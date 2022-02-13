@@ -1,0 +1,174 @@
+---
+title: "A simple introduction to Bayesian updating"
+author: "Guido Biele"
+date: "2/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(dplyr)
+library(plotrix)
+```
+
+## We know things before seeing the data
+
+We will use a simple class room experiment to show how to to Bayesian inference.
+
+The topic of our experiment is "Do we understand p-values?". To answer this question, we will first assess how likely we think it is that a random person in this room is able to answer all 6 questions about p values correctly before we have seen any data.
+
+To get this prior information or prior belief, we need 1 volunteer. 
+The volunteer tells us
+
+- What (s)he guesses is the proportion of students with 100% correct responses
+- Based on what sample size s(he) makes this statement. Here, sample size just refers to the number of of fellow students you know well enough to guess how they would do.
+
+Based on this information, we can make a plot of our prior information.
+
+To display this information we use the beta distribution, which is bound between 0 and 1. The typical parameters of the beta distribution are not mean and sample size, but two "shape" parameters alpha and beta. Conveniently, we can calculate these two parameters from the numbers for mean and number of observations.
+
+```{r PrioGuess}
+guess = .5
+num_obs = 3
+
+a_prior = guess*num_obs
+b_prior = (1-guess)*num_obs
+```
+
+Now, with these two parameters in hand we, can simulate data from the beta distribution to see what the prior information is.
+
+```{r PlotPrior}
+N.sim = 1e5
+info_prior = rbeta(N.sim, a_prior, b_prior)
+hist(info_prior,
+     main = "Information before seeing data",
+     xlab = "theta")
+```
+
+According to this prior, we are to 95% certain that the proportion of students with perfect scores is between `r round(qbeta(.025, a_prior, b_prior),2)` and `r round(qbeta(.975, a_prior, b_prior),2)`. This this basically means that don't know much, but we _do_ "know" something before we collect the data, even if some people would argue that this is not prior information but subjective beliefs of little value.
+
+## Collecting data
+
+To get more certain and more grounded in observable reality, we collect some data.
+
+Here is a link to a short questionnaire which I am asking you all to fill out, give it 3 minutes. 
+
+Lets record the results:
+
+```{r GetData}
+size = 20 # number of responses
+successes = 5 # number of participants with a perfect score
+prob.succ = successes / size 
+```
+
+OK, with the results in hand, we can look at what we learn from the data. We can again use the beta distribution to visualize the information we have. There are two ways we can now calculate the parameters alpha and betas we need
+
+```{r InfoData}
+a_data = prob.succ * size
+b_data = (1-prob.succ) * size
+
+a_data = successes
+b_data = size-successes
+
+info_data = rbeta(N.sim, a_data, b_data)
+hist(info_data,
+     main = "Information in data",
+     xlab = "theta",
+     xlim = c(0,1))
+```
+
+## Updating what we knew before with what the data tell us.
+
+Bayesian updating is all about combining information we have before we see the data with information that is in the data.
+
+Here is one intuitive way to do this
+
+- we check if the prior information can generate the data we observed
+- if the prior information generates the data, we retain it
+- if the prior information does not generate the data, we discard it
+
+The prior information we have here are the "samples" we simulated from our distribution of the prior guess. Lets look at some of them:
+
+```{r ShowInfoBeforeData}
+matrix(info_prior[1:49], ncol = 7)
+```
+
+Looking at the first column, the first value tells us that we think that participants make no errors with probability `r info_prior[1]`. To see if this value is consistent with our data, we can just check if we find `r successes` people without errors out of `r size` participants. The distribution that generates such data is the binomial distribution. Let's see if we get `r successes` successes if we simulate an experiment with `r size` participants and `r info_prior[1]` success probability:
+
+```{r FirstCheck}
+simulated.successes = 
+        rbinom(1, size, info_prior[1])
+simulated.successes
+```
+
+This `r ifelse(simulated.successes == successes, "worked", "didn't work")`. Lets look at the first 75 and show the simulated success probabilities with which we further successfully simulated `r successes` successes out of `r size`.
+  
+```{r First20Checks}
+simulated.successes = 
+        rbinom(75,size,info_prior[1:75])
+good.thetas = 
+        info_prior[which(simulated.successes == successes)] %>% 
+        round(digits = 2)
+```
+
+The rounded simulated success probabilities are `r paste(good.thetas, collapse = ", ")` and include mostly numbers around `r prob.succ`.
+
+Now lets do this for all `r N.sim` simulated success probabilities and plot when we can generate the observed data:
+
+```{r Filter}
+keep.data = 
+        data.frame(prior.value = info_prior) %>% 
+        rowwise() %>% 
+        mutate(simulated.successes = rbinom(1,size,prior.value),
+               keep = factor(simulated.successes == successes))
+
+keep.data %>% 
+        histStack(prior.value~keep,.,
+                  col = c("red","green"),
+                  xlab = "theta",
+                  main = "Filter prior information")
+legend("topright",
+       col = c("red","green"),
+       pch = c(15,15),
+       legend = c("Inconsisent with data","Consisent with data"),
+       bty = "n")
+```
+
+We can see that mostly values around `r round(keep.data %>% filter(keep == T) %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
+
+One crucial thing to note here is that the shape of our prior information, which includes the red and green parts in the histogram above, influences the shape of the distribution of theta values consistent with the data.
+
+## Posterior information
+
+As you probably have already guessed, the green part of the previous plot is what one typically calls the _posterior distributions_, which encodes what we know (believe) about the probability of successes after we have combined our prior information with information in the data.
+
+Let's plot the three steps together:
+
+```{r PriorFilterPosterio, fig.width=11}
+par(mfrow = c(1,3))
+hist(info_prior,
+     main = "Prior",
+     xlab = "theta")
+keep.data %>% 
+        histStack(prior.value~keep,.,
+                  col = c("red","green"),
+                  xlab = "theta",
+                  main = "Filter prior")
+posterior_info = 
+        keep.data %>% 
+        filter(keep == T) %>% 
+        pull(prior.value)
+
+hist(posterior_info,
+     main =  "Posterior",
+     xlab = "theta",
+     xlim = c(0,1))
+```
+
+What does the posterior tell us?
+
+It's mean is `r round(mean(posterior_info),3)`, so our best guess for the probability that a student answers all questions correctly is `r round(mean(posterior_info),3)` (according to the prior it was `r round(mean(info_prior),3)` and according to only the data it was `r prob.succ`) and that we are 95% sure that the true probability is between `r round(quantile(posterior_info,.025),3)` and `r round(quantile(posterior_info,.975),3)`.
+
+However, the most important take home message here is that we have computed a compromise between the information or belief we had before the data and the information that is in the data.
+
