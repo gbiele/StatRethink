@@ -2,7 +2,9 @@
 title: "A simple introduction to Bayesian updating"
 author: "Guido Biele"
 date: "16.02.2022"
-bookdown::html_document2: default
+output:
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -39,7 +41,7 @@ Based on this information, we can make a plot of our prior information.
 
 To display this information we use the beta distribution, which is bound between 0 and 1. The typical parameters of the beta distribution are not mean and sample size, but two "shape" parameters alpha and beta. Conveniently, we can calculate these two parameters from the numbers for mean and number of observations.
 
-```{r PrioGuess}
+```{r PrioGuess, class.source = 'fold-show'}
 prob.success.prior = .5 # guessed expected proportion 
 n.prior.obs = 3
 
@@ -67,7 +69,7 @@ Here is a link to a questionnaire with 6 questions am asking you all to fill out
 
 Lets record the results: https://nettskjema.no/a/249303
 
-```{r GetData}
+```{r GetData, class.source = 'fold-show'}
 n.obs = 20 # number of responses
 successes = 5 # number of participants with a perfect score
 prob.success = successes / n.obs 
@@ -96,7 +98,7 @@ The binomial distribution has two parameters: `size` captures the number of inde
 
 Let's see if we get `r successes` successes if we simulate an experiment with `r n.obs` participants and `r info_prior[1]` success probability:
 
-```{r FirstCheck}
+```{r FirstCheck, class.source = 'fold-show'}
 simulated.successes = 
         rbinom(1, n.obs, info_prior[1])
 simulated.successes
@@ -116,25 +118,27 @@ The rounded simulated success probabilities are `r paste(good.thetas, collapse =
 
 Now lets do this for all `r N.sim` simulated success probabilities and plot when we can generate the observed data:
 
-```{r Filter, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes."}
-# filter
+```{r Filter, class.source = 'fold-show'}
 filtered.samples = 
         data.frame(prior.value = info_prior) %>% 
         rowwise() %>% 
         mutate(simulated.successes = rbinom(1,n.obs,prior.value),
                keep = factor(simulated.successes == successes))
-# plot
+```
+
+```{r PlotFiltered, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes."}
 filtered.samples %>% 
         histStack(prior.value~keep,.,
                   col = c("blue","purple"),
                   xlab = "theta",
                   main = "Filter prior information")
 # add legend
-legend("topright",
+legend("topleft",
        col = c("blue","purple"),
        pch = c(15,15),
-       legend = c("Inconsisent with data","Consisent with data"),
-       bty = "n")
+       legend = c("Inconsisent w/ data","Consisent w/ data"),
+       bty = "n",
+       cex = 1.5)
 ```
 
 We can see that mostly values around `r round(filtered.samples %>% filter(keep == T) %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
@@ -147,7 +151,7 @@ As you probably have already guessed, the green part of the previous plot is wha
 
 Let's plot the three steps together:
 
-```{r PriorFilterPosterio, fig.cap = "Histogram of samples obtained by simulating from prior knowledge, colored after filtering and retained after filtering.", fig.width=11}
+```{r PriorFilterPosterio, fig.cap = "Histogram of samples obtained by simulating from prior knowledge, colored after filtering and retained after filtering.", fig.width=11, fig.height= 4}
 par(mfrow = c(1,3))
 hist(info_prior, col = "blue",
      main = "Prior",
@@ -204,6 +208,8 @@ Let's re-analyze our data using these concepts.
 
 Earlier, we displayed "what we know before we have the data" by simulating from the beta distribution. Now, we simply show the density function of the beta distribution by using the same parameters. We also add the relative frequency of the samples we simulated earlier to visualize that the two things represent the same information.
 
+For the interested, we simulate from the beta distribution with `rbeta(n.samples, a.prior, b.prior)` and we get the probability density function with `dbeta(x, a.prior, b.prior)`, where `x` is a vector with values for which we want to know the density. 
+
 ```{r Prior, fig.cap="Density of the prior distribution overlayed on a samples from the same distribution."}
 hist(info_prior, freq = FALSE, border = NA,
      col = adjustcolor("blue",alpha = .15),
@@ -223,15 +229,16 @@ The likelihood function tell us how likely the data are given different paramete
 
 Maybe you recall that the beta distribution has two parameters, `alpha` and `beta`. From our data collection we have information about number of attempts (`n.obs`) and success probability `prob.success`. Fortunately, we can use `n.obs` and `prob.success` to calculate `alpha` and `beta`:
 
-```{r Likelihood}
+```{r Likelihood, class.source = 'fold-show'}
 a_data = prob.success * n.obs
 b_data = (1-prob.success) * n.obs
 # or
+successes = prob.success * n.obs
 a_data = successes
 b_data = n.obs-successes
 ```
 
-Now we can plot our likelihood function.
+Now we can plot our likelihood function by using the `dbeta` function.
 
 ```{r PlotLikelihood, fig.cap= "Likelihood of the data given different success probabilities (theta)" }
 curve(
@@ -270,20 +277,26 @@ kable(parameter_table,
 
 So we have `r n.prior.obs` prior "observations" and `r n.obs` observations in our questionnaire, which makes altogether `r n.prior.obs + n.obs` total "observations". We can do the same summation for the number of successes to extend the table. Importantly, just summing the parameters alpha and beta also works, because these parameters are just derived from the number of observations and successes. 
 
-```{r PostTable2}
+```{r PostTable2, class.source = 'fold-show'}
+posterior_params =
+  parameter_table %>% 
+  summarise(
+    Source = "Prior & data",
+    Prob.success = weighted.mean(Prob.success, w = Observations),
+    Observations = sum(Observations),
+    Num.success = sum(Num.success),
+    alpha = sum(alpha),
+    beta = sum(beta))
+```
+
+```{r PostTable2Show}
+posterior_params$Prob.success = round(posterior_params$Prob.success,3)
 parameter_table = rbind(
   parameter_table,
-  parameter_table %>% 
-    summarise(Source = "Prior & data",
-              Prob.success = weighted.mean(Prob.success, Observations) %>% round(3),
-              Observations = sum(Observations),
-              Num.success = sum(Num.success),
-              alpha = sum(alpha),
-              beta = sum(beta))
+  posterior_params
 )
-
 kable(parameter_table,
-      caption = "Information in pior, data and posterior") %>% 
+      caption = "Information in pior, data and posterior ('parameter_table')") %>% 
   kable_styling(full_width = FALSE)
 ```
 Finally, we can plot our posterior distribution function. We are also plotting the relative frequency of the simulated posterior above to show that the two methods to calculate a posterior distribution give the same result.
@@ -311,7 +324,7 @@ It is useful to experiment with different values for the prior distribution and 
 
 Here is a function that takes relevant parameter as input.
 
-```{r Experiment, fig.cap = "Bayesian updating in one figure."}
+```{r Experiment, fig.cap = "Bayesian updating in one figure.", class.source = 'fold-show'}
 source("BayesProportions.R")
 bayes_proportions(
   n.prior = n.prior.obs,
@@ -327,7 +340,7 @@ Please source the function and try out what happens if you increase/decrease the
 - set `n.prior = 3`, `p.prior = .5`, `p.data = .01` and change `n.data`
 
 Here is a short example of how to make a figure with several panels / subplots
-```{r, eval = FALSE, echo = TRUE}
+```{r, eval = FALSE, echo = TRUE, class.source = 'fold-show'}
 par(mfrow = c(3,3)) # set up 3 x 3 sub plots
 for (n.obs in 1:9) { # loop through n.obs 1-9
   bayes_proportions(
