@@ -17,7 +17,7 @@ library(plotrix)
 library(knitr)
 library(kableExtra)
 set.seed(1234)
-par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 ```
 
 This is a very basic, hands on introduction to what it means to do "Bayesian updating".
@@ -123,27 +123,46 @@ filtered.samples =
         data.frame(prior.value = info_prior) %>% 
         rowwise() %>% 
         mutate(simulated.successes = rbinom(1,n.obs,prior.value),
-               keep = factor(simulated.successes == successes))
+               keep = ifelse(simulated.successes == successes,"keep","reject"))
 ```
 
 ```{r PlotFiltered, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes."}
+filtered.samples$keep = factor(filtered.samples$keep,levels = c("reject","keep"))
 filtered.samples %>% 
-        histStack(prior.value~keep,.,
-                  col = c("blue","purple"),
-                  xlab = "theta",
-                  main = "Filter prior information")
-# add legend
-legend("topleft",
-       col = c("blue","purple"),
-       pch = c(15,15),
-       legend = c("Inconsisent w/ data","Consisent w/ data"),
-       bty = "n",
-       cex = 1.5)
+  histStack(prior.value~keep,.,
+            col = c("blue","purple"),
+            xlab = "theta",
+            main = "Filter prior information")
+
 ```
 
-We can see that mostly values around `r round(filtered.samples %>% filter(keep == T) %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
+We can see that mostly values around `r round(filtered.samples %>% filter(keep == "keep") %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
 
-One crucial thing to note here is that the shape of our prior information, which includes the red and green parts in the histogram above, influences the shape of the distribution of theta values consistent with the data.
+One crucial thing to note here is that the shape of our prior information, which includes the blue and purple parts in the histogram above, influences the shape of the distribution of theta values consistent with the data.
+
+```{r MultiFilter, fig.cap = "Filtered prior samples with different prior sample sizes. Green lines indicate filtered prior from a uniform distribution", fig.width=11, fig.height= 4}
+par(mfrow = c(1,3))
+for (n.p.obs in c(2, 5, 25)) {
+  a.pr = prob.success.prior*n.p.obs
+  b.pr = (1-prob.success.prior)*n.p.obs
+  f.s = 
+    data.frame(prior.value = rbeta(N.sim, a.pr, b.pr)) %>% 
+    rowwise() %>% 
+    mutate(keep = ifelse(rbinom(1,n.obs,prior.value) == successes,"keep","reject"))
+  f.s$keep = factor(f.s$keep,levels = c("reject","keep"))
+  f.s %>% 
+  histStack(prior.value~keep,.,
+            breaks = seq(0,1,.05),
+            col = c("blue","purple"),
+            xlab = "theta",
+            main = paste("Prior observations:",n.p.obs),
+            xlim = c(0,1))
+  if (n.p.obs == 2) h = hist(f.s$prior.value[f.s$keep == "keep"], breaks = seq(0,1,.02), plot = FALSE)
+  if (n.p.obs > 2) lines(h$mids,h$counts, type = "h", col = "green", lwd = 2)
+}
+par(mfrow = c(1,1))
+```
+
 
 ### Posterior information
 
@@ -153,19 +172,20 @@ Let's plot the three steps together:
 
 ```{r PriorFilterPosterio, fig.cap = "Histogram of samples obtained by simulating from prior knowledge, colored after filtering and retained after filtering.", fig.width=11, fig.height= 4}
 par(mfrow = c(1,3))
-hist(info_prior, col = "blue",
+hist(info_prior,
+     col = "blue",
      main = "Prior",
      xlab = "theta")
 filtered.samples %>% 
-        histStack(prior.value~keep,.,
-                  col = c("blue","purple"),
-                  xlab = "theta",
-                  main = "Filter prior")
-posterior_info = 
-        filtered.samples %>% 
-        filter(keep == T) %>% 
-        pull(prior.value)
+  histStack(prior.value~keep,.,
+            col = c("blue","purple"),
+            xlab = "theta",
+            main = "Filter prior")
 
+posterior_info = 
+  filtered.samples %>% 
+  filter(keep == "keep") %>% 
+  pull(prior.value)
 hist(posterior_info, col = "purple",
      main =  "Posterior",
      xlab = "theta",
@@ -214,7 +234,7 @@ For the interested, we simulate from the beta distribution with `rbeta(n.samples
 hist(info_prior, freq = FALSE, border = NA,
      col = adjustcolor("blue",alpha = .15),
      xlab = "theta",
-     ylab = "density",
+     ylab = "Density",
      main = "Prior distribution")
 curve(
   dbeta(x,a.prior,b.prior),
@@ -246,7 +266,7 @@ curve(
   lwd = 2,
   col = "red",
   xlab = "theta",
-  ylab = "density",
+  ylab = "Density",
   main = "Likelihood function",
   bty = "none")
 ```
