@@ -17,7 +17,7 @@ library(plotrix)
 library(knitr)
 library(kableExtra)
 set.seed(1234)
-par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
 ```
 
 This is a very basic, hands on introduction to what it means to do "Bayesian updating".
@@ -56,7 +56,7 @@ N.sim = 100000
 info_prior = rbeta(N.sim, a.prior, b.prior)
 hist(info_prior, col = "blue",
      main = "Information before seeing data",
-     xlab = "theta")
+     xlab = "Success probability")
 ```
 
 According to this prior, we are to 95% certain that the proportion of students with perfect scores is between `r round(qbeta(.025, a.prior, b.prior),2)` and `r round(qbeta(.975, a.prior, b.prior),2)`. This this basically means that don't know much, but we _do_ "know" something before we collect the data, even if some people would argue that this is not prior information but subjective beliefs of little value.
@@ -89,7 +89,7 @@ Here is one intuitive way to do this
 The prior information we have here are the "samples" we simulated from our distribution of the prior guess. Lets look at some of them:
 
 ```{r ShowInfoBeforeData}
-info_prior[1:54]
+info_prior[1:30]
 ```
 
 The first value tells us that we think that participants make no errors with probability `r info_prior[1]`. To see if this value is consistent with our data, we can just check if we find `r successes` people without errors out of `r n.obs` participants when using this success probability. The distribution that generates such data is the binomial distribution. 
@@ -131,17 +131,18 @@ filtered.samples$keep = factor(filtered.samples$keep,levels = c("reject","keep")
 filtered.samples %>% 
   histStack(prior.value~keep,.,
             col = c("blue","purple"),
-            xlab = "theta",
-            main = "Filter prior information")
+            xlab = "Success probability",
+            main = "Filter prior information",
+            legend.pos = "topright")
 
 ```
 
 We can see that mostly values around `r round(filtered.samples %>% filter(keep == "keep") %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
 
-One crucial thing to note here is that the shape of our prior information, which includes the blue and purple parts in the histogram above, influences the shape of the distribution of theta values consistent with the data.
+One crucial thing to note here is that the shape of our prior information, which includes the blue and purple parts in the histogram above, influences the shape of the distribution of Success probability values consistent with the data.
 
 ```{r MultiFilter, fig.cap = "Filtered prior samples with different prior sample sizes. Green lines indicate filtered prior from a uniform distribution", fig.width=11, fig.height= 4}
-par(mfrow = c(1,3))
+par(mfrow = c(1,3), mgp=c(1.75,.5,0))
 for (n.p.obs in c(2, 5, 25)) {
   a.pr = prob.success.prior*n.p.obs
   b.pr = (1-prob.success.prior)*n.p.obs
@@ -154,13 +155,12 @@ for (n.p.obs in c(2, 5, 25)) {
   histStack(prior.value~keep,.,
             breaks = seq(0,1,.05),
             col = c("blue","purple"),
-            xlab = "theta",
+            xlab = "Success probability",
             main = paste("Prior observations:",n.p.obs),
             xlim = c(0,1))
-  if (n.p.obs == 2) h = hist(f.s$prior.value[f.s$keep == "keep"], breaks = seq(0,1,.02), plot = FALSE)
-  if (n.p.obs > 2) lines(h$mids,h$counts, type = "h", col = "green", lwd = 2)
+  if (n.p.obs == 2) h = hist(f.s$prior.value[f.s$keep == "keep"], breaks = seq(0,1,.05), plot = FALSE)
+  lines(h$mids,h$counts, type = "h", col = "green", lwd = 4)
 }
-par(mfrow = c(1,1))
 ```
 
 
@@ -171,15 +171,15 @@ As you probably have already guessed, the green part of the previous plot is wha
 Let's plot the three steps together:
 
 ```{r PriorFilterPosterio, fig.cap = "Histogram of samples obtained by simulating from prior knowledge, colored after filtering and retained after filtering.", fig.width=11, fig.height= 4}
-par(mfrow = c(1,3))
+par(mfrow = c(1,3), mgp=c(1.75,.5,0))
 hist(info_prior,
      col = "blue",
      main = "Prior",
-     xlab = "theta")
+     xlab = "Success probability")
 filtered.samples %>% 
   histStack(prior.value~keep,.,
             col = c("blue","purple"),
-            xlab = "theta",
+            xlab = "Success probability",
             main = "Filter prior")
 
 posterior_info = 
@@ -188,7 +188,7 @@ posterior_info =
   pull(prior.value)
 hist(posterior_info, col = "purple",
      main =  "Posterior",
-     xlab = "theta",
+     xlab = "Success probability",
      xlim = c(0,1))
 ```
 
@@ -206,7 +206,7 @@ $$
 P(\theta|data) = \frac{P(data|\theta) \cdot P(\theta)}{P(data)}
 $$
 
-which means that the probability of a parameter value $\theta$ given the data ($P(\theta|data)$) is equal to the probability of the data given $\theta$  ($P(data|\theta)$) times the prior probability of $theta$ ($P(\theta)$) divided by the prior probability of the data ($P(data)$).
+which means that the probability of a parameter value $\theta$ (our success probabaility) given the data ($P(\theta|data)$) is equal to the probability of the data given $\theta$  ($P(data|\theta)$) times the prior probability of $theta$ ($P(\theta)$) divided by the prior probability of the data ($P(data)$).
 
 Now, we typically do not have information about the prior probability of the data, but this is not so bad^[When we are updating parameter! Of course we need $P(data)$ in another important application of Bayes rule, when we want to calculate the probability of a disease given a test result (data)] because this is just a constant number with which we divide the really interesting term $P(\theta|data) \cdot P(\theta)$. If we just remove $P(data)$ from the equation, we arrive at 
 
@@ -361,7 +361,7 @@ Please source the function and try out what happens if you increase/decrease the
 
 Here is a short example of how to make a figure with several panels / subplots
 ```{r, eval = FALSE, echo = TRUE, class.source = 'fold-show'}
-par(mfrow = c(3,3)) # set up 3 x 3 sub plots
+par(mfrow = c(3,3), mgp=c(1.75,.5,0)) # set up 3 x 3 sub plots
 for (n.obs in 1:9) { # loop through n.obs 1-9
   bayes_proportions(
   n.prior = 3,
