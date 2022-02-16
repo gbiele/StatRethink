@@ -1,0 +1,17 @@
+/* Whole document: */
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+/* Headers */
+h1,h2,h3,h4,h5,h6{
+  font-size: 24pt;
+}
+p.caption {
+  font-size: 0.75em;
+  font-style: italic;
+  color: grey;
+  margin-right: 0%;
+  margin-left: 0%;  
+  text-align: justify;
+}
