@@ -12,7 +12,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
 library(magrittr)
 library(dplyr)
-options(collapse_mask = "manip") 
+#options(collapse_mask = "manip") 
 library(collapse)
 library(plotrix)
 library(knitr)
@@ -44,7 +44,7 @@ To display this information we use the beta distribution, which is, just like pr
 
 ```{r PrioGuess, class.source = 'fold-show'}
 prob.success.prior = .5 # guessed expected proportion 
-n.prior.obs = 3
+n.prior.obs = 2
 
 a.prior = prob.success.prior*n.prior.obs # number of successes
 b.prior = (1-prob.success.prior)*n.prior.obs # number of fails
@@ -71,8 +71,8 @@ Here is a link to a questionnaire with 6 questions am asking you all to fill out
 Lets record the results: https://nettskjema.no/a/249303
 
 ```{r GetData, class.source = 'fold-show'}
-n.obs = 20 # number of responses
-successes = 5 # number of participants with a perfect score
+n.obs = 17 # number of responses
+successes = 8 # number of participants with a perfect score
 prob.success = successes / n.obs 
 ```
 
