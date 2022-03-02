@@ -118,6 +118,7 @@ Allowing probabilistic statements also for non-countable events is not uncontrov
 
 ## 2M1
 
+### W-W-W
 You need to use a sufficiently fine-grained grid to make differences visible.
 
 ```{r 2M1a}
@@ -144,8 +145,8 @@ plot(p_H2O_grid, posterior , type="l" )
 # personally, I prefer the plot(x_values, y_values) syntax
 ```
 
+### W-W-W-L
 For 4 tosses and 3 W.
-
 ```{r 2M1c}
 likelihood <- dbinom( 3 , size=4 , prob=p_H2O_grid )
 posterior <- likelihood * prior
@@ -153,6 +154,7 @@ posterior <- posterior / sum(posterior)
 plot(p_H2O_grid, posterior , type="l" )
 ```
 
+### W-W-W-W-W-L-L
 For 7 tosses and 5 W.
 ```{r 2M1d}
 likelihood <- dbinom( 5 , size=7 , prob=p_H2O_grid )
@@ -349,6 +351,13 @@ _COMMENT: ARE THERE OTHER “EASIER” SOLUTIONS TO GET THE SAME CONCLUSION????_
 
 GB: Not any I can immediately think of.
 
+# Clarification questions
+
+When to use probability versus plausibility? Are these words interchangeable? What about Pr vs. p?
+
+Can you say something more about the usage of words “likelihood” and “distribution function” in Bayesian vs frequentist statistics? (ref section 2.3.2.1 on p. 33)
+
+
 # Exercises for next time:
 
 Everyone 3E1 - 3M6
@@ -368,6 +377,7 @@ Please ...
 - try to be more wordy, explain your code and/or use declarative variable names. (It is not suffient just to write the answers ;-))
 - try to write down the solutions so that it will be easy to explain to others what you did.
 - please submit compiled html files and not R-Markdown files (and check if the compiled html looks OK: line separation, plots shown etc)
+- send your asnwers only once
 - next time, every team  submit a clarification question or a discussion question
 
 Rpubs:
