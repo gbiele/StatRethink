@@ -2,7 +2,10 @@
 title: "Chapter 2"
 author: "GB"
 date: "2/24/2022"
-output: html_document
+output:
+  html_document: 
+    mathjax: default
+header-includes: \usepackage{xcolor}
 ---
 
 ```{r setup, include=FALSE}
@@ -67,33 +70,44 @@ Probability of rain, given that it is Monday
 
 1 and 4 are correct. Why 4?
 
-1: P(Monday | rain)
+1: P(Monday|rain)
 
 4: P(rain|Monday) * P(Monday) / P(rain)
 
+The question is then if we can show that 
+
+$P(Monday|rain) = P(rain|Monday) \cdot P(Monday) / P(rain)$?
+
+The key to the solution is that we can use both $P(Monday|rain)$ and $P(rain|Monday)$ to calculate the same thing: the joint probability of $P(Monday,rain)$.
 
 Page 37 shows the relationship of joint and conditional probability:
 
 $$
-P(A,B) = P(A|B) \cdot P(B) \\
-P(A,B) = P(B|A) \cdot P(A)
+P(A,B) = \color{blue}{P(A|B) \cdot P(B)} \\
+P(A,B) = \color{red}{P(B|A) \cdot P(A)}
 $$
 
-We can say that the joint probability that it is Monday and raining is 
+Therefore, we can say that the joint probability that it is Monday and raining is 
 
-$$P(Monday,rain) = P(rain|Monday) \cdot P(Monday)$$
+$$P(Monday,rain) = \color{blue}{P(rain|Monday) \cdot P(Monday)}$$
 
-Equally, we can say
+or
 
-$$P(Monday,rain) = P(Monday|rain) \cdot P(rain)$$
+$$P(Monday,rain) = \color{red}{P(Monday|rain) \cdot P(rain)}$$
+and we can further say 
 
-where we have the term $P(rain|Monday)$ we are looking for, and which we can get as $P(rain|Monday) = P(rain,Monday)/P(Monday)$. 
+$$
+\color{red}{P(Monday|rain) \cdot P(rain)} = \color{blue}{P(rain|Monday) \cdot P(Monday)}
+$$
 
-Because we had calculated 
+If we want to know what P(Monday|rain) is, we now have to devide on both sides with P(rain), which gives us
 
-$P(Monday,rain) = P(rain|Monday) * P(Monday)$ above and 
+$$
+\color{red}{P(Monday|rain)} = \frac{\color{blue}{P(rain|Monday) \cdot P(Monday)}}{\color{red}{P(rain)}}
+$$
 
-P(Monday,rain) = P(rain|Monday) * P(Monday) / P(rain)
+where the right hand side is answer 4 from above.
+
 
 ## 2E4 What does it mean to say "the probability of water is 0.7"?
 
