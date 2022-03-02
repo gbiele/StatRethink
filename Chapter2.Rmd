@@ -1,0 +1,254 @@
+---
+title: "Chapter 2"
+author: "GB"
+date: "2/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 2E1
+
+2 and 4 are correct. Why 4?
+
+P(rain, Monday) / P(Monday)
+
+We know generally that 
+
+P(A,B) = P(A|B) * P(B) (page 37)
+
+then 
+
+P(rain, Monday) = P(rain | Monday) * P(Monday)
+
+divide by P(Monday) on both sides
+
+P(rain, Monday) / P(Monday) = P(rain | Monday)
+
+## 2E2
+
+3 is correct
+
+# 2E3
+
+1 and 4 are correct. Why 4?
+
+1: P(Monday | rain)
+
+4: P(rain|Monday) * P(Monday) / P(rain)
+
+Bayes rule on p 37 
+
+$$
+\text{Posterior} = \frac{\text{Probability of data} \times \text{Prior}}{\text{Average probability of data}}
+$$
+This is more typically expressed, here using $H$ for hypothesis and $D$ for data
+
+$$
+P(H|D) = \frac{P(D|H)P(H)}{P(D)}
+$$
+If we substitute $D$ with rain and $H$ with Monday:
+
+P(Monday | rain) = P(rain|Monday) * P(Monday) / P(rain)
+
+## 2M1
+
+```{r 2M1a}
+# parameter values at which we calculate the posterior probability
+p_H2O_grid <- seq(from=0 , to=1, length.out=100)
+# likelihood of 3 water in 3 tosses
+N_tosses = 3
+N_water = 3
+likelihood <- dbinom(N_water , size=N_tosses, prob=p_H2O_grid)
+# uniform prior
+prior <- rep(1,100) 
+posterior <- likelihood * prior
+sum(posterior)
+# standardize 
+posterior <- posterior / sum(posterior)
+sum(posterior)
+```
+
+We use R's `plot` command to show the results:
+```{r 2M1b}
+plot(p_H2O_grid, posterior , type="l" )
+# this also works
+# plot( posterior ~ p_H2O_grid , type="l" )
+# personally, I prefer the plot(x_values, y_values) syntax
+```
+
+For 4 tosses and 3 W.
+
+```{r 2M1c}
+likelihood <- dbinom( 3 , size=4 , prob=p_H2O_grid )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" )
+```
+
+For 7 tosses and 5 W.
+```{r 2M1d}
+likelihood <- dbinom( 5 , size=7 , prob=p_H2O_grid )
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" )
+```
+
+## 2M2
+
+```{r 2M2}
+prior[p_H2O_grid < .5] = 0
+
+posterior <- dbinom( 3 , size=3 , prob=p_H2O_grid ) * prior
+posterior <- posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" )
+
+posterior <- dbinom( 3 , size=4 , prob=p_H2O_grid ) * prior
+posterior <- posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" )
+
+posterior <- dbinom( 5 , size=7 , prob=p_H2O_grid ) * prior
+posterior <- posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" )
+
+``` 
+
+## 2M3
+
+P(Earth | land) = .23 ? 
+
+P(land | Earth) = .3
+P(land | Mars) = 1
+
+P(land) = (P(land | Earth) + P(land | Mars)) / 2 = .65
+
+P(Earth) = .5
+
+P(Earth | land) = P(land | Earth) * P(Earth) / P(land)
+
+```{r 2M3}
+.3 * .5 / .65
+```
+
+## 2M4
+
+We make a table with possible outcomes
+```{r 2M4a, message=FALSE}
+library(dplyr)  # for data manipulation
+library(magrittr) # for pipes
+library(knitr) # to show tables in Markdown
+library(kableExtra) # for prettier tables
+counts = 
+  data.frame(
+    Up =   c("B","B","B","W","W","w"),
+    Down = c("B","B","W","B","W","W"))
+
+kable(counts) %>% 
+  kable_styling(full_width = F)
+```
+
+We keep only the rows where the up side is black and count how many of those are also black on the other side.
+
+```{r 2M4b, message=FALSE}
+counts %>% 
+  filter(Up == "B") %>% 
+  pull(Down) %>% 
+  table()
+```
+
+Just for fun, here is the data.table way:
+
+```{r 2M4c, message=FALSE}
+library(data.table)
+data.table(
+  Up =   c("B","B","B","W","W","w"),
+  Down = c("B","B","W","B","W","W"))  %>%
+  .[Up == "B"] %>% 
+  .[, Down] %>% 
+  table()
+```
+## 2M5
+
+We are just adding one BB card
+
+```{r 2M5, message=FALSE}
+library(data.table)
+data.table(
+  Up =   c("B","B","B","B","B","W","W","w"),
+  Down = c("B","B","B","B","W","B","W","W"))  %>%
+  .[Up == "B"] %>% 
+  .[, Down] %>% 
+  table()
+```
+## 2M6
+
+We use the `rep` command to manipulate the probability with which the different cards are chosen.
+
+```{r 2M6, message=FALSE}
+library(data.table)
+data.table(
+  Up =   c(rep(c("B","B"),1),
+           rep(c("B","W"),2),
+           rep(c("W","w"),3)),
+  Down = c(rep(c("B","B"),1),
+           rep(c("W","B"),2),
+           rep(c("W","w"),3)))  %>%
+  .[Up == "B"] %>% 
+  .[, Down] %>% 
+  table()
+```
+
+## 2M7
+
+There are 3 ways to draw a black face up: 
+
+- Face 1 from BB
+- Face 2 from BB
+- Face 1 from BW
+
+When we start with a black face from BB, there are three ways to have a white face up on the second card:
+
+- Face 1 from WW
+- Face 2 from WW
+- Face 2 from BW
+
+When we start with a black face from BW, there are two ways to have a white face up on the second card:
+
+- Face 1 from WW
+- Face 2 from WW
+
+We are using the `expand.grid` function to generate combinations of draws.
+
+```{r 2M7a}
+BB_ways = 
+  expand.grid(Black_up = c("BB","BB"),
+              White_up = c("WB","WW","WW"))
+
+BW_ways = 
+  expand.grid(Black_up = c("BW"),
+              White_up = c("WW","WW"))
+
+all_ways = 
+  rbind(
+    BB_ways,
+    BW_ways
+  ) 
+
+kable(all_ways) %>% 
+  kable_styling(full_width = F)
+  
+```
+
+and we count how often the down face of the "Black_up" cards is also black.
+
+```{r 2M7b}
+all_ways %>% 
+  data.frame() %>% 
+  rowwise() %>% 
+  mutate(face_down = substr(Black_up,2,2)) %>% 
+  pull(face_down) %>% 
+  table()
+```
+
