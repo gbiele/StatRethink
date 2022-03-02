@@ -39,11 +39,11 @@ data.frame(Teams = teams) %>%
 ```
 
 
-## 2E1
+## 2E1 Probabaility of rain on Monday
 
-2 and 4 are correct. Why 4?
+2 and 4 are correct. 
 
-P(rain, Monday) / P(Monday)
+Why 4, P(rain, Monday) / P(Monday)?
 
 We know generally that 
 
@@ -57,11 +57,13 @@ divide by P(Monday) on both sides
 
 P(rain, Monday) / P(Monday) = P(rain | Monday)
 
-## 2E2
+## 2E2 What does Pr(Monday|rain) mean?
+
+Probability of rain, given that it is Monday
 
 3 is correct
 
-# 2E3
+## 2E3 Consistent with "probability of Monday given that it is raining"
 
 1 and 4 are correct. Why 4?
 
@@ -84,62 +86,62 @@ $$P(Monday,rain) = P(rain|Monday) \cdot P(Monday)$$
 Equally, we can say
 
 $$P(Monday,rain) = P(Monday|rain) \cdot P(rain)$$
-where we have the term $P(Monday|rain)$ we are looking for, and which we can get as $P(Monday|rain) = P(Monday,rain)/P(rain)$. 
+where we have the term $P(Monday|rain)$ we are looking for, and which we can get as $P(Monday|rain) = P(rain,Monday)/P(Monday)$. 
 
 Because we had calculated $P(Monday,rain) = P(rain|Monday) * P(Monday)$ above, we can also say 
 
 P(Monday,rain) = P(rain|Monday) * P(Monday) / P(rain)
 
-## 2E4
+## 2E4 What does it mean to say "the probability of water is 0.7"?
 
 It seems fair to describe Richard McElreath as a determinist which is 
 
 > the philosophical view that all events are determined completely by previously existing causes^[https://en.wikipedia.org/wiki/Determinism]
 
-This means that he takes the position ^[in good company of many philosophers including Aristotle, Hobbes, Laplace or Daniel Dennet and physicists like Bohr and Einstein] that _in theory_ everything is with certainty explainable, provided one has access to and can effectively use all relevant information. If everything is explainable, things happen or they don't, and therefor probability does not exist in nature.
+This means that he takes the position^[in good company of many philosophers including Aristotle, Hobbes, Laplace or Daniel Dennet and physicists like Bohr and Einstein] that in principle everything is with certainty explainable, provided one has access to and can effectively use all relevant information. If everything is explainable, things happen or they don't, and therefor probability does not exist in nature.
 
 However, limited information (and lack of Leviathan information processing) brings probability into existence for humans.
 
-If a globe-tossing person would have all relevant information and computing power to calculate how a tossed globe moves through the air and is tossed, she could say with certainty if the index finger would land on water and land, and therefore the probability of water would always be 1 or 0. Globe tossers who do not have the relevant information and computing power remain uncertain and express their uncertainty by stating with what probability the index finger will lang on water.
+If a globe-tossing person would have all relevant information and computing power to calculate how a tossed globe moves through the air and is caught, she could say with certainty if the index finger would land on water and land, and therefore the probability of water would always be 1 or 0. Globe tossers who do not have the relevant information and computing power remain uncertain and express their uncertainty by stating with what probability the index finger will lang on water.
 
-One consequence of this view is that the same situation can be deterministic for one person, and yet random for another person. For instance, random numbers generated with a computer are truly uncertain for somebody who does not know the "seed" number and the algorithm used to generate a random number. Such a person should make probabilistic statements about random numbers from the computer. In contrast, a person that know seed number and algorithm can make deterministic statements. For example, I know that iy your execute the following command in R
+One consequence of this view is that the same situation can be deterministic for one person, and yet random for another person. For instance, random numbers generated with a computer are truly uncertain for somebody who does not know the "seed" number and the algorithm used to generate a random number. Such a person should make probabilistic statements about random numbers from the computer. In contrast, a person that know seed number and algorithm can make deterministic statements. For example, I know with certainty that if you execute the following command in R
 
 ```{r, eval = F}
 set.seed(123)
-runif(2)
+runif(1) # random number between 0 and 1
 ```
 
-you will get the numbers `0.2875775`and `0.7883051`.
+that the resulting number will be smaller than 0.5. Other can only give a probability that the number is smaller than 0.5.
 
-Probabilistic statements as expression of uncertainty can be related to, but are not the same as frequency-based statements. Frequency based statements come always from some countable event type, one has to count over multiple occurrences of an event to obtain frequencies. Thus, one could also arrive at the statement "the probability of water is 0.7" by tossing the globe multiple times. But we do not need to, we can also arrive at a probabilistic statement by starting with the fact that 70% of the earths surface is water.
+Probabilistic statements as expression of uncertainty can be related to, but are not the same as frequency-based statements. Frequency based statements come always from a countable event type: One has to count over multiple occurrences of an event to obtain frequencies. Thus, one could also arrive at the statement "the probability of water is 0.7" by tossing the globe multiple times. But we do not need to, we can also arrive at a probabilistic statement by starting with the fact that 70% of the earths surface is water.
 
-Allowing probabilistic statements also for non-countable events is not uncontroversial. For instance, the classical NHST framework uses only frequencies. One motivation to still allow or use probabilistic statements about one-time events is that they make it possible to express uncertainty about one time events, e.g. the probability that we will have more then 5h cloudless sunshine one day from today in Oslo.
+Allowing probabilistic statements also for non-countable events is not uncontroversial. For instance, the classical NHST framework uses only frequencies. One motivation to still allow or use probabilistic statements about one-time events is that they make it possible to express uncertainty about one time events, e.g. the probability that we will have more then 5 hours cloudless sunshine one day from today in Oslo.
 
 
-## 2M1
+## 2M1 Grid posterior
 
 ### W-W-W
 You need to use a sufficiently fine-grained grid to make differences visible.
 
 ```{r 2M1a}
 # parameter values at which we calculate the posterior probability
-p_H2O_grid <- seq(from=0 , to=1, length.out=100)
+p_H2O_grid = seq(from=0 , to=1, length.out=100)
 # likelihood of 3 water in 3 tosses
 N_tosses = 3
 N_water = 3
-likelihood <- dbinom(N_water , size=N_tosses, prob=p_H2O_grid)
+likelihood = dbinom(N_water , size=N_tosses, prob=p_H2O_grid)
 # uniform prior
-prior <- rep(1,100) 
-posterior <- likelihood * prior
+prior = rep(1,100) 
+posterior = likelihood * prior
 sum(posterior)
 # standardize 
-posterior <- posterior / sum(posterior)
+posterior = posterior / sum(posterior)
 sum(posterior)
 ```
 
 We use R's `plot` command to show the results:
 ```{r 2M1b}
-plot(p_H2O_grid, posterior , type="l" )
+plot(p_H2O_grid, posterior , type="l", ylab = "density", xlab = "p" )
 # this also works
 # plot( posterior ~ p_H2O_grid , type="l" )
 # personally, I prefer the plot(x_values, y_values) syntax
@@ -148,47 +150,47 @@ plot(p_H2O_grid, posterior , type="l" )
 ### W-W-W-L
 For 4 tosses and 3 W.
 ```{r 2M1c}
-likelihood <- dbinom( 3 , size=4 , prob=p_H2O_grid )
-posterior <- likelihood * prior
-posterior <- posterior / sum(posterior)
-plot(p_H2O_grid, posterior , type="l" )
+likelihood = dbinom( 3 , size=4 , prob=p_H2O_grid )
+posterior = likelihood * prior
+posterior = posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" , ylab = "density", xlab = "p")
 ```
 
 ### W-W-W-W-W-L-L
 For 7 tosses and 5 W.
 ```{r 2M1d}
-likelihood <- dbinom( 5 , size=7 , prob=p_H2O_grid )
-posterior <- likelihood * prior
-posterior <- posterior / sum(posterior)
+likelihood = dbinom( 5 , size=7 , prob=p_H2O_grid )
+posterior = likelihood * prior
+posterior = posterior / sum(posterior)
 plot(p_H2O_grid, posterior , type="l" )
 ```
 
-## 2M2
+## 2M2 Modified priors
 
 ```{r 2M2}
 prior[p_H2O_grid < .5] = 0
 
-posterior <- dbinom( 3 , size=3 , prob=p_H2O_grid ) * prior
-posterior <- posterior / sum(posterior)
-plot(p_H2O_grid, posterior , type="l" )
+posterior = dbinom( 3 , size=3 , prob=p_H2O_grid ) * prior
+posterior = posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" , ylab = "density", xlab = "p")
 
-posterior <- dbinom( 3 , size=4 , prob=p_H2O_grid ) * prior
-posterior <- posterior / sum(posterior)
-plot(p_H2O_grid, posterior , type="l" )
+posterior = dbinom( 3 , size=4 , prob=p_H2O_grid ) * prior
+posterior = posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l" , ylab = "density", xlab = "p")
 
-posterior <- dbinom( 5 , size=7 , prob=p_H2O_grid ) * prior
-posterior <- posterior / sum(posterior)
-plot(p_H2O_grid, posterior , type="l" )
+posterior = dbinom( 5 , size=7 , prob=p_H2O_grid ) * prior
+posterior = posterior / sum(posterior)
+plot(p_H2O_grid, posterior , type="l", ylab = "density", xlab = "p" )
 
 ``` 
 
-## 2M3
+## 2M3 Pr(Earth|land)
 
 P(Earth | land) = .23 ? 
 
 We know that 
 
-- P(land | Earth) = .3
+- P(land | Earth) = 1 - P(water | Eart) = .3
 - P(land | Mars) = 1
 - P(Earth) = .5
 
@@ -221,7 +223,7 @@ P(Earth | land) = P(land | Earth) * P(Earth) / P(land)
 .3 * .5 / .65
 ```
 
-## 2M4
+## 2M4 Probability that the back side is black with decks BB, BW, WW
 
 We make a table with possible outcomes
 ```{r 2M4a, message=FALSE, warning=FALSE}
@@ -260,7 +262,8 @@ data.table(
   table() %>% 
   prop.table()
 ```
-## 2M5
+
+## 2M5 Probability that the back side is black with decks BB, BB, BW, WW
 
 We are just adding one BB card
 
@@ -275,7 +278,7 @@ data.table(
   prop.table()
 ```
 
-## 2M6
+## 2M6 Probability that the back side is black with heavy black
 
 We use the `rep` command to manipulate the probability with which the different cards are chosen.
 
@@ -294,7 +297,7 @@ data.table(
   prop.table()
 ```
 
-## 2M7
+## 2M7 Probability that the back side is black given that a 2nd card shows white
 
 There are 3 ways to draw a black face up: 
 
