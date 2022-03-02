@@ -89,7 +89,9 @@ $$P(Monday,rain) = P(Monday|rain) \cdot P(rain)$$
 
 where we have the term $P(rain|Monday)$ we are looking for, and which we can get as $P(rain|Monday) = P(rain,Monday)/P(Monday)$. 
 
-Because we had calculated $P(Monday,rain) = P(rain|Monday) * P(Monday)$ above and $P(Monday|rain) = P(Monday, rain) / P(rain)$, we can also say 
+Because we had calculated 
+
+$P(Monday,rain) = P(rain|Monday) * P(Monday)$ above and 
 
 P(Monday,rain) = P(rain|Monday) * P(Monday) / P(rain)
 
@@ -135,6 +137,7 @@ likelihood = dbinom(N_water , size=N_tosses, prob=p_H2O_grid)
 prior = rep(1,100) 
 posterior = likelihood * prior
 sum(posterior)
+plot(p_H2O_grid, posterior , type="l" , ylab = "density", xlab = "p")
 # standardize 
 posterior = posterior / sum(posterior)
 sum(posterior)
