@@ -12,35 +12,188 @@ header-includes: \usepackage{xcolor}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Teams
 
-```{r, echo = F, warning = F}
-library(magrittr)
-library(knitr)
-library(kableExtra)
-teams = c(
-  "crazy rich bayesians",
-"Laplace's demons",
-"(Probably) Aspiring Golem Engineers",
-"Bayesic Butchers",
-"The Golem's Posterior",
-"EMM",
-"The Statistics Owls",
-"Paranormal Distribution",
-"Cheerful Confounders",
-"average joe's",
-"The No Priors",
-"R&E*",
-"The Marbles*",
-"the outliers*",
-"We Stan*"
-)
+## What is conditional probability?
 
-data.frame(Teams = teams) %>% 
-  kable %>% 
-  kable_styling(full_width = F)
+Lets say you want to know if a random day in the year is a winter day, is a snow day, and what the relationship between winter and snow days is.
+
+We start by drawing a circle, which symbolizes all days in a year:
+
+```{r, echo = F}
+library(plotrix)
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "")
+draw.circle(0,0,.8, col ="white")
 ```
 
+We know that a quarter of the days in a year are in winter months. We visualize this by highlighting a section of the circle in icy blue.
+
+```{r, echo = F}
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "")
+```
+
+From this we can see that the probability of winter is 1/4, or 0.25. This is an unconditional probability, and we can write $P(winter) = 0.25$.
+
+Snow happens mostly in winter, so we add an ellipse that shows that snowing days are typically in the winter:
+
+```{r, echo = F}
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "")
+e.rot = 45
+h.e = .25
+k.e = -.25
+a.e = .5
+b.e = .175
+draw.ellipse(h.e,k.e,a.e,b.e , col = adjustcolor("grey",alpha = .75), angle = e.rot)
+```
+
+The unconditional probability of snow, $P(snow)$, is the probability of snow independent if it is winter or not, and corresponds to the area of the grey ellipse. The probability of snow is the area of the ellipse divided by the area of the circle, and computes to $P(snow) =$ 
+`r pi*a.e*b.e/(pi*.8^2)`.
+
+We can also use the figure above to explain what a joint probability is: The joint probability of winter and snow $P(winter, snow)$ or $P(winter \cap snow)$ is the ellipse-area that overlaps with the bottom right quadrant.
+
+What is a conditional probability? A conditional probability gives an answer to the question "Given that it is winter, what is the probability of snow". In the figure above this amounts to the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". We are "conditioning" our question about the probability of snow on the value of another variable, namely that the season is winter. In comparison, the unconditional probability asks "What is the size of the ellipse-area, _relative to_ the total circle area".
+
+So, to calculate the conditional probability $P(snow|winter)$ we want to answer the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". Unfortunately, there is no simple equation for calculating the overlap of an ellipse and a section of a circle. But we can approximate the correct answer by randomly placing points into the circle and checking if they are in the bottom right quadrant (winter), in the ellipse (snow), or in the area of the ellipse that overlaps with the bottom right quadrant (winter and snow).
+
+Here is the code for the simulation. You don't need to understand all of it, the important part is that we are keeping track of winter and snow days.
+
+```{r, echo = F}
+shift_rotate = function(xy,shift_x, shift_y, angle) {
+  theta = 2*pi/(1/(angle/360))
+  trans.mat = transf = matrix(c(cos(theta),-sin(theta),sin(theta),cos(theta)),nrow = 2)
+  
+  x.e = xy[1] - shift_x
+  y.e = xy[2] - shift_y
+  
+  xy_transf = trans.mat %*% matrix(c(x.e,y.e))
+  
+  return(xy.r = c(
+    x.r = shift_x + xy_transf[1],
+    y.r = shift_y + xy_transf[2]  
+  ))
+}
+
+in_ellipse = function(xy,h,k,a,b, e.rot) {
+  xy.r = shift_rotate(xy,h,k,e.rot)
+  (xy.r[1]-h)^2/a^2 + (xy.r[2]-k)^2/b^2 <= 1
+}
+
+rpoint_in_circle = function() {
+  r = 0.8 * sqrt(runif(1))
+  theta = runif(1) * 2 * pi
+  return(c(0 + r * cos(theta),
+           0 + r * sin(theta)))
+}
+
+```
+
+
+```{r}
+set.seed(123)
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "")
+draw.ellipse(h.e,k.e,a.e,b.e , col = adjustcolor("grey",alpha = .75), angle = e.rot)
+
+N = 365
+is.winter = vector(length = N) # vector to count winter days
+is.snow = vector(length = N) # vector to count snow days
+
+for (k in 1:N) {
+  # generate random point with custom function
+  xy = rpoint_in_circle()
+  
+  # check if it is a snow day, i.e. in ellipse, with custom function
+  is.snow[k] = in_ellipse(xy,h.e,k.e,a.e,b.e,e.rot)
+  # check if it is a winter day
+  is.winter[k] = xy[1] > 0 & xy[2] < 0
+  
+  # plot points
+  points(xy[1],xy[2],
+         pch = ifelse(is.winter[k] == T,23,21),
+         bg = ifelse(is.snow[k] == T,"green4","red"),
+         col = ifelse(is.snow[k] == T,"green4","red"))
+
+}
+
+legend("topright",
+       pch = c(18,16,15,15),
+       col = c("black","black","green4","red"),
+       legend = c("winter","no-winter", "snow", "no-snow"))
+```
+
+Let's first calculate the probability of winter, which should be around 0.25. This is simply the number of diamond-shaped dots divided by the total number of dots.
+
+```{r}
+N_winter = sum(is.winter)
+P_winter = N_winter/N
+P_winter
+```
+
+Now, the probability of snow (green dots divided by total number of dots):
+
+```{r}
+N_snow = sum(is.snow)
+P_snow = N_snow/N
+P_snow
+```
+And now it gets interesting. For the joint probability of winter and snow $P(winter, snow)$ we count the number of green diamonds. 
+
+```{r}
+# logical indexing:
+# is.snow[is.winter] returns only those entries of the 
+# vector is.snow that are at positions where the 
+# value for is.winter is TRUE
+N_winter_and_snow = sum(is.snow[is.winter]) 
+P_winter_and_snow = N_winter_and_snow/N
+P_winter_and_snow
+```
+
+Check the last code block and see that to get the (unconditional) joint probability we divide by the total number of dots `N`.
+
+In contrast, for conditional probabilities, we want to divide by the number of dots that have the value we are conditioning on. If we want to calculate the conditional probability $P(snow | winter)$, we therefore have to divide by the number of winter dots:
+
+```{r}
+P_snow_given_winter = N_winter_and_snow/N_winter
+P_snow_given_winter
+```
+If you check further above, you can see that `P_winter_and_snow` and `P_winter` are calculated by dividing `N_winter_and_snow` and `N_winter` with `N`, respectively. Therefore `N_winter_and_snow/N_winter` and `P_winter_and_snow/P_winter` have the same result, and we can also write:
+
+```{r}
+P_snow_given_winter = P_winter_and_snow/P_winter
+```
+
+Hopefully, you recognize now that we have the conditional probability on the left side (`P_snow_given_winter` or $P(snow|winter)$), which we calculate with help of the joint probability (`P_winter_and_snow` or $P(snow, winter)$) and the unconditional probability (`P_winter` or $P(winter)$) on the right side:
+
+$$
+P(snow|winter) = \frac{P(snow, winter)}{P(winter)}
+$$
+
+or more abstract:
+
+$$
+P(A|B) = \frac{P(A, B)}{P(B)}
+$$
+and by multiplying with $P(B)$ on both sides, we get 
+
+$$
+P(A, B) = P(A|B) \cdot P(B)
+$$
+
+which is the chain rule that connects conditional probabilities with joint probabilities.
+
+Can you also show that the following is true:
+
+$$
+P(A, B) = P(B|A) \cdot P(A)
+$$
+
+Or, using the example above
+
+$$
+P(snow, winter) = P(winter|snow) \cdot P(snow)
+$$
 
 ## 2E1 Probabaility of rain on Monday
 
