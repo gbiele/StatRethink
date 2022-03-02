@@ -39,19 +39,52 @@ P(rain, Monday) / P(Monday) = P(rain | Monday)
 
 4: P(rain|Monday) * P(Monday) / P(rain)
 
-Bayes rule on p 37 
+
+Page 37 shows the relationship of joint and conditional probability:
 
 $$
-\text{Posterior} = \frac{\text{Probability of data} \times \text{Prior}}{\text{Average probability of data}}
+P(A,B) = P(A|B) \cdot P(B) \\
+P(A,B) = P(B|A) \cdot P(A)
 $$
-This is more typically expressed, here using $H$ for hypothesis and $D$ for data
 
-$$
-P(H|D) = \frac{P(D|H)P(H)}{P(D)}
-$$
-If we substitute $D$ with rain and $H$ with Monday:
+We can say that the joint probability that it is Monday and raining is 
 
-P(Monday | rain) = P(rain|Monday) * P(Monday) / P(rain)
+$$P(Monday,rain) = P(rain|Monday) \cdot P(Monday)$$
+
+Equally, we can say
+
+$$P(Monday,rain) = P(Monday|rain) \cdot P(rain)$$
+where we have the term $P(Monday|rain)$ we are looking for, and which we can get as $P(Monday|rain) = P(Monday,rain)/P(rain)$. 
+
+Because we had calculated $P(Monday,rain) = P(rain|Monday) * P(Monday)$ above, we can also say 
+
+P(Monday,rain) = P(rain|Monday) * P(Monday) / P(rain)
+
+## 2E4
+
+It seems fair to describe Richard McElreath as a determinist which is 
+
+> the philosophical view that all events are determined completely by previously existing causes^[https://en.wikipedia.org/wiki/Determinism]
+
+This means that he takes the position ^[in good company of many philosophers including Aristotle, Hobbes, Laplace or Daniel Dennet and physicists like Bohr and Einstein] that _in theory_ everything is with certainty explainable, provided one has access to and can effectively use all relevant information. If everything is explainable, things happen or they don't, and therefor probability does not exist in nature.
+
+However, limited information (and lack of Leviathan information processing) brings probability into existence for humans.
+
+If a globe-tossing person would have all relevant information and computing power to calculate how a tossed globe moves through the air and is tossed, she could say with certainty if the index finger would land on water and land, and therefore the probability of water would always be 1 or 0. Globe tossers who do not have the relevant information and computing power remain uncertain and express their uncertainty by stating with what probability the index finger will lang on water.
+
+One consequence of this view is that the same situation can be deterministic for one person, and yet random for another person. For instance, random numbers generated with a computer are truly uncertain for somebody who does not know the "seed" number and the algorithm used to generate a random number. Such a person should make probabilistic statements about random numbers from the computer. In contrast, a person that know seed number and algorithm can make deterministic statements. For example, I know that iy your execute the following command in R
+
+```{r, eval = F}
+set.seed(123)
+runif(2)
+```
+
+you will get the numbers `0.2875775`and `0.7883051`.
+
+Probabilistic statements as expression of uncertainty can be related to, but are not the same as frequency-based statements. Frequency based statements come always from some countable event type, one has to count over multiple occurrences of an event to obtain frequencies. Thus, one could also arrive at the statement "the probability of water is 0.7" by tossing the globe multiple times. But we do not need to, we can also arrive at a probabilistic statement by starting with the fact that 70% of the earths surface is water.
+
+Allowing probabilistic statements also for non-countable events is not uncontroversial. For instance, the classical NHST framework uses only frequencies. One motivation to still allow or use probabilistic statements about one-time events is that they make it possible to express uncertainty about one time events, e.g. the probability that we will have more then 5h cloudless sunshine one day from today in Oslo.
+
 
 ## 2M1
 
@@ -119,12 +152,34 @@ plot(p_H2O_grid, posterior , type="l" )
 
 P(Earth | land) = .23 ? 
 
-P(land | Earth) = .3
-P(land | Mars) = 1
+We know that 
+
+- P(land | Earth) = .3
+- P(land | Mars) = 1
+- P(Earth) = .5
+
+We want to use
+$$
+P(A|B) = \frac{P(B|A) \cdot P(A)}{P(B)}
+$$
+A = Earth
+B = land
+
+so
+
+$$
+P(Earth|land) = \frac{P(land|Earth) \cdot P(Earth)}{P(land)}
+$$
+
+We know
+
+- P(B|A) = P(land | Earth) = .3
+- P(A) = P(Earth) = .5
+
+But we are missing P(B) = P(land)
 
 P(land) = (P(land | Earth) + P(land | Mars)) / 2 = .65
 
-P(Earth) = .5
 
 P(Earth | land) = P(land | Earth) * P(Earth) / P(land)
 
@@ -135,7 +190,7 @@ P(Earth | land) = P(land | Earth) * P(Earth) / P(land)
 ## 2M4
 
 We make a table with possible outcomes
-```{r 2M4a, message=FALSE}
+```{r 2M4a, message=FALSE, warning=FALSE}
 library(dplyr)  # for data manipulation
 library(magrittr) # for pipes
 library(knitr) # to show tables in Markdown
@@ -155,7 +210,8 @@ We keep only the rows where the up side is black and count how many of those are
 counts %>% 
   filter(Up == "B") %>% 
   pull(Down) %>% 
-  table()
+  table() %>% 
+  prop.table()
 ```
 
 Just for fun, here is the data.table way:
@@ -165,9 +221,10 @@ library(data.table)
 data.table(
   Up =   c("B","B","B","W","W","w"),
   Down = c("B","B","W","B","W","W"))  %>%
-  .[Up == "B"] %>% 
-  .[, Down] %>% 
-  table()
+  .[Up == "B"] %>% # dplyr: filter(Up == "B")
+  .[, Down] %>%    # dplyr: pull(Down) %>% 
+  table() %>% 
+  prop.table()
 ```
 ## 2M5
 
@@ -180,8 +237,10 @@ data.table(
   Down = c("B","B","B","B","W","B","W","W"))  %>%
   .[Up == "B"] %>% 
   .[, Down] %>% 
-  table()
+  table()  %>% 
+  prop.table()
 ```
+
 ## 2M6
 
 We use the `rep` command to manipulate the probability with which the different cards are chosen.
@@ -197,7 +256,8 @@ data.table(
            rep(c("W","w"),3)))  %>%
   .[Up == "B"] %>% 
   .[, Down] %>% 
-  table()
+  table() %>% 
+  prop.table()
 ```
 
 ## 2M7
@@ -249,6 +309,7 @@ all_ways %>%
   rowwise() %>% 
   mutate(face_down = substr(Black_up,2,2)) %>% 
   pull(face_down) %>% 
-  table()
+  table() %>% 
+  prop.table()
 ```
 
