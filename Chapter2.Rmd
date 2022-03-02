@@ -9,6 +9,36 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Teams
+
+```{r, echo = F, warning = F}
+library(magrittr)
+library(knitr)
+library(kableExtra)
+teams = c(
+  "crazy rich bayesians",
+"Laplace's demons",
+"(Probably) Aspiring Golem Engineers",
+"Bayesic Butchers",
+"The Golem's Posterior",
+"EMM",
+"The Statistics Owls",
+"Paranormal Distribution",
+"Cheerful Confounders",
+"average joe's",
+"The No Priors",
+"R&E*",
+"The Marbles*",
+"the outliers*",
+"We Stan*"
+)
+
+data.frame(Teams = teams) %>% 
+  kable %>% 
+  kable_styling(full_width = F)
+```
+
+
 ## 2E1
 
 2 and 4 are correct. Why 4?
@@ -87,6 +117,8 @@ Allowing probabilistic statements also for non-countable events is not uncontrov
 
 
 ## 2M1
+
+You need to use a sufficiently fine-grained grid to make differences visible.
 
 ```{r 2M1a}
 # parameter values at which we calculate the posterior probability
@@ -313,3 +345,31 @@ all_ways %>%
   prop.table()
 ```
 
+_COMMENT: ARE THERE OTHER “EASIER” SOLUTIONS TO GET THE SAME CONCLUSION????_
+
+GB: Not any I can immediately think of.
+
+# Exercises for next time:
+
+Everyone 3E1 - 3M6
+
+Why so many excersises?
+
+- 3E1 - 3E7 are easy / fast.
+- 3M1 - 3M3 Build on each other
+- 3M4, 3M5 just re-use the code from 3M1 - 3M3
+
+
+General comments:
+
+Please ...
+
+- add the name of the team as author
+- try to be more wordy, explain your code and/or use declarative variable names. (It is not suffient just to write the answers ;-))
+- try to write down the solutions so that it will be easy to explain to others what you did.
+- please submit compiled html files and not R-Markdown files (and check if the compiled html looks OK: line separation, plots shown etc)
+- next time, every team  submit a clarification question or a discussion question
+
+Rpubs:
+
+- I propose we try to use Rpubs (https://rpubs.com/), i.e. you can submit a link to an Rpubs site. You can delete you post after the class.
