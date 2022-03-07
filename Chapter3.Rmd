@@ -1,0 +1,457 @@
+---
+title: "Chapter 3"
+author: "Guido Biele"
+date: "07.03.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+header-includes: \usepackage{xcolor}
+---
+
+```{css}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+/* Headers */
+h1,h2,h3,h4,h5,h6{
+  font-size: 22pt;
+}
+````
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+library(magrittr)
+library(rethinking)
+par(mar=c(2.5,2.5,0,1), mgp=c(2,.7,0), tck=-.01)
+```
+
+## Generating the samples
+
+```{r SampleGeneration}
+p_grid = seq(from=0 , to=1, length.out=1000)
+prior = rep( 1 , 1000 )
+likelihood = dbinom(6, size=9, prob=p_grid)
+posterior = likelihood * prior
+posterior = posterior / sum(posterior)
+set.seed(100)
+samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+```
+
+## 3E1 Proportion posterior < .2
+
+It is always a good idea to plot a histogram of the posterior, if possible with meaningful axis limits
+
+```{r}
+hist(samples,
+     xlim = c(0,1))
+
+# using that R interprets FALSE as 0 and TRUE as 1
+mean(samples < .2)
+```
+
+## 3E2 Proportion posterior > .8
+
+```{r}
+mean(samples > .8)
+```
+
+## 3E3 Proportion posterior > .2 && < .8
+
+```{r}
+mean(samples > .2 & samples < .8)
+```
+
+
+## 3E4 20% of posterior below x
+Here we need to use the `quantile` function
+
+```{r}
+quantile(samples,.2)
+```
+
+## 3E4 20% of posterior above x
+
+```{r}
+quantile(samples,.8)
+```
+
+## 3E6 Border values of narrowest 66% interval
+
+This is the highest density posterior interval.
+```{r}
+HPDI(samples,.66)
+```
+
+## 3E7 Border values of the central 66% interval
+
+This is commonly called the credible interval.
+```{r}
+c(
+  quantile(samples,(1-.66)/2),
+  quantile(samples,1-(1-.66)/2)
+  )
+```
+or
+
+```{r}
+PI(samples,.66)
+```
+
+
+## 3M1 Construct posterior for new data with grid approximation
+
+Everything except the data is the same as at the beginning of the exercises
+
+```{r}
+likelihood = dbinom(8, size=15, prob=p_grid)
+posterior = likelihood * prior
+posterior = posterior / sum(posterior)
+plot(p_grid,posterior,'l') # use 'l' to get a line and not dots
+```
+
+## 3M2 10000 samples and 90% HDPI
+
+We use the `HDPI` function from the `rethinking` package.
+
+```{r, message=FALSE}
+samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+HPDI(samples, prob = .9)
+```
+## 3M3 posterior predictive check
+
+A few general tips
+
+- Always plot things!
+- Use pipes to help your understanding of code
+- Many short lines are better than fee long lines
+
+```{r, fig.height=10}
+posterior_predictions = 
+  rbinom(n = length(samples),
+         size = 15,
+         prob = samples)
+
+par(mfrow = c(2,1))
+
+posterior_predictions %>% 
+  table() %>% 
+  prop.table() %>% 
+  plot(ylab = "Proportion of samples",
+       xlab = "N water")
+
+# Now the same result with hard-to-read code
+plot(prop.table(table(posterior_predictions)),ylab = "Proportion of samples", xlab = "N water")
+
+mean(posterior_predictions == 8)
+```
+
+The probability to get 8 out of 15 is not 1, but it is with `r round(mean(posterior_predictions == 8)*100)`% the most likely outcome.
+
+## 3M4 Probability 6 in 9, given previous posterior
+
+We only need to change the size, and can then look at the predictions.
+
+```{r}
+posterior_predictions = 
+  rbinom(n = length(samples),
+         size = 9,
+         prob = samples)
+
+posterior_predictions %>% 
+  table() %>% 
+  prop.table() %>% 
+  plot(ylab = "Proportion of samples",
+       xlab = "N water")
+
+mean(posterior_predictions == 6)
+```
+
+## 3M5 Probability 6 in 9, given previous posterior
+
+Maybe this is a bit advanced, but we will write a little function that does all we need for us instead of doing everything manually:
+
+```{r}
+
+get_samples = function(p_grid, prior, n_tosses, n_water) {
+  likelihood = dbinom(n_water, size=n_tosses, prob=p_grid)
+  posterior = likelihood * prior
+  posterior = posterior / sum(posterior)
+  set.seed(100)
+  samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+  return(samples)
+}
+
+get_my_results = function(p_grid, prior) {
+  
+  samples = get_samples(p_grid, prior, n_tosses = 9, n_water = 6)
+  spls_15_8 = get_samples(p_grid, prior, n_tosses = 15, n_water = 8)
+  
+  results = c(
+    p_below_0.2 = mean(samples < .2),                #E1
+    p_above_0.8 = mean(samples > .8),                #E2
+    p_betweeb_0.2_0.8 = mean(samples > .2 & samples < .8), #E3
+    quantile_0.2 = quantile(samples,.2),             #E4
+    quantile_0.8 = quantile(samples,.8),             #E5
+    HDPI_66.lower = HPDI(samples,.66)[1],            #E6a
+    HDPI_66.upper = HPDI(samples,.66)[2],            #E6b
+    CI_66.lower = quantile(samples,(1-.66)/2),       #E7a
+    CI_66.upper = quantile(samples,1-(1-.66)/2),     #E7b
+    HDPI_90.lower = HPDI(spls_15_8,.90)[1],          #M2a
+    HDPI_90.upper = HPDI(spls_15_8,.90)[2],          #M2b
+    post_pred_8_15 = mean(rbinom(n = 10e4,size = 15,prob = spls_15_8) == 8), #M3
+    post_pred_6_9 = mean(rbinom(n = 10e4,size = 9,prob = spls_15_8) == 6)   #M4
+  )
+  return(results)
+}
+
+get_my_results(p_grid = p_grid,
+               prior = prior)
+```
+
+```{r}
+prior_flat = rep(1,1000)
+prior_05 = prior_flat
+prior_05[p_grid < 0.5] = 0
+
+results = 
+  cbind(prior_flat = get_my_results(p_grid, prior = prior_flat),
+        prior_0.5 = get_my_results(p_grid, prior = prior_05))
+
+results
+```
+To understand the differences, we can look at the entire posterior distributions.
+
+```{r, fig.height = 10, echo = F}
+par(mfrow = c(3,1))
+
+breaks = seq(0,1,length.out = 51)
+post_flat = get_samples(p_grid, prior, n_tosses = 9, n_water = 6)
+post_0.5 = get_samples(p_grid, prior_05, n_tosses = 9, n_water = 6)
+hist(post_0.5, xlim = c(0,1), col = adjustcolor("red",alpha = .5), main = "6 out of 9, quantiles", breaks = breaks)
+hist(post_flat, col = adjustcolor("blue",alpha = .5), add = T, breaks = breaks)
+
+abline(v = .7, col = "green", lwd = 2)
+abline(v = c(.2,.8))
+abline(v = results[4:5,1], col = "blue")
+abline(v = results[4:5,2], col = "red")
+
+hist(post_0.5, xlim = c(0,1), col = adjustcolor("red",alpha = .5), main = "6 out of 9, HDPI & CI", breaks = breaks)
+hist(post_flat, col = adjustcolor("blue",alpha = .5), add = T, breaks = breaks)
+
+abline(v = .7, col = "green", lwd = 2)
+abline(v = results[6:7,1], col = "blue", lty = 1)
+abline(v = results[6:7,2], col = "red", lty = 1)
+abline(v = results[8:9,1], col = "blue", lty = 3)
+abline(v = results[8:9,2], col = "red", lty = 3)
+
+
+post_flat = get_samples(p_grid, prior, n_tosses = 15, n_water = 8)
+post_0.5 = get_samples(p_grid, prior_05, n_tosses = 15, n_water = 8)
+hist(post_0.5, xlim = c(0,1), col = adjustcolor("red",alpha = .5), main = "8 out of 15, HDPI", breaks = breaks)
+hist(post_flat, col = adjustcolor("blue",alpha = .5), add = T, breaks = breaks)
+
+abline(v = .7, col = "green", lwd = 2)
+abline(v = results[10:11,1], col = "blue", lty = 1)
+abline(v = results[10:11,2], col = "red", lty = 1)
+
+```
+
+Here are the posterior predictions for posteriors from different priors, and the predictions when using the true proportion of water.
+
+```{r, echo = F}
+set.seed(1234)
+post_pred_flat = 
+  rbinom(n = 10e4,size = 15,prob = post_flat) %>% 
+  table() %>% prop.table()
+post_pred_0.5 = 
+  rbinom(n = 10e4,size = 15,prob = post_0.5) %>% 
+  table() %>% prop.table()
+post_pred_truth = 
+  rbinom(n = 10e4,size = 15,prob = 0.7) %>% 
+  table() %>% prop.table()
+
+ylim = c(0,max(post_pred_flat,post_pred_0.5, post_pred_truth))
+
+plot(0:15,post_pred_flat,type = "h", ylim = ylim, lwd = 2,
+     ylab = "Proportion posterior predictions",
+     xlab = "N water",
+     xaxt = "n",
+     yaxt = "n")
+axis(1,at = 0:15)
+lines((1:15)-.2,post_pred_0.5,type = "h", col = "red", lwd = 2)
+lines((3:15)+.2,post_pred_truth,type = "h", col = "blue", lwd = 2)
+legend("topleft", 
+       col = c("black","red","blue"), 
+       legend = c("Flat prior","Stair (0,.5) prior","truth"),
+       lty = c(1,1,1),
+       lwd = c(2,2,2),
+       bty = "n")
+```
+
+## Posterior predictions
+
+- The goal is to produce predictions give parameter estimates.
+- This always involves some randomness, so that even given a concrete parameter value, e.g. probability of water, different predictions are possible.
+
+For instance, our best guess for the probability of water with the stair-shapes prior and 8 out of 15 water landings is `r mean(post_0.5)`. Now we can simulate what happens if we plug this parameter in and make 10 predictions:
+
+```{r}
+post_preds = 
+  rbinom(n = 10,
+       size = 15,
+       prob = mean(post_0.5))
+post_preds
+```
+
+
+What is the mean of these predictions, divided by the number of tosses?
+
+```{r}
+mean(post_preds)/15
+```
+
+What if we make not 10 but 1000 predictions:
+
+```{r}
+post_preds = 
+  rbinom(n = 1000,
+       size = 15,
+       prob = mean(post_0.5)) 
+mean(post_preds)/15
+```
+
+There we go. Averaged over many predictions, we get the right proportion, even if there is some variations in predictions from one parameter value, as can be seen in the next figure.
+
+```{r, echo=F}
+par(mfrow = c(2,2), mar=c(3,2.5,2,1), mgp=c(1.5,.5,0), tck = -.025)
+
+plotter = function(prob) {
+  rbinom(n = 1000, size = 15, prob = prob) %>% 
+    table() %>% 
+    plot(main = paste0("prob = ",round(prob,2)),
+         xlim = c(0,15),
+       ylim = c(0,375),
+       xaxt = "n",
+       ylab = "Frequency",
+       xlab = "N water")
+  axis(1,at = 0:15)
+  abline(v = 15*prob, col = "grey", lwd = 2, lty = 3)
+}
+
+plotter(mean(post_0.5))
+
+for (p in c(.1,.5,.9)) {
+  plotter(p)
+}
+```
+
+<!-- $$ -->
+<!-- se = \sqrt{\frac{p(1-p)}{n}} \\ -->
+<!-- var = \frac{p(1-p)}{n} \\ -->
+<!-- n = \frac{var}{p(1-p)} \\ -->
+<!-- p = 0.7 \\  -->
+<!-- 0.025 = \sqrt{var} -->
+<!-- $$ -->
+
+## 3M6 Credible Interval with width of .05
+
+There is no unique solution for this question, because for proportions the standard error is a function of the proportion itself:
+
+$$
+se_{prop} = \sqrt{\frac{p(1-p)}{n}}
+$$
+We can illustrate this with an arbitrary sample size.
+
+```{r}
+se_prop = function(p) {
+  sqrt((p*(1-p))/50)
+}
+
+curve(se_prop(x),
+      xlab = "proportion",
+      ylab = "standard error")
+```
+
+For this exercise we assume that the target proportion is 0.7.
+
+First we write a function that takes sample size `n` and proportion `p` as input and returns the width of the 99% CI.
+
+```{r}
+interval_width = function(p,n) {
+  p_grid = seq(0,1,length.out = 10000)
+  likelihood = dbinom(round(n*p), size = n,  prob=p_grid)
+  posterior = likelihood * prior
+  posterior = posterior / sum(posterior)
+  set.seed(123)
+  samples = sample( p_grid , prob=posterior , size=1e5 , replace=TRUE )
+  width = diff(PI(samples,prob = .99))
+  return(width)
+}
+```
+
+Next we try a coarse grid-search to find where roughly the correct sample size will be.
+
+```{r, message=FALSE, warning=FALSE}
+ns = seq(100,5000,50)
+i.width = 
+  do.call(c,
+          lapply(ns, function(n) interval_width(.7,n))
+  )
+
+
+plot(ns,i.width,'l',
+      ylab = "interval width",
+      xlab = "sample size")
+ abline(h = .05)
+```
+
+Now the we know that it is around 2000, we can search with a finer grid around this area. 
+
+```{r}
+ns = seq(1500,3000,25)
+
+i.width = 
+  do.call(c,
+        lapply(ns, function(n) interval_width(.7,n))
+        )
+
+minimum_sample_size = min(ns[i.width < .05])
+minimum_sample_size
+```
+
+Here is a plot of the grid-search result. We also add plots for proportions of .6 and .8, just to show how this influences the width of the CI.
+
+```{r, echo = F}
+plot(ns,i.width,'l',
+     ylab = "interval width",
+     xlab = "sample size")
+
+abline(h = .05)
+abline(v = min(ns[i.width < .05]))
+
+i.width = 
+  do.call(c,
+        lapply(ns, function(n) interval_width(.6,n))
+        )
+lines(ns,i.width, lty = 2, col = "grey")
+abline(v = min(ns[i.width < .05]), col = "grey", lty = 2)
+
+i.width = 
+  do.call(c,
+        lapply(ns, function(n) interval_width(.8,n))
+        )
+lines(ns,i.width, lty = 3, col = "grey")
+abline(v = min(ns[i.width < .05]), col = "grey", lty = 3)
+
+legend("topright",
+       lty = c(1,2,3),
+       col = c("black","grey","gray"),
+       legend = c("p = .7", "p = .6", "p = .8"))
+
+title(paste0("minimum samples size = ", minimum_sample_size))
+```
+
