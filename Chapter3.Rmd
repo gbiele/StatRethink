@@ -465,3 +465,14 @@ legend("topright",
 title(paste0("minimum samples size = ", minimum_sample_size))
 ```
 
+# Questions
+
+## Clarification 
+
+- “Please concisely delineate the difference, advantages, disadvantages, and cases of use for grid approximation, quadratic approximation, and MCMC.”
+- #Questions: what do they mean by 'posterior distribution constructed from the NEW (8/15) data'? Is it also the case that we take w above (the number of Water in 15 tosses - 10,0000 observations) and build a posterior from it? We think we're probably wrong there, but it will be great to have a clear explanation of what they mean by NEW (8/15) data.
+
+## Disussion 
+
+- “An increasing number of researchers is implementing Bayesian methods, which inevitably introduces an influx of people that are inexperienced in Bayesian methods. It becomes more likely that many will implement the methods in a way that is not really sound as they do not fully grasp the underlying assumptions. Could this lead to a ‘Bayesian backlash’?“
+
