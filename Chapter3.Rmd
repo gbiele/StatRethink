@@ -48,22 +48,44 @@ set.seed(100)
 samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE)
 ```
 
-## 3E1 Proportion posterior < .2
+To show that the samples come in a random order, we can display the first 500.
+
+```{r, fig.height=5, fig.width=10}
+plot(1:500,samples[1:500],
+     ylab = "p",
+     xlab = "n",
+     type = 'l')
+```
+
+
+## 3E1 & 3E2 Proportion posterior < .2 & > .8 
 
 It is always a good idea to plot a histogram of the posterior, if possible with meaningful axis limits
 
 ```{r}
 hist(samples,
      xlim = c(0,1))
-
-# using that R interprets FALSE as 0 and TRUE as 1
-mean(samples < .2)
 ```
 
-## 3E2 Proportion posterior > .8
+Here is small function, which plots colored histograms and the results.
 
-```{r}
-mean(samples > .8)
+```{r, fig.width=10}
+colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "") {
+  if(is.numeric(main)) main=round(main,4)
+  h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
+  cols = rep("white",length(h))
+  if (!is.null(lower)) cols[h$breaks < lower] = "red"
+  if (!is.null(upper)) cols[h$breaks > upper] = "red"
+  plot(h, col = cols, main = main)
+}
+
+
+# using that R interprets FALSE as 0 and TRUE as 1
+p_smaller_0.2 = mean(samples < .2)
+p_larger_0.8 = mean(samples > .8)
+par(mfrow = c(1,2))
+colored.hist(samples, lower = .2, main = p_smaller_0.2)
+colored.hist(samples, upper = .8, main = p_larger_0.8)
 ```
 
 ## 3E3 Proportion posterior > .2 && < .8
@@ -71,23 +93,30 @@ mean(samples > .8)
 
 ```{r}
 mean(samples > .2 & samples < .8)
+colored.hist(samples, lower = .2, upper = .8,
+             main = mean(samples > .2 & samples < .8))
 ```
 
 One cannot simply do `mean(.2 < sample < .8)`!
 
 
-## 3E4 20% of posterior below x
+## 3E4 20% of posterior below x, 3E4 20% of posterior above x
+
 Here we need to use the `quantile` function
 
-```{r}
-quantile(samples,.2)
+```{r, fig.width=10}
+lowest_20_percent = quantile(samples,.2)
+highest_20_percent = quantile(samples,.8)
+
+colored.hist(samples,
+             lower = lowest_20_percent,
+             upper = highest_20_percent,
+             length.out = 51)
+text(lowest_20_percent,400, round(lowest_20_percent,3), pos = 2)
+text(highest_20_percent,425, round(highest_20_percent,3), pos = 4)
+
 ```
 
-## 3E4 20% of posterior above x
-
-```{r}
-quantile(samples,.8)
-```
 
 ## 3E6 Border values of narrowest 66% interval
 
@@ -471,6 +500,12 @@ title(paste0("minimum samples size = ", minimum_sample_size))
 
 - “Please concisely delineate the difference, advantages, disadvantages, and cases of use for grid approximation, quadratic approximation, and MCMC.”
 - #Questions: what do they mean by 'posterior distribution constructed from the NEW (8/15) data'? Is it also the case that we take w above (the number of Water in 15 tosses - 10,0000 observations) and build a posterior from it? We think we're probably wrong there, but it will be great to have a clear explanation of what they mean by NEW (8/15) data.
+- Does HPDI always include the most frequent value of the posterior probability? (Ref. page 57)
+- Ref. 3M5: Why are there so many simulated observations below the 0.5 proportion threshold (in this case 7.5), when the simulated data is based on a posterior with no values below p=0.5
+- Is MAP the same as the mode? (Ref. page 59)
+- The equation on page 62: What does “!” mean? Would be helpful with a walk-through of the elements of the equation.
+- On page 61, it is suggested that simulated data can be used to conduct power analyses. We thought this could be relevant for 3M6, but did not how. Is this something we will come back to later in the course?
+- Why do we use this input for the flat prior? prob_p <- rep(1, 1000) 
 
 ## Disussion 
 
