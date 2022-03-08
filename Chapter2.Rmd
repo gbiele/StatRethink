@@ -10,6 +10,23 @@ output:
 header-includes: \usepackage{xcolor}
 ---
 
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1,h2{
+  font-size: 22pt;
+}
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 ```

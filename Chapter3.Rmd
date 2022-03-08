@@ -1,7 +1,7 @@
 ---
 title: "Chapter 3"
 author: "Guido Biele"
-date: "07.03.2022"
+date: "08.03.2022"
 output:
   html_document: 
     mathjax: default
@@ -10,16 +10,23 @@ output:
 header-includes: \usepackage{xcolor}
 ---
 
-```{css}
+
+```{css, echo = F}
 body{
   font-family: Helvetica;
   font-size: 16pt;
 }
+pre{
+  font-size: 20px;
+}
 /* Headers */
-h1,h2,h3,h4,h5,h6{
+h1,h2{
   font-size: 22pt;
 }
-````
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
 
 
 ```{r setup, include=FALSE}
@@ -33,7 +40,7 @@ par(mar=c(2.5,2.5,0,1), mgp=c(2,.7,0), tck=-.01)
 
 ```{r SampleGeneration}
 p_grid = seq(from=0 , to=1, length.out=1000)
-prior = rep( 1 , 1000 )
+prior = rep(1, 1000 )
 likelihood = dbinom(6, size=9, prob=p_grid)
 posterior = likelihood * prior
 posterior = posterior / sum(posterior)
@@ -61,9 +68,12 @@ mean(samples > .8)
 
 ## 3E3 Proportion posterior > .2 && < .8
 
+
 ```{r}
 mean(samples > .2 & samples < .8)
 ```
+
+One cannot simply do `mean(.2 < sample < .8)`!
 
 
 ## 3E4 20% of posterior below x
@@ -127,7 +137,7 @@ A few general tips
 
 - Always plot things!
 - Use pipes to help your understanding of code
-- Many short lines are better than fee long lines
+- Many short lines are better than few long lines
 
 ```{r, fig.height=10}
 posterior_predictions = 
@@ -396,7 +406,7 @@ interval_width = function(p,n) {
 Next we try a coarse grid-search to find where roughly the correct sample size will be.
 
 ```{r, message=FALSE, warning=FALSE}
-ns = seq(100,5000,50)
+ns = seq(100,5000,250)
 i.width = 
   do.call(c,
           lapply(ns, function(n) interval_width(.7,n))
