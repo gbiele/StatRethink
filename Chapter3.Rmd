@@ -45,7 +45,7 @@ likelihood = dbinom(6, size=9, prob=p_grid)
 posterior = likelihood * prior
 posterior = posterior / sum(posterior)
 set.seed(100)
-samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE)
 ```
 
 ## 3E1 Proportion posterior < .2
@@ -128,7 +128,7 @@ plot(p_grid,posterior,'l') # use 'l' to get a line and not dots
 We use the `HDPI` function from the `rethinking` package.
 
 ```{r, message=FALSE}
-samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE )
 HPDI(samples, prob = .9)
 ```
 ## 3M3 posterior predictive check
@@ -191,7 +191,7 @@ get_samples = function(p_grid, prior, n_tosses, n_water) {
   posterior = likelihood * prior
   posterior = posterior / sum(posterior)
   set.seed(100)
-  samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+  samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE)
   return(samples)
 }
 
@@ -397,7 +397,7 @@ interval_width = function(p,n) {
   posterior = likelihood * prior
   posterior = posterior / sum(posterior)
   set.seed(123)
-  samples = sample( p_grid , prob=posterior , size=1e5 , replace=TRUE )
+  samples = sample(p_grid, prob=posterior, size=1e5, replace=TRUE)
   width = diff(PI(samples,prob = .99))
   return(width)
 }

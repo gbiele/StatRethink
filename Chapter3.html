@@ -214,7 +214,7 @@ likelihood = dbinom(6, size=9, prob=p_grid)
 posterior = likelihood * prior
 posterior = posterior / sum(posterior)
 set.seed(100)
-samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )</code></pre>
+samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE)</code></pre>
 </div>
 <div id="e1-proportion-posterior-.2" class="section level2">
 <h2>3E1 Proportion posterior &lt; .2</h2>
@@ -283,7 +283,7 @@ plot(p_grid,posterior,&#39;l&#39;) # use &#39;l&#39; to get a line and not dots<
 <div id="m2-10000-samples-and-90-hdpi" class="section level2">
 <h2>3M2 10000 samples and 90% HDPI</h2>
 <p>We use the <code>HDPI</code> function from the <code>rethinking</code> package.</p>
-<pre class="r"><code>samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+<pre class="r"><code>samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE )
 HPDI(samples, prob = .9)</code></pre>
 <pre><code>##      |0.9      0.9| 
 ## 0.3293293 0.7167167</code></pre>
@@ -341,7 +341,7 @@ posterior_predictions %&gt;%
   posterior = likelihood * prior
   posterior = posterior / sum(posterior)
   set.seed(100)
-  samples = sample( p_grid , prob=posterior , size=1e4 , replace=TRUE )
+  samples = sample(p_grid, prob=posterior, size=1e4, replace=TRUE)
   return(samples)
 }
 
@@ -461,7 +461,7 @@ curve(se_prop(x),
   posterior = likelihood * prior
   posterior = posterior / sum(posterior)
   set.seed(123)
-  samples = sample( p_grid , prob=posterior , size=1e5 , replace=TRUE )
+  samples = sample(p_grid, prob=posterior, size=1e5, replace=TRUE)
   width = diff(PI(samples,prob = .99))
   return(width)
 }</code></pre>
