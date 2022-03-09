@@ -73,7 +73,7 @@ Here is small function, which plots colored histograms and the results.
 colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "") {
   if(is.numeric(main)) main=round(main,4)
   h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
-  cols = rep("white",length(h))
+  cols = rep("white",length(h$breaks))
   if (!is.null(lower)) cols[h$breaks < lower] = "red"
   if (!is.null(upper)) cols[h$breaks > upper] = "red"
   plot(h, col = cols, main = main)
