@@ -1,7 +1,7 @@
 ---
 title: "Chapter 3: Recap"
 author: "Guido Biele"
-date: "03.03.2022"
+date: "09.03.2022"
 output:
   html_document: 
     mathjax: default
@@ -29,7 +29,7 @@ h3,h4,h5,h6{
 }
 ```
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 library(plotrix)
 draw_pie = function() {
@@ -56,6 +56,7 @@ colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main 
   if (!is.null(upper)) cols[h$breaks > upper] = color2
   plot(h, col = cols, main = main, xlab = "samples",border = NA)
 }
+library(rethinking)
 ```
 
 
@@ -80,6 +81,7 @@ We can visualize the probability that any given day falls into one of these for 
 
 ```{r, echo = F}
 draw_pie()
+draw_ellipse()
 legend("topleft",
        fill = c("white","lightblue2",adjustcolor("grey",alpha = .75),"lightblue3"),
        legend = c(
@@ -137,7 +139,7 @@ rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
 lines(c(-1,1),c(-1,-1), lwd = 2)
 title("Conditional probability", line = -1)
-title(expression(P(winter~"|"~snow)~"="~frac(P(winter ~ intersect(snow)),P(snow))), line = -3)
+title(expression(P(snow~"|"~winter)~"="~frac(P(winter ~ intersect(snow)),P(winter))), line = -3)
 pie(c(3,1), labels = "", border = "white")
 
 ```
@@ -263,7 +265,11 @@ $$
 
 This tells us the that probability of disease also depends of the unconditional probability (base rate) of the disease and of positive tests.
 
-Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is $P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)$, however, this is not so relevant for Bayesian inference.
+Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is $
+$$
+P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)
+$$
+However, this is not so relevant for Bayesian inference.
 
 
 ## What are probability distribution, and where do we need them for Bayesian statistics?
@@ -362,6 +368,7 @@ plot(p,
      likelihood,
      type = 'l',
      xlab = "p",
+     ylab = "likelihood = P(data|p)",
      bty = "n",
      col = "red")
 ```
@@ -484,7 +491,7 @@ legend("topleft",
 So it is not so easy to "cheat" with priors to get what one wants, provided one has collected sufficient data of course.
 
 
-## Ways to calculate the posterior:
+## Ways to calculate the posterior
 
 ### Grid approximation
 
@@ -513,7 +520,7 @@ MCMC directly produces samples.
 
 ## Learning things from the posterior 
 
-The posterior distribution contains all our knowledge given the prior, model, and data. If possible, we should show the reader the full posterior. If the posterior distribution has a simple form, which is often the case, we can calculate certain statistics to summarize the posterior.
+The posterior distribution contains all our knowledge given the prior, model, and data. If possible, we should show the reader the full posterior. If the posterior distribution has a simple shape, which is often the case, we can calculate certain statistics to summarize the posterior.
 
 We walk through some concepts with the following posterior.
 
@@ -525,8 +532,7 @@ colored.hist(samples1, length.out = 250)
 I prefer histograms over density plots, because density plots can distort things
 
 ### Mean, median, and mode
-```{r, echo = F, messsage = FALSE, warning=FALSE}
-library(rethinking)
+```{r, echo = F, messsage = FALSE, warning=FALSE, results='hide'}
 colored.hist(samples1, length.out = 250)
 mode = mean(HPDI(samples1,.1))
 clrs = c("red","blue","black")
@@ -576,7 +582,7 @@ colored.hist(samples1, length.out = 250,
              upper = HPDI80[2])
 title(paste("Interval length = ",round(diff(HPDI80),3)))
 abline(v = HPDI80, col = "blue", lwd = 2)
-abline(v = CI80, col = "blue", lwd = 2, lty = 3)
+abline(v = CI80, col = "lightblue", lwd = 2, lty = 3)
 text(HPDI80, c(4000,4000), labels = round(HPDI80,2), pos = c(2,4), col = "blue")
 ```
 
