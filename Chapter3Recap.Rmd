@@ -56,6 +56,7 @@ colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main 
   if (!is.null(upper)) cols[h$breaks > upper] = color2
   plot(h, col = cols, main = main, xlab = "samples",border = NA)
 }
+par(mar=c(2.5,2.5,0,1), mgp=c(2,.7,0), tck=-.01)
 library(rethinking)
 ```
 
@@ -270,6 +271,10 @@ $$
 P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)
 $$
 However, this is not so relevant for Bayesian inference.
+
+Because this last expression is so complicated, natural frequencies are popular with some
+
+![](NatFreq.jpg)
 
 
 ## What are probability distribution, and where do we need them for Bayesian statistics?

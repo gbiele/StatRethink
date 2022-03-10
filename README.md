@@ -7,7 +7,9 @@ The html documents with general background and solutions for exercises can be vi
 
 [Background material Chapter 2](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter2BG.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
-[Chapter 2](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter2.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+[Solutions Chapter 2](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter2.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
-[Chapter 3](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter3.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+[Recap Chapter 3](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter3Recap.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ). This repeats much of the Background material for chapter 2.
+
+[Solutions Chapter 3](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter3.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
