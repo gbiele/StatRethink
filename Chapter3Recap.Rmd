@@ -279,40 +279,64 @@ Because this last expression is so complicated, natural frequencies are popular 
 
 ## What are probability distribution, and where do we need them for Bayesian statistics?
 
-Probability distributions are a special form of functions.
+Probability distributions are a special form of functions. Here are some functions you have probably already encountered. 
 
-```{r, echo = F}
-plot(0, type = "n", xlim = c(0,1), 
+```{r, echo = F, fig.width=8, fig.height=8}
+par(mfrow = c(2,2))
+plot(seq(-3,3,.1), 
+     seq(-3,3,.1)^2,
+     type = "l", 
      xlab = "x",
-     ylab = "f(x)",
+     ylab = "f(x) = f(x)",
+     bty = "n", main = "Qudratic function")
+text(0,6,expression(f(x)~"="~x^2))
+plot(seq(0,pi*2,.1), 
+     sin(seq(0,pi*2,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "Sine function")
+text(5,.5,expression(f(x)~"="~sin(x)))
+plot(seq(0,10,.1), 
+     3 + 0.5 * seq(0,10,.1),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "linear regression function")
+text(2,7,expression(f(x)~"="~a+b*x))
+plot(seq(-3,3,.1), 
+     dnorm(seq(-3,3,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     main = "Normal distribution function",
      bty = "n")
+text(0,.1, expression(f(x)~"="~frac(1,sigma~sqrt(2~pi))~e^{-frac(1,2)~(frac(x-mu,sigma))^2}))
 ```
 
-We use these functions to represent uncertainty.
+In Bayesian statistics, we use probability distribution functions to represent uncertainty.
 
-Before we display uncertainty, let's look at how this function looks if we are certain to land on water:
+Before we display uncertainty, let's look at how it function looks if we are certain to land on water. The x axis of the function goes from 0 to 1, because proportions are limited to this range of numbers.
 
 ```{r, echo = F}
-plot(c(0,1,1),
-     c(0,0,1),
-     type = "l", xlim = c(0,1), 
-     ylab = "density",
-     xlab = "p",
-     col = "blue",
-     bty = "n")
+curve(dbeta(x,100000,1),
+      n = 1000,
+      ylab = "density",
+      xlab = "p",
+      col = "blue",
+      bty = "n")
 ```
 
-If we are certain to land on water, $P(water)$ = 1 and all other probabilities have the value zero.
+If we are certain to land on water, $P(water)$ = 1 and all other probabilities have the value zero. Note that density is not the same as probability.
 
-If we want to express uncertainty, our function has to allow all possible values (and forbid all impossible values) on the x-axis. If we had no information whatsoever to say something about the probability to land on water, all probabilities should get the same value.
+If we want to express uncertainty, our function has to allow all possible values (and forbid all impossible values) on the x-axis. If we had no information whatsoever to say something about the probability to land on water, all probabilities p get the same value.
 
 ```{r, echo = F}
 curve(dbeta(x,1,1),
       ylab = "density", 
       xlab = "p", 
       bty = "n",
-      col = "blue",
-      yaxt = "n")
+      col = "blue")
 ```
 
 For this function to be a probability distribution, the area under the function (the integral) must sum up to 1.
