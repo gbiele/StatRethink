@@ -34,6 +34,14 @@ knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 library(magrittr)
 library(rethinking)
 par(mar=c(2.5,2.5,0,1), mgp=c(2,.7,0), tck=-.01)
+colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "") {
+  if(is.numeric(main)) main=round(main,4)
+  h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
+  cols = rep("white",length(h$breaks))
+  if (!is.null(lower)) cols[h$breaks < lower] = "red"
+  if (!is.null(upper)) cols[h$breaks > upper] = "red"
+  plot(h, col = cols, main = main)
+}
 ```
 
 ## Generating the samples
@@ -70,16 +78,6 @@ hist(samples,
 Here is small function, which plots colored histograms and the results.
 
 ```{r, fig.width=10}
-colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "") {
-  if(is.numeric(main)) main=round(main,4)
-  h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
-  cols = rep("white",length(h$breaks))
-  if (!is.null(lower)) cols[h$breaks < lower] = "red"
-  if (!is.null(upper)) cols[h$breaks > upper] = "red"
-  plot(h, col = cols, main = main)
-}
-
-
 # using that R interprets FALSE as 0 and TRUE as 1
 p_smaller_0.2 = mean(samples < .2)
 p_larger_0.8 = mean(samples > .8)
