@@ -1,0 +1,84 @@
+---
+  title: "Chapter 2: Recap"
+author: "Guido Biele"
+date: "09.03.2022"
+output:
+  html_document: 
+  mathjax: default
+toc: true
+toc_depth: 2
+header-includes: 
+  \usepackage{xcolor}
+\usepackage{amsmath}
+---
+  
+  ```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+  h1,h2{
+    font-size: 22pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+library(plotrix)
+library(DescTools)
+library(rethinking)
+library(magrittr)
+```
+
+# Normal distribution & central limit theorem
+
+```{r}
+combs = 
+  CombSet(
+  c(-1,1),
+  4,
+  rep = T,
+  ord = T
+)
+
+combs %>% 
+  rowMeans() %>% 
+  table()
+```
+
+```{r}
+combs = CombSet(
+  c(-1,1),
+  16,
+  rep = T,
+  ord = T
+)
+
+combs.means = 
+  combs %>% 
+  rowMeans()
+
+h.breaks = seq(-1.01,1.01, length.out = 1+length(unique(combs.means)))
+combs.means %>% 
+  hist(breaks = h.breaks,
+     freq = F)
+
+curve(dnorm(x,sd = sd(combs.means)), add = T)
+
+```
+
+
+# Linear regression model
+
+- scatter plot of data
+- describe $E(y) = f(x)$
+- linear regression: $f(x) = \alpha + \beta X$ plot: line in scatter plot 
+- $x = Normal(E(y),\sigma)$ plot: normal distribution around $E(X)$
+
