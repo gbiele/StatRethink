@@ -327,7 +327,7 @@ curve(dbeta(x,100000,1),
       bty = "n")
 ```
 
-If we are certain to land on water, $P(water)$ = 1 and all other probabilities have the value zero. Note that density is not the same as probability.
+If we are certain to land on water, $P(water)$ = 1^[The figure shows density, not probability] and all other probabilities have the value zero. Note that density is not the same as probability.
 
 If we want to express uncertainty, our function has to allow all possible values (and forbid all impossible values) on the x-axis. If we had no information whatsoever to say something about the probability to land on water, all probabilities p get the same value.
 

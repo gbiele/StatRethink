@@ -358,16 +358,15 @@ plot(0, type = "n", xlim = c(0,1),
 Before we display uncertainty, let's look at how this function looks if we are certain to land on water:
 
 ```{r, echo = F}
-plot(c(0,1,1),
-     c(0,0,1),
-     type = "l", xlim = c(0,1), 
-     ylab = "density",
-     xlab = "p",
-     col = "blue",
-     bty = "n")
+curve(dbeta(x,100000,1),
+      n = 1000,
+      ylab = "density",
+      xlab = "p",
+      col = "blue",
+      bty = "n")
 ```
 
-If we are certain to land on water, $P(water)$ = 1 and all other probabilities have the value zero.
+If we are certain to land on water, $P(water)$ = 1^[The figure shows density, not probability] and all other probabilities have the value zero.
 
 If we want to express uncertainty, we also have to allow for all other values. If we had no information whatsoever to say something about the probability to land on water, all probabilities should get the same value.
 
@@ -376,8 +375,7 @@ curve(dbeta(x,1,1),
       ylab = "density", 
       xlab = "p", 
       bty = "n",
-      col = "blue",
-      yaxt = "n")
+      col = "blue")
 ```
 
 For this function to be a probability distribution, the area under the function (the integral) must sum up to 1.

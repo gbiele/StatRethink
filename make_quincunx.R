@@ -3,7 +3,9 @@ library(ggplot2)
 library(data.table)
 library(magrittr)
 
-for (sx in 1:10) {
+all.circles = vector(mode = "list", length = 9)
+
+for (sx in 1:9) {
   set.seed(sx)
   
   f.circles = 1.5

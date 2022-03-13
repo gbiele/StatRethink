@@ -1,18 +1,19 @@
 ---
-  title: "Chapter 2: Recap"
+title: "Chapter 4: Recap"
 author: "Guido Biele"
 date: "09.03.2022"
 output:
   html_document: 
-  mathjax: default
-toc: true
-toc_depth: 2
+    mathjax: default
+    toc: true
+    toc_depth: 2
 header-includes: 
-  \usepackage{xcolor}
-\usepackage{amsmath}
+    \usepackage{xcolor}
+    \usepackage{amsmath}
 ---
+
   
-  ```{css, echo = F}
+```{css, echo = F}
 body{
   font-family: Helvetica;
   font-size: 16pt;
@@ -75,6 +76,8 @@ curve(dnorm(x,sd = sd(combs.means)), add = T)
 ```
 
 
+![Galton Board](galton1.mp4)
+
 # Linear regression model
 
 - scatter plot of data
@@ -82,3 +85,14 @@ curve(dnorm(x,sd = sd(combs.means)), add = T)
 - linear regression: $f(x) = \alpha + \beta X$ plot: line in scatter plot 
 - $x = Normal(E(y),\sigma)$ plot: normal distribution around $E(X)$
 
+# Modeling workflow
+
+## Define model
+
+## Prior predictive check
+
+## Fitting
+
+## Posterior predictive check
+
+# Splines
