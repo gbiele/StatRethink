@@ -132,7 +132,7 @@ One popular device to display such a process is a Galton^[Who certainly was clev
 
 When data covary,we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
 
-```{r echo = F, fig.width=6, fig.height=6}
+```{r echo = F, fig.width=7, fig.height=7}
 dt = data.frame(length = rnorm(250,50,5))
 expected_weight = 3.5 + scale(dt$length)*.5
 dt$weight = rnorm(250,expected_weight,.5)
@@ -170,7 +170,7 @@ plot(dt,
      ylim = ylim)
 abline(h = mean(dt$weight), col = "red")
 arrows(40,0,40,mean(dt$weight), col = "blue", code = 3)
-text(40,1,expression(w[i]), pos = 4, col = "blue", cex = 2, font = 3)
+text(40,1,expression(mu), pos = 4, col = "blue", cex = 2, font = 3)
 par(mar=c(5,2,0,0))
 plot(NULL, type = "n", xlim = c(0, max(A$counts)), ylim = ylim, 
      bty = "n", yaxt = "n", xlab = "N")
@@ -237,7 +237,7 @@ prior.pedictive.weights = rnorm(
 
 hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
 text(-2,2000,expression(mu~"="~Normal(3.5,1.5)))
-text(-2,1900,expression(sigma~"="~Uniform(3.5,1.5)))
+text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)))
 ```
 
 
@@ -255,7 +255,7 @@ prior.pedictive.weights = rnorm(
 
 hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
 text(-3300,1500,expression(mu~"="~Normal(0,10000)))
-text(-3300,1400,expression(sigma~"="~Uniform(0,10000)))
+text(-3300,1350,expression(sigma~"="~Uniform(0,10000)))
 ```
 
 It seems obvious that the first set of parameters makes more sense.
@@ -271,31 +271,34 @@ head(dt)
 Based on the quap code in the table above, we can also put the quap model. `alist` is a command that creates a list that holds our model.
 
 ```{r}
-mu.model.list =
+alpha.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
-    mu     ~ dnorm(3.5,1.5),
+    mu <- alpha,
+    alpha  ~ dnorm(3.5,1.5),
     sigma  ~ dunif(0,1.5)
   )
 ```
 
+For reasons that will be clear soon, we are using a parameter $\alpha$ as a determinent of the mean $\mu$.
+
 This is what the model list looks like:
 
 ```{r}
-mu.model.list
+alpha.model.list
 ```
 
 Now we can use `quap` to calculate the posterior distribution.
 
 ```{r}
-mu.model.fit = quap(mu.model.list, data=dt)
+alpha.model.fit = quap(alpha.model.list, data=dt)
 ```
 
 
 And we can have a first glimpse of the results with the `precis` function from the `rethinking package`:
 
 ```{r}
-precis(mu.model.fit)
+precis(alpha.model.fit)
 ```
 
 # Posterior predictive check
@@ -305,15 +308,16 @@ Before we start interpreting our data, it is always a good idea to see if the mo
 To do this, we first extract the posterior from the prior:
 
 ```{r}
-mu.model.post = extract.samples(mu.model.fit,n=1e4)
-head(mu.model.post)
+alpha.model.post = extract.samples(alpha.model.fit,n=1e4)
+alpha.model.post$mu = alpha.model.post$alpha
+head(alpha.model.post)
 ```
 
 One thing we would like to check is if the observed mean is within the credible interval of the posterior for $\mu$:
 
 ```{r}
-hist(mu.model.post$mu, main = "",xlab = expression(mu))
-abline(v = HPDI(mu.model.post$mu), col = "blue")
+hist(alpha.model.post$mu, main = "",xlab = expression(mu))
+abline(v = HPDI(alpha.model.post$mu), col = "blue")
 abline(v = mean(dt$weight), lwd = 2)
 ```
 
@@ -321,9 +325,9 @@ We also expect that most of the data lies within the posterior predicted values.
 
 ```{r}
 posterior.predictions = 
-  rnorm(nrow(mu.model.post),
-        mu.model.post$mu,
-        mu.model.post$sigma)
+  rnorm(nrow(alpha.model.post),
+        alpha.model.post$mu,
+        alpha.model.post$sigma)
 
 hist(dt$weight, col = "gray10", main = "", xlab = "weight")
 hdpi = HPDI(posterior.predictions)
@@ -336,31 +340,127 @@ title(paste0(round(in.hdpi*100),"% of weights are in the 89% HDPI"))
 
 Now let's simulate 200 weights and see if they are associated with length:
 
-```{r}
-pp.weight = rnorm(250,
-      mu.model.post$mu[1:250],
-      mu.model.post$sigma[1:250])
+```{r, fig.height=7}
+par(mfrow = c(2,2))
+plot(dt,
+     ylab = "weight",
+     xlab = "length")
 
+pp.weight = rnorm(250,
+      alpha.model.post$mu[1:250],
+      alpha.model.post$sigma[1:250])
 plot(dt$length,pp.weight,
      ylab = "posterior prediction weight",
-     xlab = "length")
+     xlab = "length",
+     col = "blue")
+```
+
+Differently than in the observed data, the predicted data do not show an association between length and weight. This is obviously because we did not use length to predict weight. Instead of the following model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on length.
+
+Finally, we can show the estimated weight together with the observed weights
+
+```{r, fig.height=7}
+par(mfrow = c(1,2))
+plot(dt,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+abline(h = sample(alpha.model.post$mu,250),col = adjustcolor("blue",alpha = .2))
+xs = runif(250,39.75,40.25)
+arrows(xs,rep(0,250),xs,
+       sample(alpha.model.post$mu,250), col = adjustcolor("red",alpha = .1),
+       code = 3)
+
+plot(dt,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+abline(lm(dt$weight~dt$length), lty = 3, col = "blue", lwd = 3)
+```
+
+Looking at the right-hand side of the plot, we see that it is not so easy to think about what the mean weight is, length has a difficult scale. We can just re-scale it.
+
+```{r, fig.width=7, fig.height=7}
+dt$length.s = scale(dt$length)
+plot(dt$length.s,
+     dt$weight,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+abline(lm(dt$weight~dt$length), lty = 3, col = adjustcolor("blue",alpha = .2), lwd = 3)
+```
+
+
+No it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the weight goes up by 5 units (-3 to 2), length goes up by 4 units (2 to 6), that `r 4/5`kg per cm length.
+
+So we can build a new model:
+
+We start as before
+
+<br/>
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
+|Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
+|Prior | $\alpha \sim Normal(3.5,1.5)$ | `alpha ~ dnorm(3.5, 1.5)` |
+|Prior | $\beta \sim Normal(1,1)$ | `beta ~ dnorm(1, 1)` |
+|Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
+
+<br/>
+
+The only real difference to the previous model is in lines 2 and 4. 
+
+We do again a prior predictive check to see if model and prior are broadly in line with the data.
+
+```{r, fig.width=7, fig.height=7}
+plot(dt$length.s,
+     dt$weight,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+clr = adjustcolor("black",alpha = .25)
+for (k in 1:100)
+  abline(rnorm(1,3.5,1.5), rnorm(1,1,1), col = clr)
+```
+This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibally lage range. We can do better than that, without that the model priors determine the fitting results.
+
+```{r, fig.width=7, fig.height=7}
+plot(dt$length.s,
+     dt$weight,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+for (k in 1:100)
+    abline(rnorm(1,3.5,1), rlnorm(1,-.25,.5), col = clr)
+```
+This looks much more reasonable. Here is the model with new priors:
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
+|Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
+|Prior | $\alpha \sim logNormal(3.5,1)$ | `alpha ~ dlnorm(-.25, .5)` |
+|Prior | $\beta \sim Normal(1,1)$ | `beta ~ dnorm(1, 1)` |
+|Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
+
+And here is the quap model:
+
+```{r}
+mu.model.list =
+  alist(
+    weight ~ dnorm(mu,sigma),
+    mu <- a + b * length.s,
+    a  ~ dnorm(3.5,1),
+    b  ~ dlnorm(-.25,.5),
+    sigma  ~ dunif(0,1.5)
+  )
+
+mu.model.list
 ```
 
 
 
 
-- describe $E(y) = f(x)$
-- linear regression: $f(x) = \alpha + \beta X$ plot: line in scatter plot 
-- $x = Normal(E(y),\sigma)$ plot: normal distribution around $E(X)$
-
-# Modeling workflow
-
-## Define model
-
-## Prior predictive check
-
-## Fitting
-
-## Posterior predictive check
 
 # Splines

@@ -5,7 +5,7 @@ library(magrittr)
 
 all.circles = vector(mode = "list", length = 9)
 
-for (sx in 1:9) {
+for (sx in 1:25) {
   set.seed(sx)
   
   f.circles = 1.5
@@ -58,12 +58,16 @@ for (sx in 1:9) {
   floor <- -18
   width <- 60
   for (x in seq(-width, width, 3)) {
-    cm$add_static_segment(x, floor,  x,  40)
+    y = ifelse(abs(x) == width,40,40)
+    cm$add_static_segment(x, floor,  x,  y)
   }
   
   cm$add_static_segment(-width, floor, width, floor)
   cm$add_static_segment(-width, floor-0.2, width, floor-0.2)
   
+  #floor
+  cm$add_static_segment(-width*3, floor-200, width*3, floor-200)
+  cm$add_static_segment(-width*3, floor-0.2-200, width*3, floor-0.2-200)
   
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
