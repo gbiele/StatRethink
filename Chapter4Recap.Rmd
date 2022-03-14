@@ -1,7 +1,7 @@
 ---
 title: "Chapter 4: Recap"
 author: "Guido Biele"
-date: "09.03.2022"
+date: "14.03.2022"
 output:
   html_document: 
     mathjax: default
@@ -32,29 +32,67 @@ h3,h4,h5,h6{
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 library(plotrix)
 library(DescTools)
 library(rethinking)
 library(magrittr)
+library(knitr)
+library(kableExtra)
+library(psych)
+library(MASS)
 ```
 
 # Normal distribution & central limit theorem
 
-```{r}
+Lets assume the monthly growth rate follows following distribution:
+
+```{r, echo = F}
+curve(dgamma(x,1.1,1.3),
+      0,6,
+      ylab = "density",
+      xlab = "growth in cm per month")
+```
+
+What is the distribution of heights from 10000 people at age 16?
+
+```{r, echo = F}
+set.seed(3)
+rgamma(12*16*10000,1.1,1.3) %>% 
+  matrix(nrow = 10000) %>% 
+  rowSums() %>% 
+  hist(main = "", 
+       xlab = "height in cm")
+```
+
+This is an example the displays the central limit theorem, which states that the result of processes that manifest as the sum of many small identical and independently distributed events are normally distributed.
+
+One way to explain why this is the case is to see that there are more possible combinations of events that lead to average outcomes than possible combination of events that lead to extreme events. 
+
+For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you loos a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
+
+```{r, echo = F}
 combs = 
   CombSet(
   c(-1,1),
   4,
   rep = T,
-  ord = T
-)
+  ord = T)
+
+colnames(combs) = paste("event",1:4)
+
+combs = cbind(Permutation = 1:nrow(combs),
+              combs,
+              sum = rowSums(combs))
 
 combs %>% 
-  rowMeans() %>% 
-  table()
+  kable() %>% 
+  kable_styling()
 ```
 
-```{r}
+Now lets do the same experiment again, except that we are not looking at 4, but 16 tosses, which leads to $2^{16}$ or `r 2^16` possible sequences. Here is the distribution of credit points.
+
+```{r, echo = F}
 combs = CombSet(
   c(-1,1),
   16,
@@ -62,25 +100,255 @@ combs = CombSet(
   ord = T
 )
 
-combs.means = 
+combs.sum = 
   combs %>% 
-  rowMeans()
+  rowSums()
 
-h.breaks = seq(-1.01,1.01, length.out = 1+length(unique(combs.means)))
-combs.means %>% 
-  hist(breaks = h.breaks,
-     freq = F)
+h.breaks = seq(-16.01,16.01, length.out = 1+length(unique(combs.sum)))
+h = 
+  combs.sum %>% 
+  hist(breaks = h.breaks, plot = F)
 
-curve(dnorm(x,sd = sd(combs.means)), add = T)
+plot(h$mids, h$counts, type = 'h',
+     ylab = "density",
+     xlab = "number of credit points")
+x = seq(-16,16, .005)
+y = dnorm(x, sd = 4)
+y = y/max(y)*max(h$counts)
+lines(x,y, col = "grey", lty = 3)
 
 ```
 
+One popular device to display such a process is a Galton^[Who certainly was clever, but is nowadays also infamous for his views on eugenics and race.] board:
 
-![Galton Board](galton1.mp4)
+<!-- ![Galton Board](galton1.mp4) -->
 
 # Linear regression model
 
-- scatter plot of data
+![A 10 days old baby](newborn.jpg)
+
+
+## What is marginalization?
+
+When data covary,we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
+
+```{r echo = F, fig.width=6, fig.height=6}
+dt = data.frame(length = rnorm(250,50,5))
+expected_weight = 3.5 + scale(dt$length)*.5
+dt$weight = rnorm(250,expected_weight,.5)
+plot(dt,
+     ylab = "weight",
+     xlab = "length")
+```
+Sometimes, we want information about only one dimension of the data. This information is shown in the _marginal_ distribution.
+
+```{r, echo = F}
+scatter.hist( weight ~ length,
+              data = dt,
+              density = FALSE, ellipse = FALSE, smooth = F, correl = F,
+              ylab = "weight",
+              xlab = "length",
+              col = "black", pch = 0)
+```
+
+
+In this plot, each histogram shows the marginal distribution of length and weight, respectively.
+E.g. to get the frequency of length = 190cm, we sum all individuals with the eight, regardless of their weight.
+
+# Modeling the mean
+
+## Describing the model
+
+```{r, echo = F}
+layout(matrix(c(1,1,2), nrow=1))
+par(mar=c(5,5,0,0))
+A = hist(dt$weight, plot = F)
+ylim = c(0, max(A$breaks))
+plot(dt,
+     ylab = "weight",
+     xlab = "length",
+     ylim = ylim)
+abline(h = mean(dt$weight), col = "red")
+arrows(40,0,40,mean(dt$weight), col = "blue", code = 3)
+text(40,1,expression(w[i]), pos = 4, col = "blue", cex = 2, font = 3)
+par(mar=c(5,2,0,0))
+plot(NULL, type = "n", xlim = c(0, max(A$counts)), ylim = ylim, 
+     bty = "n", yaxt = "n", xlab = "N")
+rect(0,
+     A$breaks[1:(length(A$breaks) - 1)], 
+     A$counts, 
+     A$breaks[2:length(A$breaks)],
+     col = "grey")
+#dy = density(dt$weight)
+#plot(dy$y,dy$x)
+```
+
+To model such data, we typically think first about the likelihood function. The question here is, which distribution describes best the data we observed.
+Given that we can think of birth weight as the result of a sum of many processes, a normal distribution, with parameters $\mu$ and $\sigma$ for mean and standard deviations, makes sense. (One easy way to spot parameters is that they are typically Greek letters, whereas data variables are Roman letters.)
+
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
+
+<br />
+
+Parameters $\mu$ and $\sigma$ are variables that we cannot observe directly, we have to estimate them from the data _and the prior_. The table above already shows how they depend on the data, but we still need to add that they also depend on the prior:
+
+<br />
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
+|Prior | $\mu \sim Normal(3.5,1.5)$ | `mu ~ dnorm(3.5, 1.5)` |
+|Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
+
+<br />
+
+And if we want to impress (or scare off) a colleague, we can write down the full model:
+
+$$
+P(\mu,\sigma|w) = \frac{\prod_i Normal(w_i|\mu,\sigma) Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}{\int\int \prod_i Normal(w_i|\mu,\sigma) Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}
+$$
+<br />
+
+This looks scarier than it is. The numerator just means to calculate the following for each combination of $\mu$ and $\sigma$
+
+1. for each participant $i$ calculate the product of 
+  - likelihood ($Normal(w_i|\mu,\sigma)$) and 
+  - prior ($Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)$)
+2. calculate the product of all values generated in 1.
+  
+This is not how the calculation is really performed (expect when one uses grid approximation). Instead, methods lake Lapalce approximation or MCMC are used to calculate this quantity.
+
+The denominator is what is called the evidence, and it's main purpose is to insure that the posterior sums to 1.
+
+## Prior predictive check
+
+It is good predictive to check if the model with priors make sensible predictions, before one estimates the model parameters.
+The goal is not to prior-predict data that are very similar to observed data, but to prior-predict data that pass plausibility checks and are in the same ball park as the observed data.
+Plausibility checks are simple things like that there are not negative weights. With "in the same ball park" one means that the values should ave approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
+
+```{r}
+prior.pedictive.weights = rnorm(
+  10000,
+  rnorm(10000, 3.5, 1.5),
+  runif(10000, 0, 1.5))
+
+hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
+text(-2,2000,expression(mu~"="~Normal(3.5,1.5)))
+text(-2,1900,expression(sigma~"="~Uniform(3.5,1.5)))
+```
+
+
+This looks reasonable, even though we surely know that there are no newborns with a weight below 0 or above 6 kilogram. But the point of the prior is not to forbid impossible values. Such impossible values should be rare, and if they have to be allowed in order to insure a weak influence of the prior on the results, this is OK.
+
+
+How does it look if we use non-informative priors?
+
+```{r}
+set.seed(1)
+prior.pedictive.weights = rnorm(
+  10000,
+  rnorm(10000, 0, 1000),
+  runif(10000, 0, 1000))
+
+hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
+text(-3300,1500,expression(mu~"="~Normal(0,10000)))
+text(-3300,1400,expression(sigma~"="~Uniform(0,10000)))
+```
+
+It seems obvious that the first set of parameters makes more sense.
+
+## Estimating the model parameters
+
+To analyse the model, we can just use the data.frame we created above:
+
+```{r}
+head(dt)
+```
+
+Based on the quap code in the table above, we can also put the quap model. `alist` is a command that creates a list that holds our model.
+
+```{r}
+mu.model.list =
+  alist(
+    weight ~ dnorm(mu,sigma),
+    mu     ~ dnorm(3.5,1.5),
+    sigma  ~ dunif(0,1.5)
+  )
+```
+
+This is what the model list looks like:
+
+```{r}
+mu.model.list
+```
+
+Now we can use `quap` to calculate the posterior distribution.
+
+```{r}
+mu.model.fit = quap(mu.model.list, data=dt)
+```
+
+
+And we can have a first glimpse of the results with the `precis` function from the `rethinking package`:
+
+```{r}
+precis(mu.model.fit)
+```
+
+# Posterior predictive check
+
+Before we start interpreting our data, it is always a good idea to see if the model is any good at describing the data.
+
+To do this, we first extract the posterior from the prior:
+
+```{r}
+mu.model.post = extract.samples(mu.model.fit,n=1e4)
+head(mu.model.post)
+```
+
+One thing we would like to check is if the observed mean is within the credible interval of the posterior for $\mu$:
+
+```{r}
+hist(mu.model.post$mu, main = "",xlab = expression(mu))
+abline(v = HPDI(mu.model.post$mu), col = "blue")
+abline(v = mean(dt$weight), lwd = 2)
+```
+
+We also expect that most of the data lies within the posterior predicted values. First we calculate the posterior predictions, which depend on $\mu$ and $\sigma$:
+
+```{r}
+posterior.predictions = 
+  rnorm(nrow(mu.model.post),
+        mu.model.post$mu,
+        mu.model.post$sigma)
+
+hist(dt$weight, col = "gray10", main = "", xlab = "weight")
+hdpi = HPDI(posterior.predictions)
+abline(v = hdpi , col = "blue")
+in.hdpi = mean(dt$weight > hdpi[1] & dt$weight < hdpi[2])
+
+title(paste0(round(in.hdpi*100),"% of weights are in the 89% HDPI"))
+
+```
+
+Now let's simulate 200 weights and see if they are associated with length:
+
+```{r}
+pp.weight = rnorm(250,
+      mu.model.post$mu[1:250],
+      mu.model.post$sigma[1:250])
+
+plot(dt$length,pp.weight,
+     ylab = "posterior prediction weight",
+     xlab = "length")
+```
+
+
+
+
 - describe $E(y) = f(x)$
 - linear regression: $f(x) = \alpha + \beta X$ plot: line in scatter plot 
 - $x = Normal(E(y),\sigma)$ plot: normal distribution around $E(X)$
