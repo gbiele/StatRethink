@@ -41,13 +41,14 @@ library(knitr)
 library(kableExtra)
 library(psych)
 library(MASS)
+library(png)
 ```
 
 # Normal distribution & central limit theorem
 
 Lets assume the monthly growth rate follows following distribution:
 
-```{r, echo = F}
+```{r CLT1, echo = F}
 curve(dgamma(x,1.1,1.3),
       0,6,
       ylab = "density",
@@ -56,7 +57,7 @@ curve(dgamma(x,1.1,1.3),
 
 What is the distribution of heights from 10000 people at age 16?
 
-```{r, echo = F}
+```{r CLT2, echo = F}
 set.seed(3)
 rgamma(12*16*10000,1.1,1.3) %>% 
   matrix(nrow = 10000) %>% 
@@ -71,7 +72,7 @@ One way to explain why this is the case is to see that there are more possible c
 
 For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you loos a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
 
-```{r, echo = F}
+```{r CLTtable, echo = F}
 combs = 
   CombSet(
   c(-1,1),
@@ -92,7 +93,7 @@ combs %>%
 
 Now lets do the same experiment again, except that we are not looking at 4, but 16 tosses, which leads to $2^{16}$ or `r 2^16` possible sequences. Here is the distribution of credit points.
 
-```{r, echo = F}
+```{r CLTdist, echo = F}
 combs = CombSet(
   c(-1,1),
   16,
@@ -125,14 +126,18 @@ One popular device to display such a process is a Galton^[Who certainly was clev
 
 # Linear regression model
 
-![A 10 days old baby](newborn.jpg)
-
-
-## What is marginalization?
+What is the association between length and weight at birth?
 
 When data covary,we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
 
-```{r echo = F, fig.width=7, fig.height=7}
+```{r lreg1 , echo = F, fig.width=10}
+par(mfrow = c(1,2), mar = c(0,0,0,0))
+plot(0,type = "n", xaxt = "n", yaxt = "n", bty = "n",
+     xlim = c(0,1), ylim = c(0,1))
+Picture<-readPNG("newborn.png")
+rasterImage(Picture,0,0,1,1)
+
+par(mar=c(3,3,1,1), mgp=c(1.5,.5,0), tck=-.01)
 dt = data.frame(length = rnorm(250,50,5))
 expected_weight = 3.5 + scale(dt$length)*.5
 dt$weight = rnorm(250,expected_weight,.5)
@@ -140,9 +145,13 @@ plot(dt,
      ylab = "weight",
      xlab = "length")
 ```
+
+
+## What is marginalization?
+
 Sometimes, we want information about only one dimension of the data. This information is shown in the _marginal_ distribution.
 
-```{r, echo = F}
+```{r marginal, echo = F, fig.width=8, fig.height=8}
 scatter.hist( weight ~ length,
               data = dt,
               density = FALSE, ellipse = FALSE, smooth = F, correl = F,
@@ -159,7 +168,7 @@ E.g. to get the frequency of length = 190cm, we sum all individuals with the eig
 
 ## Describing the model
 
-```{r, echo = F}
+```{r alphaModel , echo = F}
 layout(matrix(c(1,1,2), nrow=1))
 par(mar=c(5,5,0,0))
 A = hist(dt$weight, plot = F)
@@ -171,9 +180,9 @@ plot(dt,
 abline(h = mean(dt$weight), col = "red")
 arrows(40,0,40,mean(dt$weight), col = "blue", code = 3)
 text(40,1,expression(mu), pos = 4, col = "blue", cex = 2, font = 3)
-par(mar=c(5,2,0,0))
+par(mar=c(5,.5,0,0))
 plot(NULL, type = "n", xlim = c(0, max(A$counts)), ylim = ylim, 
-     bty = "n", yaxt = "n", xlab = "N")
+     bty = "n", yaxt = "n", xlab = "N", ylab = "")
 rect(0,
      A$breaks[1:(length(A$breaks) - 1)], 
      A$counts, 
@@ -186,6 +195,7 @@ rect(0,
 To model such data, we typically think first about the likelihood function. The question here is, which distribution describes best the data we observed.
 Given that we can think of birth weight as the result of a sum of many processes, a normal distribution, with parameters $\mu$ and $\sigma$ for mean and standard deviations, makes sense. (One easy way to spot parameters is that they are typically Greek letters, whereas data variables are Roman letters.)
 
+<br />
 
 | What | Notation | quap R-code |
 |---|---|---|
@@ -229,13 +239,15 @@ It is good predictive to check if the model with priors make sensible prediction
 The goal is not to prior-predict data that are very similar to observed data, but to prior-predict data that pass plausibility checks and are in the same ball park as the observed data.
 Plausibility checks are simple things like that there are not negative weights. With "in the same ball park" one means that the values should ave approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
 
-```{r}
-prior.pedictive.weights = rnorm(
-  10000,
-  rnorm(10000, 3.5, 1.5),
-  runif(10000, 0, 1.5))
+```{r PriorPredictiveAlpha}
+prior.pedictive.weights = 
+  rnorm(
+    10000,
+    rnorm(10000, 3.5, 1.5),
+    runif(10000, 0, 1.5))
 
-hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
+hist(prior.pedictive.weights,
+     main = "", xlab = "prior predictive weights")
 text(-2,2000,expression(mu~"="~Normal(3.5,1.5)))
 text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)))
 ```
@@ -246,7 +258,7 @@ This looks reasonable, even though we surely know that there are no newborns wit
 
 How does it look if we use non-informative priors?
 
-```{r}
+```{r PriorPredictiveAlphaNonInformative, echo = F}
 set.seed(1)
 prior.pedictive.weights = rnorm(
   10000,
@@ -264,13 +276,13 @@ It seems obvious that the first set of parameters makes more sense.
 
 To analyse the model, we can just use the data.frame we created above:
 
-```{r}
+```{r showData}
 head(dt)
 ```
 
 Based on the quap code in the table above, we can also put the quap model. `alist` is a command that creates a list that holds our model.
 
-```{r}
+```{r alphaquapmpodel}
 alpha.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
@@ -284,30 +296,30 @@ For reasons that will be clear soon, we are using a parameter $\alpha$ as a dete
 
 This is what the model list looks like:
 
-```{r}
+```{r alphashowquap}
 alpha.model.list
 ```
 
 Now we can use `quap` to calculate the posterior distribution.
 
-```{r}
+```{r alphafit}
 alpha.model.fit = quap(alpha.model.list, data=dt)
 ```
 
 
 And we can have a first glimpse of the results with the `precis` function from the `rethinking package`:
 
-```{r}
+```{r alphaprecis}
 precis(alpha.model.fit)
 ```
 
-# Posterior predictive check
+## Posterior predictive check
 
 Before we start interpreting our data, it is always a good idea to see if the model is any good at describing the data.
 
 To do this, we first extract the posterior from the prior:
 
-```{r}
+```{r alphaposterpred1}
 alpha.model.post = extract.samples(alpha.model.fit,n=1e4)
 alpha.model.post$mu = alpha.model.post$alpha
 head(alpha.model.post)
@@ -315,7 +327,7 @@ head(alpha.model.post)
 
 One thing we would like to check is if the observed mean is within the credible interval of the posterior for $\mu$:
 
-```{r}
+```{r alphaposterpred2}
 hist(alpha.model.post$mu, main = "",xlab = expression(mu))
 abline(v = HPDI(alpha.model.post$mu), col = "blue")
 abline(v = mean(dt$weight), lwd = 2)
@@ -323,7 +335,7 @@ abline(v = mean(dt$weight), lwd = 2)
 
 We also expect that most of the data lies within the posterior predicted values. First we calculate the posterior predictions, which depend on $\mu$ and $\sigma$:
 
-```{r}
+```{r alphaposterpred5}
 posterior.predictions = 
   rnorm(nrow(alpha.model.post),
         alpha.model.post$mu,
@@ -340,8 +352,8 @@ title(paste0(round(in.hdpi*100),"% of weights are in the 89% HDPI"))
 
 Now let's simulate 200 weights and see if they are associated with length:
 
-```{r, fig.height=7}
-par(mfrow = c(2,2))
+```{r alphaposterpred3, fig.width=7}
+par(mfrow = c(1,2))
 plot(dt,
      ylab = "weight",
      xlab = "length")
@@ -355,19 +367,20 @@ plot(dt$length,pp.weight,
      col = "blue")
 ```
 
+# Linear regression
+
 Differently than in the observed data, the predicted data do not show an association between length and weight. This is obviously because we did not use length to predict weight. Instead of the following model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on length.
 
-Finally, we can show the estimated weight together with the observed weights
 
-```{r, fig.height=7}
+```{r alphaposterpred4}
 par(mfrow = c(1,2))
 plot(dt,
      ylab = "weight",
      xlab = "length",
      ylim = ylim)
-abline(h = sample(alpha.model.post$mu,250),col = adjustcolor("blue",alpha = .2))
-xs = runif(250,39.75,40.25)
-arrows(xs,rep(0,250),xs,
+abline(h = sample(alpha.model.post$mu,100),col = adjustcolor("blue",alpha = .2))
+xs = runif(100,39.75,40.25)
+arrows(xs,rep(0,100),xs,
        sample(alpha.model.post$mu,250), col = adjustcolor("red",alpha = .1),
        code = 3)
 
@@ -380,22 +393,41 @@ abline(lm(dt$weight~dt$length), lty = 3, col = "blue", lwd = 3)
 
 Looking at the right-hand side of the plot, we see that it is not so easy to think about what the mean weight is, length has a difficult scale. We can just re-scale it.
 
-```{r, fig.width=7, fig.height=7}
+```{r scaledata, fig.width=6, fig.height=6}
 dt$length.s = scale(dt$length)
 plot(dt$length.s,
      dt$weight,
      ylab = "weight",
      xlab = "length",
      ylim = ylim)
-abline(lm(dt$weight~dt$length), lty = 3, col = adjustcolor("blue",alpha = .2), lwd = 3)
 ```
 
 
-No it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the weight goes up by 5 units (-3 to 2), length goes up by 4 units (2 to 6), that `r 4/5`kg per cm length.
+Now it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the weight goes up by 5 units (-3 to 2), length goes up by 4 units (2 to 6), that `r 4/5`kg per cm length.
 
-So we can build a new model:
+## The model
 
-We start as before
+Next we "build" the new model, which can be visualized as follows:
+
+```{r moModelPlot, fig.width=6, fig.height=6, echo = F}
+plot(dt$length.s,
+     dt$weight,
+     col = "grey",
+     ylab = "weight",
+     xlab = "scaled length",
+     ylim = ylim,
+     xlim = c(-3,3))
+coeffs = coef(lm(dt$weight~dt$length.s))
+abline(coeffs, col = "blue", lwd = 2)
+arrows(0,0,0,mean(dt$weight), code = 3, col = "red", lwd = 2)
+abline(h = c(0,coeffs[1] + -3*coeffs[2]), col = "grey", lty = 3)
+draw.arc(-3, coeffs[1] + -3*coeffs[2], 1, deg1 = 0, deg2 = coeffs[2]*45, lwd = 2, col = "magenta", n = 100)
+text(0,1, expression(alpha), pos = 4, col = "red", cex = 1.5)
+text(-2.2,coeffs[1] + -2.2*coeffs[2], expression(beta), pos = 1, col = "magenta", cex = 1.5)
+text(2,coeffs[1] + 2*coeffs[2], expression(mu~"="~alpha+beta*l.s), pos = 1, col = "blue", cex = 1.5, srt=25.6)
+```
+
+Here is the full model
 
 <br/>
 
@@ -411,42 +443,46 @@ We start as before
 
 The only real difference to the previous model is in lines 2 and 4. 
 
+## Prior predictive check
+
 We do again a prior predictive check to see if model and prior are broadly in line with the data.
 
-```{r, fig.width=7, fig.height=7}
-plot(dt$length.s,
-     dt$weight,
+```{r mupriorpredicttive1, fig.width=7, fig.height=7}
+plot(0,
      ylab = "weight",
-     xlab = "length",
-     ylim = ylim)
+     xlab = "scaled length",
+     ylim = c(1,7),
+     xlim = c(-3,3))
 clr = adjustcolor("black",alpha = .25)
-for (k in 1:100)
+for (k in 1:50)
   abline(rnorm(1,3.5,1.5), rnorm(1,1,1), col = clr)
 ```
-This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibally lage range. We can do better than that, without that the model priors determine the fitting results.
 
-```{r, fig.width=7, fig.height=7}
-plot(dt$length.s,
-     dt$weight,
+This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibly large range. We can do better than that, without that the model priors determine the fitting results.
+
+```{r mupriorpredicttive2, fig.width=7, fig.height=7}
+plot(0,
      ylab = "weight",
-     xlab = "length",
-     ylim = ylim)
-for (k in 1:100)
-    abline(rnorm(1,3.5,1), rlnorm(1,-.25,.5), col = clr)
+     xlab = "scaled length",
+     ylim = c(1,7),
+     xlim = c(-3,3))
+for (k in 1:50)
+  abline(rnorm(1,3.5,1), rlnorm(1,-.25,.5), col = clr)
 ```
+
 This looks much more reasonable. Here is the model with new priors:
 
 | What | Notation | quap R-code |
 |---|---|---|
 |Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
 |Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
-|Prior | $\alpha \sim logNormal(3.5,1)$ | `alpha ~ dlnorm(-.25, .5)` |
-|Prior | $\beta \sim Normal(1,1)$ | `beta ~ dnorm(1, 1)` |
+|Prior | $\alpha \sim logNormal(3.5, 1)$ | `alpha ~ dnorm(3.5, 1)` |
+|Prior | $\beta \sim Normal(-.25, .5)$ | `beta ~ dlnorm(-.25, .5)` |
 |Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
 
-And here is the quap model:
+And here is the `quap` model:
 
-```{r}
+```{r muquap}
 mu.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
@@ -455,12 +491,173 @@ mu.model.list =
     b  ~ dlnorm(-.25,.5),
     sigma  ~ dunif(0,1.5)
   )
-
-mu.model.list
 ```
 
 
+## Estimating the model parameters
 
+We fit the `quap` model.
+
+```{r fitmumodel}
+mu.model.fit = quap(mu.model.list, data=dt)
+precis(mu.model.fit)
+```
+
+## Posterior predictive check
+
+As should become custom, we check if our model describes the data reasonably well. We first extract the posterior samples. 
+
+```{r mugetsamples}
+mu.model.post = extract.samples(mu.model.fit)
+```
+
+Next we calculate the "transformed parameter" $\mu$ for each participant. Because we have `r nrow(mu.model.post)` posterior samples and `r nrow(dt)` participants, we end up with a `r nrow(mu.model.post)` time `r nrow(dt)` matrix of posterior predictions.
+
+```{r mucalcposterpred}
+n_samples = nrow(mu.model.post)
+
+get_mu.model.pp = function(dt,posterior, type = "pred"){
+  mu.model.pp = 
+  apply(dt, # instead of a for loop
+        1,  # for each row in dt
+        function(x){
+          length.s = x[3] # take the scales length from pos. 3
+          with(data.frame(posterior),
+               {
+                 mu = a + b * length.s           # calculate mu
+                 if (type == "lin_pred") {
+                   return(mu)
+                 } else {
+                   pp = rnorm(n_samples,mu,sigma)  # generate post. preds
+                   return(pp)
+                 }
+                 
+                 
+               }
+          )
+        })
+}
+
+mu.model.pp = get_mu.model.pp(dt,mu.model.post)
+
+dim(mu.model.pp)
+```
+
+And we check if the predicted weights are consistent with the observed means.
+```{r muposterpred1, fig.width=8, fig.height=8, echo = F}
+par(mfrow = c(2,2))
+for (p in c(.1, .25, .5, .9)) {
+  hist(dt$weight, col = "gray10", main = "", xlab = "predicted weight")
+  hdpi = HPDI(as.vector(mu.model.pp),prob = p)
+  abline(v = hdpi , col = "blue")
+  in.hdpi = mean(dt$weight > hdpi[1] & dt$weight < hdpi[2])
+  title(paste0(round(in.hdpi*100),
+               "% of weights are in the ",p*100,"% HDPI"))
+}
+
+```
+
+Posterior predictive checks do not need to be limited to simlpy the outcome variable. We can check if any aspect of the data we care about works. Here we check if mean and sd of the predicted data lie within the credible interval of the posterior.
+
+```{r muposterpred2, fig.width=8 }
+par(mfrow = c(1,2))
+
+pp.mu = apply(mu.model.pp, 1, mean)
+pp.sd = apply(mu.model.pp, 1 , sd)
+
+hist(pp.mu, main = "")
+abline(v = c(HPDI(pp.mu),mean(dt$weight)), 
+       col = c("blue","blue","black"))
+
+hist(pp.sd, main = "")
+abline(v = c(HPDI(pp.sd),sd(dt$weight)), 
+       col = c("blue","blue","black"))
+```
+
+We can also check if we see the covariation of birth length and birth weight of we use predicted weights.
+
+```{r fig.width=8, fig.height=8, echo = F}
+par(mfrow = c(2,2))
+for (k in 1:4) {
+  plot(dt$length, mu.model.pp[k,], col = "blue",
+       xlab = "length", ylab = "predicted weight",
+       ylim = ylim)
+}
+```
+
+## Describe the results
+
+Now that we have convinced of the that the model describes the data well enough (yes, this is to a degree subjective) we can present our results.
+
+As a visual presentation we can e.g. just show the slope:
+
+```{r}
+plot(dt$length.s,
+     dt$weight,
+     col = "grey", 
+     ylab = "weight",
+     xlab = "length",
+     xaxt = "n")
+x.ticks = seq(35,60,by = 5)
+axis(1, 
+     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     labels = x.ticks)
+for(k in 1:25) 
+  abline(a = mu.model.post$a[k], 
+         b = mu.model.post$b[k],
+         col = adjustcolor("black",alpha = .2))
+```
+
+I like spaghetti plots, but confidence bands are more typically used:
+
+```{r}
+newdata = data.frame(a = 1,b = 2,length.s = seq(min(dt$length.s),max(dt$length.s),.1))
+mu.model.pp.nd = 
+  get_mu.model.pp(newdata,
+                  mu.model.post)
+mu.model.lin_pred.nd = 
+  get_mu.model.pp(newdata,
+                  mu.model.post,
+                  type = "lin_pred")
+
+HDPI.pp = apply(mu.model.pp.nd, 2, HPDI)
+HDPI.lin_pred = apply(mu.model.lin_pred.nd, 2, HPDI)
+
+conf_band = function(x,y) {
+  polygon(c(rev(x), x),
+          c(rev(y[2,]), y[1,]),
+          col = adjustcolor("blue", alpha = .1),
+          border = NA)  
+}
+
+par(mfrow = c(1,2))
+plot(dt$length.s,
+     dt$weight,
+     col = "grey", 
+     ylab = "weight",
+     xlab = "length",
+     xaxt = "n")
+conf_band(newdata$length.s,HDPI.lin_pred)
+x.ticks = seq(35,60,by = 5)
+axis(1, 
+     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     labels = x.ticks)
+abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
+
+plot(dt$length.s,
+     dt$weight,
+     col = "grey", 
+     ylab = "weight",
+     xlab = "length",
+     xaxt = "n")
+conf_band(newdata$length.s,HDPI.pp)
+x.ticks = seq(35,60,by = 5)
+axis(1, 
+     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     labels = x.ticks)
+abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
+
+```
 
 
 # Splines
