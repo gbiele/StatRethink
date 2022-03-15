@@ -352,7 +352,7 @@ title(paste0(round(in.hdpi*100),"% of weights are in the 89% HDPI"))
 
 Now let's simulate 200 weights and see if they are associated with length:
 
-```{r alphaposterpred3, fig.width=7}
+```{r alphaposterpred3, fig.width=8, echo = F}
 par(mfrow = c(1,2))
 plot(dt,
      ylab = "weight",
@@ -367,21 +367,25 @@ plot(dt$length,pp.weight,
      col = "blue")
 ```
 
+Differently than in the observed data, the predicted data do not show an association between length and weight. This is obviously because we did not use length to predict weight.
+
 # Linear regression
 
-Differently than in the observed data, the predicted data do not show an association between length and weight. This is obviously because we did not use length to predict weight. Instead of the following model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on length.
+Instead of the previous model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on birth length.
 
 
-```{r alphaposterpred4}
+```{r alphaposterpred4, fig.width=8}
 par(mfrow = c(1,2))
 plot(dt,
      ylab = "weight",
      xlab = "length",
      ylim = ylim)
-abline(h = sample(alpha.model.post$mu,100),col = adjustcolor("blue",alpha = .2))
+abline(h = sample(alpha.model.post$mu,100),
+       col = adjustcolor("blue",alpha = .2))
 xs = runif(100,39.75,40.25)
 arrows(xs,rep(0,100),xs,
-       sample(alpha.model.post$mu,250), col = adjustcolor("red",alpha = .1),
+       sample(alpha.model.post$mu,250),
+       col = adjustcolor("red",alpha = .1),
        code = 3)
 
 plot(dt,
@@ -513,32 +517,37 @@ mu.model.post = extract.samples(mu.model.fit)
 
 Next we calculate the "transformed parameter" $\mu$ for each participant. Because we have `r nrow(mu.model.post)` posterior samples and `r nrow(dt)` participants, we end up with a `r nrow(mu.model.post)` time `r nrow(dt)` matrix of posterior predictions.
 
+```{r}
+
+```
+
+
 ```{r mucalcposterpred}
 n_samples = nrow(mu.model.post)
 
-get_mu.model.pp = function(dt,posterior, type = "pred"){
+get_mu.model.pp = function(x,posterior, type = "pred"){
+  x = matrix(x, ncol = 1)
   mu.model.pp = 
-  apply(dt, # instead of a for loop
-        1,  # for each row in dt
-        function(x){
-          length.s = x[3] # take the scales length from pos. 3
-          with(data.frame(posterior),
-               {
-                 mu = a + b * length.s           # calculate mu
-                 if (type == "lin_pred") {
-                   return(mu)
-                 } else {
-                   pp = rnorm(n_samples,mu,sigma)  # generate post. preds
-                   return(pp)
-                 }
-                 
-                 
+    apply(
+      x, # instead of a for loop
+      1,  # for each row in dt
+      function(length.s){
+        with(data.frame(posterior),
+             {
+               mu = a + b * length.s             # calculate mu
+               if (type == "lin_pred") {
+                 return(mu)
+               } else {
+                 pp = rnorm(n_samples,mu,sigma)  # generate post. preds
+                 return(pp)
                }
-          )
-        })
+             }
+        )
+      }
+    )
 }
 
-mu.model.pp = get_mu.model.pp(dt,mu.model.post)
+mu.model.pp = get_mu.model.pp(dt$length.s,mu.model.post)
 
 dim(mu.model.pp)
 ```
@@ -554,7 +563,6 @@ for (p in c(.1, .25, .5, .9)) {
   title(paste0(round(in.hdpi*100),
                "% of weights are in the ",p*100,"% HDPI"))
 }
-
 ```
 
 Posterior predictive checks do not need to be limited to simlpy the outcome variable. We can check if any aspect of the data we care about works. Here we check if mean and sd of the predicted data lie within the credible interval of the posterior.
@@ -576,7 +584,7 @@ abline(v = c(HPDI(pp.sd),sd(dt$weight)),
 
 We can also check if we see the covariation of birth length and birth weight of we use predicted weights.
 
-```{r fig.width=8, fig.height=8, echo = F}
+```{r mupostpredcorr, fig.width=8, fig.height=8, echo = F}
 par(mfrow = c(2,2))
 for (k in 1:4) {
   plot(dt$length, mu.model.pp[k,], col = "blue",
@@ -591,7 +599,7 @@ Now that we have convinced of the that the model describes the data well enough 
 
 As a visual presentation we can e.g. just show the slope:
 
-```{r}
+```{r muresultsfigure1}
 plot(dt$length.s,
      dt$weight,
      col = "grey", 
@@ -610,13 +618,13 @@ for(k in 1:25)
 
 I like spaghetti plots, but confidence bands are more typically used:
 
-```{r}
-newdata = data.frame(a = 1,b = 2,length.s = seq(min(dt$length.s),max(dt$length.s),.1))
+```{r muresultsfigures2, fig.width=8, echo = F}
+length.s.new = seq(min(dt$length.s),max(dt$length.s),.1)
 mu.model.pp.nd = 
-  get_mu.model.pp(newdata,
+  get_mu.model.pp(length.s.new,
                   mu.model.post)
 mu.model.lin_pred.nd = 
-  get_mu.model.pp(newdata,
+  get_mu.model.pp(length.s.new,
                   mu.model.post,
                   type = "lin_pred")
 
@@ -636,8 +644,9 @@ plot(dt$length.s,
      col = "grey", 
      ylab = "weight",
      xlab = "length",
-     xaxt = "n")
-conf_band(newdata$length.s,HDPI.lin_pred)
+     xaxt = "n",
+     main = "Credible interval of expected weight")
+conf_band(length.s.new,HDPI.lin_pred)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
      at = (x.ticks-mean(dt$length))/sd(dt$length), 
@@ -649,15 +658,74 @@ plot(dt$length.s,
      col = "grey", 
      ylab = "weight",
      xlab = "length",
-     xaxt = "n")
-conf_band(newdata$length.s,HDPI.pp)
+     xaxt = "n",
+     main = "Credible interval of predicted weight")
+conf_band(length.s.new,HDPI.pp)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
      at = (x.ticks-mean(dt$length))/sd(dt$length), 
      labels = x.ticks)
 abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
-
 ```
 
 
+This is how one could describe the results:
+
+We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) increase with of birth weight.
+
 # Splines
+
+Splines are an alternative to polynomial regression if one wants to model non-linear relationships.
+
+In polynomial regression, the regression weight for each basis functions changes the predicted values over the entire range of the predictor variables.
+
+```{r polynomial, fig.height=7}
+x = seq(-3,3,.1)
+X.poly = poly(x, 2, raw = T)
+
+b1 = c(1,1)
+b2 = c(1,2)
+
+y1 = X.poly %*% b1
+y2 = X.poly %*% b2
+
+par(mfrow = c(2,1))
+matplot(X.poly, type = 'l', ylab = "basis function value", xlab = "" )
+title("Polynomials")
+plot(x, y1, 'l', lwd = 2,
+     ylim = range(c(y1,y2)),
+     col = "blue",
+     ylab = "y")
+lines(x,y2, col = "red", lwd = 2, lty = 2)
+
+```
+
+As a result, it is not possible to fit local trends.
+
+Splines partition the x-axis in overlapping regions, and parameter for basis functions modify the predicted values only in specific regions.
+
+
+```{r splines , fig.height=7}
+library(splines)
+knot.locations = seq(-3,3, length.out = 5)
+X.splines = bs(x, knots = knot.locations)
+
+b1 = scale(1:ncol(X.splines))^2
+b2 = b1
+b2[(length(b2)-2):length(b2)] = 0
+
+y1 = X.splines %*% b1
+y2 = X.splines %*% b2
+
+par(mfrow = c(2,1))
+matplot(X.splines, type = 'l', ylab = "basis function value", xlab = "")
+title("Spline basis functions")
+plot(x, y1, 'l', lwd = 2,
+     ylim = range(c(y1,y2)),
+     col = "blue",
+     ylab = "y")
+lines(x,y2, col = "red", lty = 2, lwd = 2)
+```
+
+
+As a result, splines can model local variations. 
