@@ -1,0 +1,81 @@
+---
+title: "Questions Chapter 4"
+author: "Guido Biele"
+date: "3/16/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# General points
+
+- check the details, like what prior distributions and what parameter
+- try to visualize the results
+- use multiple indexes when the data is structured in that way (e.g. year, student)
+- the most important one: Plot prior predictions!
+
+$$
+\begin{alignat}{2}
+h_{ij} & = Normal(\mu_{ij},\sigma) \\
+\mu_{ij} & = \alpha + \beta (y_j-\bar y) \\
+\alpha & \sim Normal(150,15) \\
+\beta & \sim Exponential(3) \\
+\sigma & \sim Exponential(1) \\
+\end{alignat}
+$$
+
+# Questions
+
+- 4M1: We were uncertain whether to use sample_sigma <- runif ( 1e4, 1 , 10) or sample_sigma <- runif ( 1e4, 0 , 10) for M41. Could you explain again the reasoning behind this? (Please see difference in plots below) We were uncertain whether to use sample_sigma <- runif ( 1e4, 1 , 10) or sample_sigma <- runif ( 1e4, 0 , 10) for M41. Could you explain again the reasoning behind this? (Please see difference in plots below)
+
+- Questions: Can you explain what values log-normal(0, 1) takes and how different the distribution would look like if we use log-normal (0, 2). Is there any way to ensure positive values without using the log-normal function, because it’s look heavily skewd.
+
+```{r}
+curve(dlnorm(x,0,2),0,10, col = "red")
+curve(dlnorm(x,0,1),0,10, add = T)
+```
+
+- M6: Questions: I thought variance take the unit of cm square (cm^2), why is it cm only
+- 4M6: How could we visualize the likelihood? (I.e. both the linear model along with different potential sigma values.)
+
+```{r}
+N = 100000
+alpha = rnorm(N,150,10)
+sigma1 = runif(N,0,25)
+sigma2 = runif(N,0,8)
+
+pred1 = rnorm(N, alpha, sigma1)
+pred2 = rnorm(N, alpha, sigma2)
+
+breaks = seq(min(c(pred1,pred2))-1,
+             max(c(pred1,pred2))+1,
+             length.out = 100)
+
+hist(pred2,col = adjustcolor("red", alpha = .5), 
+     breaks = breaks, main = "", xlab = "prior prediction")
+hist(pred1,col = adjustcolor("blue", alpha = .5), 
+     breaks = breaks, add = T)
+```
+
+
+- M7: Question: Could you explain this part, why it changes and why there are negative values - the textbook doesn’t explain it. Thanks!
+
+- McElreath states that we can think of an exponential prior for sigma (e.g., exp(1)) including no more information than the average deviation from the mean. We are struggling with understanding the relation between the exponential prior for sigma and the mean.
+
+- In general, we had difficulties understanding the exercises which concerned the “number of parameters in the posterior”, e.g., 4E2.
+
+- But we are still unclear on what these symbols mean: 
+$$
+\int_a^b f(\theta) d\theta \\
+\int f(\mu,\sigma) d\mu d\sigma \\
+\prod \\
+\prod_{i=1}^N
+$$
+
+
+- Clarification: In page 98, in the overthinking box, McElreath states: "You can usefully think of y = log(x) as assigning to y the order of magnitude of x. The function x = exp(y) is the reverse, turning a magnitude into a value.". I find this a confusing statement, as it is most common to talk about orders of magnitudes in reference to logarithms in base 10. But in the context of statistics the natural logarithm is seen as the default. I don’t see how logarithms in base ‘e’ can be intuitively translated to orders of magnitude (e.g., consider that ln(10) ~ 2.5, ln(100) ~ 4.6 and ln(1000) ~ 6.9).
+ 
+
+- Discussion: Gelman et al., (2020) state: "We like our parameters to be interpretable for both practical and ethical reasons. This leads to wanting them on natural scales [...] It can also help to separate out the scale so that the unknown parameters are scale-free.” Contrast with McElreath’s point on page 111 where he says that standardizing the predictor variable “should be your default behavior”.
