@@ -22,7 +22,10 @@ pre{
   font-size: 20px;
 }
 /* Headers */
-  h1,h2{
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
     font-size: 22pt;
   }
 h3,h4,h5,h6{
@@ -48,22 +51,32 @@ library(png)
 
 Lets assume the monthly growth rate follows following distribution:
 
-```{r CLT1, echo = F}
-curve(dgamma(x,1.1,1.3),
-      0,6,
+```{r, echo = F}
+curve(dlnorm(x,log(.4),.85),
+      0,2.5,
       ylab = "density",
-      xlab = "growth in cm per month")
+      xlab = "growth in cm per month",
+      n = 500)
 ```
 
-What is the distribution of heights from 10000 people at age 16?
+What is the distribution of heights of 10000 children at different ages?
 
-```{r CLT2, echo = F}
+```{r, echo = F}
 set.seed(3)
-rgamma(12*16*10000,1.1,1.3) %>% 
-  matrix(nrow = 10000) %>% 
-  rowSums() %>% 
-  hist(main = "", 
-       xlab = "height in cm")
+par(mfrow = c(2,2))
+for (age in c(1,5,10,15)) {
+  heights = 
+    rlnorm(12*age*10000,log(.4),.85) %>% 
+    matrix(nrow = 10000) %>% 
+    rowSums()
+  heights = heights + 60
+  heights %>% 
+    hist(main = age, 
+         xlab = "height in cm",
+         breaks = 30)
+}
+
+
 ```
 
 This is an example the displays the central limit theorem, which states that the result of processes that manifest as the sum of many small identical and independently distributed events are normally distributed.
@@ -128,6 +141,15 @@ One popular device to display such a process is a Galton^[Who certainly was clev
 
 What is the association between length and weight at birth?
 
+We simulate some data:
+
+```{r}
+dt = data.frame(length = rnorm(250,50,5))
+expected_weight = 3.5 + scale(dt$length)*.5
+dt$weight = rnorm(250,expected_weight,.5)
+```
+
+
 When data covary,we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
 
 ```{r lreg1 , echo = F, fig.width=10}
@@ -138,9 +160,6 @@ Picture<-readPNG("newborn.png")
 rasterImage(Picture,0,0,1,1)
 
 par(mar=c(3,3,1,1), mgp=c(1.5,.5,0), tck=-.01)
-dt = data.frame(length = rnorm(250,50,5))
-expected_weight = 3.5 + scale(dt$length)*.5
-dt$weight = rnorm(250,expected_weight,.5)
 plot(dt,
      ylab = "weight",
      xlab = "length")
@@ -162,7 +181,7 @@ scatter.hist( weight ~ length,
 
 
 In this plot, each histogram shows the marginal distribution of length and weight, respectively.
-E.g. to get the frequency of length = 190cm, we sum all individuals with the eight, regardless of their weight.
+E.g. to get the frequency of length = 50cm, we sum all individuals with the eight, regardless of their weight.
 
 # Modeling the mean
 
@@ -193,7 +212,9 @@ rect(0,
 ```
 
 To model such data, we typically think first about the likelihood function. The question here is, which distribution describes best the data we observed.
-Given that we can think of birth weight as the result of a sum of many processes, a normal distribution, with parameters $\mu$ and $\sigma$ for mean and standard deviations, makes sense. (One easy way to spot parameters is that they are typically Greek letters, whereas data variables are Roman letters.)
+Given that we can think of birth weight as the result of a sum of many processes, a normal distribution, with parameters $\mu$ and $\sigma$ for mean and standard deviation, makes sense. 
+
+One easy way to spot parameters is that they are typically Greek letters, whereas data variables are Roman letters.
 
 <br />
 
@@ -218,11 +239,13 @@ Parameters $\mu$ and $\sigma$ are variables that we cannot observe directly, we 
 And if we want to impress (or scare off) a colleague, we can write down the full model:
 
 $$
-P(\mu,\sigma|w) = \frac{\prod_i Normal(w_i|\mu,\sigma) Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}{\int\int \prod_i Normal(w_i|\mu,\sigma) Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}
+\overset{Posterior}{P(\mu,\sigma|w)} = \frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}}{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
 $$
 <br />
 
-This looks scarier than it is. The numerator just means to calculate the following for each combination of $\mu$ and $\sigma$
+This looks scarier than it is. $\prod_if$ just means that we calculate for each (individual) $i$ the quantity the product behind the product sign $\prod$ and than calculate the product of all these quantities.
+
+The numerator just means to calculate the following for each combination of $\mu$ and $\sigma$
 
 1. for each participant $i$ calculate the product of 
   - likelihood ($Normal(w_i|\mu,\sigma)$) and 
@@ -240,21 +263,25 @@ The goal is not to prior-predict data that are very similar to observed data, bu
 Plausibility checks are simple things like that there are not negative weights. With "in the same ball park" one means that the values should ave approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
 
 ```{r PriorPredictiveAlpha}
+my_blue = adjustcolor("blue",alpha = .5) # for model predictions
+my_gray = adjustcolor("black",alpha = .5) # for data
+
 prior.pedictive.weights = 
   rnorm(
     10000,
     rnorm(10000, 3.5, 1.5),
     runif(10000, 0, 1.5))
-
 hist(prior.pedictive.weights,
-     main = "", xlab = "prior predictive weights")
-text(-2,2000,expression(mu~"="~Normal(3.5,1.5)))
-text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)))
+     main = "", xlab = "prior predictive weights",
+     col = my_blue)
+text(-2,2000,expression(mu~"="~Normal(3.5,1.5)), pos = 4)
+text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)), pos = 4)
 ```
 
 
-This looks reasonable, even though we surely know that there are no newborns with a weight below 0 or above 6 kilogram. But the point of the prior is not to forbid impossible values. Such impossible values should be rare, and if they have to be allowed in order to insure a weak influence of the prior on the results, this is OK.
+This looks reasonable, even though we surely know that there are no newborns with a weight below 0 or above 8 kilogram. But the point of the prior is not to forbid impossible values. Such impossible values should just be very rare, and if they have to be allowed in order to insure a weak influence of the prior on the results, this is OK.
 
+Note that our choice of priors is not incluenced by the data we have, but by domain knowledge we have before seeing that data.
 
 How does it look if we use non-informative priors?
 
@@ -265,9 +292,11 @@ prior.pedictive.weights = rnorm(
   rnorm(10000, 0, 1000),
   runif(10000, 0, 1000))
 
-hist(prior.pedictive.weights, main = "", xlab = "prior predictive weights")
-text(-3300,1500,expression(mu~"="~Normal(0,10000)))
-text(-3300,1350,expression(sigma~"="~Uniform(0,10000)))
+hist(prior.pedictive.weights, main = "",
+     xlab = "prior predictive weights",
+     col = my_blue)
+text(-4500,1500,expression(mu~"="~Normal(0,10000)), pos = 2)
+text(-4500,1350,expression(sigma~"="~Uniform(0,10000)), pos = 2)
 ```
 
 It seems obvious that the first set of parameters makes more sense.
@@ -294,12 +323,6 @@ alpha.model.list =
 
 For reasons that will be clear soon, we are using a parameter $\alpha$ as a determinent of the mean $\mu$.
 
-This is what the model list looks like:
-
-```{r alphashowquap}
-alpha.model.list
-```
-
 Now we can use `quap` to calculate the posterior distribution.
 
 ```{r alphafit}
@@ -315,12 +338,13 @@ precis(alpha.model.fit)
 
 ## Posterior predictive check
 
-Before we start interpreting our data, it is always a good idea to see if the model is any good at describing the data.
+Before we start interpreting our modeling results, it is always a good idea to see if the model is any good at describing the data.
 
 To do this, we first extract the posterior from the prior:
 
 ```{r alphaposterpred1}
 alpha.model.post = extract.samples(alpha.model.fit,n=1e4)
+# calculate mu, because quap does not return it automtically
 alpha.model.post$mu = alpha.model.post$alpha
 head(alpha.model.post)
 ```
@@ -328,7 +352,8 @@ head(alpha.model.post)
 One thing we would like to check is if the observed mean is within the credible interval of the posterior for $\mu$:
 
 ```{r alphaposterpred2}
-hist(alpha.model.post$mu, main = "",xlab = expression(mu))
+hist(alpha.model.post$mu, main = "",
+     xlab = expression(mu), col = my_blue )
 abline(v = HPDI(alpha.model.post$mu), col = "blue")
 abline(v = mean(dt$weight), lwd = 2)
 ```
@@ -341,7 +366,7 @@ posterior.predictions =
         alpha.model.post$mu,
         alpha.model.post$sigma)
 
-hist(dt$weight, col = "gray10", main = "", xlab = "weight")
+hist(dt$weight, col = my_gray, main = "", xlab = "weight")
 hdpi = HPDI(posterior.predictions)
 abline(v = hdpi , col = "blue")
 in.hdpi = mean(dt$weight > hdpi[1] & dt$weight < hdpi[2])
@@ -374,7 +399,7 @@ Differently than in the observed data, the predicted data do not show an associa
 Instead of the previous model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on birth length.
 
 
-```{r alphaposterpred4, fig.width=8}
+```{r alphaposterpred4, fig.width=8, echo = F}
 par(mfrow = c(1,2))
 plot(dt,
      ylab = "weight",
@@ -428,7 +453,7 @@ abline(h = c(0,coeffs[1] + -3*coeffs[2]), col = "grey", lty = 3)
 draw.arc(-3, coeffs[1] + -3*coeffs[2], 1, deg1 = 0, deg2 = coeffs[2]*45, lwd = 2, col = "magenta", n = 100)
 text(0,1, expression(alpha), pos = 4, col = "red", cex = 1.5)
 text(-2.2,coeffs[1] + -2.2*coeffs[2], expression(beta), pos = 1, col = "magenta", cex = 1.5)
-text(2,coeffs[1] + 2*coeffs[2], expression(mu~"="~alpha+beta*l.s), pos = 1, col = "blue", cex = 1.5, srt=25.6)
+text(2,coeffs[1] + 2*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 1, col = "blue", cex = 1.5, srt=25.6)
 ```
 
 Here is the full model
@@ -438,18 +463,20 @@ Here is the full model
 | What | Notation | quap R-code |
 |---|---|---|
 |Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
-|Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
+|Linear model | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
 |Prior | $\alpha \sim Normal(3.5,1.5)$ | `alpha ~ dnorm(3.5, 1.5)` |
 |Prior | $\beta \sim Normal(1,1)$ | `beta ~ dnorm(1, 1)` |
 |Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
 
 <br/>
 
-The only real difference to the previous model is in lines 2 and 4. 
+The only real difference to the previous model is in lines 2 and 4. `mu` is now also a function of length, and we added a prior for the effect of length.
 
 ## Prior predictive check
 
 We do again a prior predictive check to see if model and prior are broadly in line with the data.
+
+We are using the abline function for this. See the [documentation](https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/abline)!!!
 
 ```{r mupriorpredicttive1, fig.width=7, fig.height=7}
 plot(0,
@@ -463,6 +490,8 @@ for (k in 1:50)
 ```
 
 This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibly large range. We can do better than that, without that the model priors determine the fitting results.
+
+A good rule to keep in mind is that for a prior $Normal(\mu,\sigma))$ 95% of the prior mass lies between $\mu + 2\sigma$ and $\mu - 2\sigma$.
 
 ```{r mupriorpredicttive2, fig.width=7, fig.height=7}
 plot(0,
@@ -556,7 +585,7 @@ And we check if the predicted weights are consistent with the observed means.
 ```{r muposterpred1, fig.width=8, fig.height=8, echo = F}
 par(mfrow = c(2,2))
 for (p in c(.1, .25, .5, .9)) {
-  hist(dt$weight, col = "gray10", main = "", xlab = "predicted weight")
+  hist(dt$weight, col = my_gray, main = "", xlab = "predicted weight")
   hdpi = HPDI(as.vector(mu.model.pp),prob = p)
   abline(v = hdpi , col = "blue")
   in.hdpi = mean(dt$weight > hdpi[1] & dt$weight < hdpi[2])
@@ -573,11 +602,11 @@ par(mfrow = c(1,2))
 pp.mu = apply(mu.model.pp, 1, mean)
 pp.sd = apply(mu.model.pp, 1 , sd)
 
-hist(pp.mu, main = "")
+hist(pp.mu, main = "", col = my_blue)
 abline(v = c(HPDI(pp.mu),mean(dt$weight)), 
        col = c("blue","blue","black"))
 
-hist(pp.sd, main = "")
+hist(pp.sd, main = "", col = my_blue)
 abline(v = c(HPDI(pp.sd),sd(dt$weight)), 
        col = c("blue","blue","black"))
 ```
@@ -592,6 +621,8 @@ for (k in 1:4) {
        ylim = ylim)
 }
 ```
+
+Experience helps for doing good posterior predictive check. One rule guiding principle is that important characteristics of the data should still be visible in the posterior predictions. 
 
 ## Describe the results
 
@@ -671,7 +702,7 @@ abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
 
 This is how one could describe the results:
 
-We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) increase with of birth weight.
+We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) gram increase of birth weight.
 
 # Splines
 
@@ -689,13 +720,13 @@ b2 = c(1,2)
 y1 = X.poly %*% b1
 y2 = X.poly %*% b2
 
-par(mfrow = c(2,1))
-matplot(X.poly, type = 'l', ylab = "basis function value", xlab = "" )
+par(mfrow = c(2,1)) 
+matplot(X.poly, type = 'l', ylab = "basis function value", xlab = "")
 title("Polynomials")
 plot(x, y1, 'l', lwd = 2,
      ylim = range(c(y1,y2)),
      col = "blue",
-     ylab = "y")
+     ylab = "y (weighted sum of basis functions)")
 lines(x,y2, col = "red", lwd = 2, lty = 2)
 
 ```
@@ -723,7 +754,7 @@ title("Spline basis functions")
 plot(x, y1, 'l', lwd = 2,
      ylim = range(c(y1,y2)),
      col = "blue",
-     ylab = "y")
+     ylab = "y (weighted sum of basis functions)")
 lines(x,y2, col = "red", lty = 2, lwd = 2)
 ```
 
