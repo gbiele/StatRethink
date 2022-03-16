@@ -484,7 +484,7 @@ plot(0,
      xlab = "scaled length",
      ylim = c(1,7),
      xlim = c(-3,3))
-clr = adjustcolor("black",alpha = .25)
+clr = adjustcolor("blue",alpha = .5)
 for (k in 1:50)
   abline(rnorm(1,3.5,1.5), rnorm(1,1,1), col = clr)
 ```
@@ -587,7 +587,7 @@ par(mfrow = c(2,2))
 for (p in c(.1, .25, .5, .9)) {
   hist(dt$weight, col = my_gray, main = "", xlab = "predicted weight")
   hdpi = HPDI(as.vector(mu.model.pp),prob = p)
-  abline(v = hdpi , col = "blue")
+  abline(v = hdpi , col = "blue", lwd = 3)
   in.hdpi = mean(dt$weight > hdpi[1] & dt$weight < hdpi[2])
   title(paste0(round(in.hdpi*100),
                "% of weights are in the ",p*100,"% HDPI"))
@@ -604,11 +604,11 @@ pp.sd = apply(mu.model.pp, 1 , sd)
 
 hist(pp.mu, main = "", col = my_blue)
 abline(v = c(HPDI(pp.mu),mean(dt$weight)), 
-       col = c("blue","blue","black"))
+       col = c("blue","blue","black"), lwd = 3)
 
 hist(pp.sd, main = "", col = my_blue)
 abline(v = c(HPDI(pp.sd),sd(dt$weight)), 
-       col = c("blue","blue","black"))
+       col = c("blue","blue","black"), lwd = 3)
 ```
 
 We can also check if we see the covariation of birth length and birth weight of we use predicted weights.
@@ -630,7 +630,7 @@ Now that we have convinced of the that the model describes the data well enough 
 
 As a visual presentation we can e.g. just show the slope:
 
-```{r muresultsfigure1}
+```{r muresultsfigure1, fig.width=5}
 plot(dt$length.s,
      dt$weight,
      col = "grey", 
@@ -720,7 +720,7 @@ b2 = c(1,2)
 y1 = X.poly %*% b1
 y2 = X.poly %*% b2
 
-par(mfrow = c(2,1)) 
+par(mfrow = c(2,1), mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 matplot(X.poly, type = 'l', ylab = "basis function value", xlab = "")
 title("Polynomials")
 plot(x, y1, 'l', lwd = 2,
@@ -748,9 +748,9 @@ b2[(length(b2)-2):length(b2)] = 0
 y1 = X.splines %*% b1
 y2 = X.splines %*% b2
 
-par(mfrow = c(2,1))
+par(mfrow = c(2,1), mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 matplot(X.splines, type = 'l', ylab = "basis function value", xlab = "")
-title("Spline basis functions")
+title("Splines")
 plot(x, y1, 'l', lwd = 2,
      ylim = range(c(y1,y2)),
      col = "blue",
