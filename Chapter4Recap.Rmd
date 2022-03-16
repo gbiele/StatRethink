@@ -135,7 +135,7 @@ lines(x,y, col = "grey", lty = 3)
 
 One popular device to display such a process is a Galton^[Who certainly was clever, but is nowadays also infamous for his views on eugenics and race.] board:
 
-<!-- ![Galton Board](galton1.mp4) -->
+![Galton Board](galton1.mp4)
 
 # Linear regression model
 
@@ -169,6 +169,15 @@ plot(dt,
 ## What is marginalization?
 
 Sometimes, we want information about only one dimension of the data. This information is shown in the _marginal_ distribution.
+
+One way to view how the marginal distribution is calculate is to imagine that data point (or samples from a p posterior) are collapsed over one variable. Like this:
+
+![Galton Board](margins1.mp4)
+
+This is only a visualization to give you an intuition. We won't cover here how one calculates marginal integrals. When we dealing with samples from posterior distributions, we also do not calculate integrals. In fact, just showing the histogram for one parameter of the posterior is already the display of this variables marginal distribution.
+
+
+Here is a more traditional way to show two marginal distributions.
 
 ```{r marginal, echo = F, fig.width=8, fig.height=8}
 scatter.hist( weight ~ length,
