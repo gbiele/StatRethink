@@ -248,7 +248,9 @@ Parameters $\mu$ and $\sigma$ are variables that we cannot observe directly, we 
 And if we want to impress (or scare off) a colleague, we can write down the full model:
 
 $$
-\overset{Posterior}{P(\mu,\sigma|w)} = \frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}}{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
+\overset{Posterior}{P(\mu,\sigma|w)} = 
+\frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}}
+{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
 $$
 <br />
 
@@ -261,9 +263,9 @@ The numerator just means to calculate the following for each combination of $\mu
   - prior ($Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)$)
 2. calculate the product of all values generated in 1.
   
-This is not how the calculation is really performed (expect when one uses grid approximation). Instead, methods lake Lapalce approximation or MCMC are used to calculate this quantity.
+This is not how the calculation is performed in Bayesian analysis software (expect when one uses grid approximation). Instead, methods lake Laplace approximation or MCMC are used to calculate this quantity.
 
-The denominator is what is called the evidence, and it's main purpose is to insure that the posterior sums to 1.
+The denominator is what is called the evidence, and it's main purpose is to insure that the posterior sums to 1. If we are mainly interested in the relative plausibility of parameter values, we do not calculate the denominator because the product of likelihood and prior is already proportional to the posterior distribution. Only if we wan to do different types of analysis, like Bayes factors, is it necessary to calculate the denominator/evidence. 
 
 ## Prior predictive check
 
@@ -304,8 +306,8 @@ prior.pedictive.weights = rnorm(
 hist(prior.pedictive.weights, main = "",
      xlab = "prior predictive weights",
      col = my_blue)
-text(-4500,1500,expression(mu~"="~Normal(0,10000)), pos = 2)
-text(-4500,1350,expression(sigma~"="~Uniform(0,10000)), pos = 2)
+text(-4500,1500,expression(mu~"="~Normal(0,10000)), pos = 4)
+text(-4500,1350,expression(sigma~"="~Uniform(0,10000)), pos = 4)
 ```
 
 It seems obvious that the first set of parameters makes more sense.
@@ -711,7 +713,7 @@ abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
 
 This is how one could describe the results:
 
-We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) gram increase of birth weight.
+We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` gram (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) increase of birth weight.
 
 # Splines
 
