@@ -608,49 +608,55 @@ post = extract.samples(mu.model.fit)
 smoothScatter(post$a,post$b,
               ylab = "b", xlab = "a")
 small_a.idx = which(post$a <= sort(post$a)[25])
-large_a.idx = which(post$a >= sort(post$a,decreasing = T)[25])
+large_a.idx = which(post$a >= sort(post$a,decreasing = T)[50])
 
 small_a.a = post$a[small_a.idx]
 small_a.b = post$b[small_a.idx]
 large_a.a = post$a[large_a.idx]
 large_a.b = post$b[large_a.idx]
 
-points(small_a.a, small_a.b,col = "red", pch = 16)
-points(large_a.a, large_a.b,col = "blue", pch = 16)
+points(small_a.a, small_a.b,col = adjustcolor("red",alpha = .5), pch = 16)
+points(large_a.a, large_a.b,col = adjustcolor("blue",alpha = .5), pch = 16)
 ```
 
 ```{r}
 post$lp__ = NA
-with(post,
-     for (k in 1:nrow(post)) {
-       mu = a[k] + b[k] * dt$length # linear predictor
-       lp__[k] = 
-         sum(dnorm(dt$weight, mu, sigma[k],log = T)) + 
-         dnorm(a[k],-1.5,3,log = T) + 
-         dnorm(b[k],0.1,.1,log = T) + 
-         dunif(sigma[k],0,1.5,log = T)
-     }
-)
-plot(post$a,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
-plot(post$b,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
-plot(post$sigma,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
+for (k in 1:nrow(post)) {
+  a = post$a[k]
+  b = post$b[k]
+  sigma = post$sigma[k]
+  mu = a + b * dt$length # linear predictor
+    post$lp__[k] = 
+      sum(dnorm(dt$weight, mu, sigma,log = T)) + # likelihood
+      dnorm(a,-1.5,3,log = T) +                  # prior a
+      dnorm(b,0.1,.1,log = T) +                  # prior b
+      dunif(sigma,0,1.5,log = T)                 # prior sigma
+}
+
+plot(post$a,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
+plot(post$b,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
+plot(post$sigma,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 ```
 
 
 ```{r}
 plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
-abline(a = mean(post$a), b = mean(post$b), lwd = 2)
-for (k in 1:length(small_a.a)) abline(small_a.a[k],small_a.b[k], col = adjustcolor("red",alpha = .25))
-for (k in 1:length(large_a.a)) abline(large_a.a[k],large_a.b[k], col = adjustcolor("blue",alpha = .25))
+abline(a = mean(post$a), b = mean(post$b), lwd = 2, col = "green4")
+for (k in 1:length(small_a.a)) abline(small_a.a[k],small_a.b[k], col = adjustcolor("red",alpha = .125))
+for (k in 1:length(large_a.a)) abline(large_a.a[k],large_a.b[k], col = adjustcolor("blue",alpha = .125))
 ```
 
+Parameters are hard to interpret. What do intercept $\alpha$ and slope $\beta$ mean intuitively?
 
 ## Analysis with standardized predictor length
 
 Looking at the right-hand side of the plot, we see that it is not so easy to think about what the mean weight is, length has a difficult scale. We can just re-scale it.
 
 ```{r scaledata, fig.width=6, fig.height=6}
-dt$length.s = scale(dt$length)
+dt$length.s = 
+  scale(dt$length,
+        center = TRUE,
+        scale = FALSE)
 plot(dt$length.s,
      dt$weight,
      ylab = "weight",
@@ -672,7 +678,7 @@ plot(dt$length.s,
      ylab = "weight",
      xlab = "scaled length",
      ylim = ylim,
-     xlim = c(-3,3))
+     xlim = c(-11,11))
 coeffs = coef(lm(dt$weight~dt$length.s))
 abline(coeffs, col = "blue", lwd = 2)
 arrows(0,0,0,mean(dt$weight), code = 3, col = "red", lwd = 2)
@@ -692,7 +698,7 @@ Here is the full model
 |Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
 |Linear model | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
 |Prior | $\alpha \sim Normal(3.5,1.5)$ | `alpha ~ dnorm(3.5, 1.5)` |
-|Prior | $\beta \sim Normal(1,1)$ | `beta ~ dnorm(1, 1)` |
+|Prior | $\beta \sim Normal(.15, .5)$ | `beta ~ dnorm(.15, .5)` |
 |Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
 
 <br/>
@@ -710,10 +716,10 @@ plot(0,
      ylab = "weight",
      xlab = "scaled length",
      ylim = c(1,7),
-     xlim = c(-3,3))
+     xlim = c(-11,11))
 clr = adjustcolor("blue",alpha = .5)
 for (k in 1:50)
-  abline(rnorm(1,3.5,1.5), rnorm(1,1,1), col = clr)
+  abline(rnorm(1,3.5,1.5), rnorm(1,.15,.5), col = clr)
 ```
 
 This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibly large range. We can do better than that, without that the model priors determine the fitting results.
@@ -725,9 +731,9 @@ plot(0,
      ylab = "weight",
      xlab = "scaled length",
      ylim = c(1,7),
-     xlim = c(-3,3))
+     xlim = c(-11,11))
 for (k in 1:50)
-  abline(rnorm(1,3.5,1), rlnorm(1,-.25,.5), col = clr)
+  abline(rnorm(1,3.5,1), rlnorm(1,log(.15),.5), col = clr)
 ```
 
 This looks much more reasonable. Here is the model with new priors:
@@ -736,8 +742,8 @@ This looks much more reasonable. Here is the model with new priors:
 |---|---|---|
 |Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
 |Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
-|Prior | $\alpha \sim logNormal(3.5, 1)$ | `alpha ~ dnorm(3.5, 1)` |
-|Prior | $\beta \sim Normal(-.25, .5)$ | `beta ~ dlnorm(-.25, .5)` |
+|Prior | $\alpha \sim Normal(3.5, 1)$ | `alpha ~ dnorm(3.5, 1)` |
+|Prior | $\beta \sim logNormal(log(.15), .5)$ | `beta ~ dlnorm(log(.15), .5)` |
 |Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
 
 And here is the `quap` model:
@@ -838,7 +844,7 @@ abline(v = c(HPDI(pp.sd),sd(dt$weight)),
        col = c("blue","blue","black"), lwd = 3)
 ```
 
-We can also check if we see the covariation of birth length and birth weight of we use predicted weights.
+We can also check if we see the co-variation of birth length and birth weight of we use predicted weights.
 
 ```{r mupostpredcorr, fig.width=8, fig.height=8, echo = F}
 par(mfrow = c(2,2))
