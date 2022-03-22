@@ -621,7 +621,7 @@ points(large_a.a, large_a.b,col = "blue", pch = 16)
 post$lp__ = NA
 with(post,
      for (k in 1:nrow(post)) {
-       mu = a[k] + b[k] * dt$length # lineqar predictor
+       mu = a[k] + b[k] * dt$length # linear predictor
        lp__[k] = 
          sum(dnorm(dt$weight, mu, sigma[k],log = T)) + 
          dnorm(a[k],-1.5,3,log = T) + 
@@ -630,9 +630,7 @@ with(post,
      }
 )
 plot(post$a,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
-abline(v = mean(post$a))
 plot(post$b,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
-abline(v = mean(post$b))
 plot(post$sigma,lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 ```
 
