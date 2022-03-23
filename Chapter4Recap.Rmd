@@ -45,7 +45,6 @@ library(kableExtra)
 library(psych)
 library(MASS)
 library(png)
-library(ggdist)
 ```
 
 # Distributions in R
