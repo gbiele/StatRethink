@@ -54,16 +54,25 @@ library(ggdist)
 
 The density function starts with __d__ and shows the "likelihood of different values x given the distribution parameters. For instance `dnorm(1.85, 1.7, 0.1)` gives the likelihood of the value 1.85 given a normal distribution with a mean of `1.7` and a standard deviation of 0.5.
 
-```{r}
-curve(dnorm(x,1.7,.1),1.3,2.1,
+```{r, eval = F, echo = T}
+curve(dnorm(x,1.7,.1),  # function y = f(x) for value on y axis
+      1.3,              # minimum x
+      2.1,              # maximum x
+      ylab = "density")
+```
+
+```{r, echo=F}
+curve(dnorm(x,1.7,.1),  # function y = f(x) for value on y axis
+      1.3,              # minimum x
+      2.1,              # maximum x
       ylab = "density")
 d1.8 = dnorm(1.8, 1.7, 0.1)
 lines(c(1.8,1.8,1),
       c(0,d1.8,d1.8), col = "red")
-text(1.5,d1.8,round(d1.8,3),pos = 3, col = "red")
+text(1.8,d1.8,paste0("dnorm(1.85, 1.7, 0.1) = ",round(d1.8,3)),pos = 4, col = "red")
 ```
 
-## The random generation
+## Generating random samples
 
 The random generation function (cdf) starts with __r__ and and generates random values x given the distribution parameters. 
 
@@ -115,7 +124,7 @@ samples = rnorm(500, 1.7, 0.1)
 plot(samples, ylab = "value", xlab = "sample #")
 ```
 
-If we have samples and want to see how they are distributed, we can use a histogram or a density plot.
+If we have samples and want to see how they are distributed, we can use a histogram or a density plot. It is better to use histograms than density plots, because the latter involve estimation of the smoothness of the density, which can lead to artefacts.
 
 ```{r, fig.width=8}
 par(mfrow = c(1,2))
@@ -137,13 +146,13 @@ with(dt,plot(length,weight, pch = 16, cex = .5, main = "Scatter plot"))
 with(dt,smoothScatter(length,weight, main = "Smooth scatter plot"))
 ```
 
-Another type of process that also leads to jointly distributed variables is Bayesian data analysis. If an analysis estimates several parameters, then we can look at posterior distribution of these parameters individually, we look at their marginal distributions, or we can look at the joint posterior distribution of the parameters. Even if I am just referring to posterior distributions of parameters here, we typically look at samples from this posterior distribution.
+Another type of process that also leads to jointly distributed variables is Bayesian data analysis. If an analysis estimates several parameters, we can look at posterior distribution of these parameters individually-- we look at their marginal distributions--or we can look at the joint posterior distribution of the parameters. Even if I am just referring to posterior distributions of parameters here, we typically look at _samples_ from this posterior distribution.
 
 The typical way to describe such variables that are jointly and normally distributed is to use a multivariate normal distribution. A multivariate normal distribution has parameters you already know, and one additional parameter:
 
-- Means ov the two marginal distributions (length and weight above)
-- Variances (sd^2) for the two marginal distributions
-- and also the co_variance of the two variables.
+- means of the two marginal distributions (length and weight above)
+- variances (sd^2) for the two marginal distributions
+- and also the covariance of the two variables.
 
 Here are these parameters for our birth weight and birth length data:
 
@@ -154,7 +163,7 @@ cov(dt)
 
 The variances are on the main diagonal of the covariance matrix, and the co-variances on the off diagonal.
 
-As you probably have guessed, covariance and correlation are closely related:
+As you probably have guessed, covariance and correlation are linked:
 
 ```{r}
 correlation.R = 
@@ -551,7 +560,7 @@ plot(dt,
 abline(lm(dt$weight~dt$length), lty = 3, col = "blue", lwd = 3)
 ```
 
-## The model
+## The linear regression model (preditor not centered)
 
 Next we "build" the new model, which also takes birth length into account.
 
@@ -583,7 +592,7 @@ plot(dt$length,
      dt$weight,
      col = "grey",
      ylab = "weight",
-     xlab = "scaled length",
+     xlab = "length",
      ylim = c(coeffs[1],max(dt$weight)),
      xlim = c(-2,max(dt$length)))
 abline(coeffs, col = "blue", lwd = 2)
@@ -595,6 +604,10 @@ text(18,coeffs[1] + 18*coeffs[2], expression(beta), pos = 4, col = "magenta", ce
 text(30,coeffs[1] + 30*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 3, col = "blue", cex = 1.5, srt=35)
 ```
 
+## Thinking about priors
+
+
+
 ```{r, echo = F}
 min.l = min(floor(dt$length/10))*10
 max.l = max(ceiling(dt$length/10))*10
@@ -602,12 +615,17 @@ delta.l = max.l - min.l
 min.w = min(round(dt$weight))
 max.w = max(ceiling(dt$weight))
 delta.w = max.w - min.w
+
 ```
 
 
-By looking at the range of the data, length varies roughly between around `r min.l` and `r max.l` and weight varies roughly between `r min.w` and `r max.w`. Then we can see that for length`r max.l` - `r min.l` = `r delta.l` and for weigh `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate the `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
+Generally, birthlength varies roughly between around `r min.l` and `r max.l` and weight varies roughly between `r min.w` and `r max.w`.^[I made this up, in a real analysis one might consult some statistics that are available.] Then we can see that for length `r max.l` - `r min.l` = `r delta.l` and for weigh `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
 
 We can use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
+
+It is much harder to make a guess about the intercept (the predicted weight when length = 0), because length = 0 is so car out of the data range.
+
+We plot some prior predictions.
 
 
 ```{r}
@@ -619,6 +637,7 @@ for (k in 1:50) {
          col = clr)
   }
 ```
+The prior predictions show that our prior allow for predictions that are consistent with the data, but also for nonsensical predictions. Nevertheless, we move ahead for now.
 
 Here is the quap model.
 
@@ -633,17 +652,17 @@ mu.model.list =
   )
 ```
 
-And fit the `quap` model.
+And we fit the `quap` model.
 
 ```{r fitmumodel1}
 mu.model.fit = quap(mu.model.list, data=dt)
 precis(mu.model.fit)
 ```
 
-One peculiar characteristic of this analysis is that the parameter values for $\alpha$ and $\beta$ are dependent. Remember that we discussed earlier that one can have dependency between any variables, which also includes parameter values, and that we can show this dependency by plotting both variables jointly in a (smooth) scatter plot.
+One peculiar characteristic of this analysis is that the parameter values for $\alpha$ and $\beta$ are dependent, they co-vary. We discussed earlier that one can have dependency between any variables, which also includes parameter values, and that we can display this dependency by plotting both variables jointly in a (smooth) scatter plot.
 
 
-Here is a smooth scatter plot of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored. Remember, Bayesian analysis tried to find parameter combinations are configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
+Here is a scatter plot (in blue) of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored (in green). Remember, Bayesian analysis tried to find parameter combinations are configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
 
 ```{r, echo = F}
 post = extract.samples(mu.model.fit)
@@ -654,7 +673,7 @@ smoothScatter(
   ylim = c(0.1-3*.1,0.1+3*.1),
   ylab = "b", xlab = "a",
   colramp = colorRampPalette(c("white", "green4")))
-points(post$a,post$b, col = adjustcolor(tail(blues9,1),alpha = .5), pch = 16)
+points(post$a,post$b, col = adjustcolor(tail(blues9,1),alpha = .5), pch = 16, cex = 0.5)
 ```
 
 We can't see a lot here. Let us zoom in and highlight the samples in the posterior distribution with extreme values for $\alpha$ and $\beta$. 
@@ -696,9 +715,9 @@ plot(post$b,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 plot(post$sigma,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 ```
 
-How is it possible that we see parameter combinations that have a similar posterior probability, and yet have vary different parameter values? To understand this, we can plot precictions, i.e. regression lines, from such parameter values.
+How is it possible that we see parameter combinations that have a similar posterior probability, and yet have very different parameter values? To understand this, we can plot predictions, i.e. regression lines, from such parameter values.
 
-```{r}
+```{r, echo = F}
 plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
 abline(a = mean(post$a), b = mean(post$b), lwd = 2, col = "green4")
 for (k in 1:length(small_a.a)) 
@@ -715,17 +734,25 @@ A linear regression tries to minimize the distance between the regression line a
 
 The correlation in the posterior can make it hard to fit more complex models. In addition, the parameters of the model we just fit are are hard to interpret: What do intercept $\alpha$ and slope $\beta$ mean intuitively?
 
-To deal with these problems, some recommend to standardize predictor variables.
+To deal with these problems, some recommend to center predictor variables.
 
-## Analysis with standardized predictor length
+<p style="color:grey">
 
-With standardization, we mean first and foremost to subtract the mean from the predictor variable, as is done in the next plot. One could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive.
+Why does centering help against covariation of intercept and slope parameters?
+
+
+If we want to fit a line through the point cloud, it needs to go through the center of the cloud, because only then can we achieve that the vertical distance from the points to the regression line is on average small.
+If we want to change the slope and still stay in the middle of the point cloud, we hence have to change the predicted weight value for length = 0 (the intercept). If we center length, centered length = 0 will be at the horizontal center of the point cloud. In this case, we can change the slope without changing the intercept (the predicted weight value for centered length = 0).
+
+</p>
+
+## Analysis with centered predictor length
+
+With centering means to subtract the mean of the predictor variable from all values. In order to standardize, one could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive for domain experts.
 
 ```{r scaledata, fig.width=6, fig.height=6}
 dt$length.s = 
-  scale(dt$length,
-        center = TRUE,
-        scale = FALSE)
+  scale(dt$length, center = TRUE, scale = FALSE) # centering
 plot(dt$length.s,
      dt$weight,
      ylab = "weight",
@@ -736,7 +763,7 @@ plot(dt$length.s,
 
 Now it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the length goes up by 20 units (-10 to 10), length goes up by 3.5 units (2 to 5.5), that is `r 3.5/20`kg per cm length.
 
-## The model
+## The linear regression model (centered predictor)
 
 Next we "build" the new model, which can be visualized as follows:
 
@@ -789,7 +816,9 @@ plot(0,
 clr = adjustcolor("blue",alpha = .5)
 abline(v = 0, lty = 3, col = "grey")
 for (k in 1:50)
-  abline(rnorm(1,3.5,1.5), rnorm(1,.15,.5), col = clr)
+  abline(a = rnorm(1,3.5,1.5), 
+         b = rnorm(1,.15,.5),
+         col = clr)
 ```
 
 This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibly large range. We can do better than that, without that the model priors determine the fitting results.
@@ -804,7 +833,9 @@ plot(0,
      xlim = c(-11,11))
 abline(v = 0, lty = 3, col = "grey")
 for (k in 1:50)
-  abline(rnorm(1,3.5,1), rlnorm(1,log(.175),.5), col = clr)
+  abline(a = rnorm(1,3.5,1),
+         b = rlnorm(1,log(.175),.5),
+         col = clr)
 ```
 
 This looks much more reasonable. Here is the model with new priors:
@@ -814,7 +845,7 @@ This looks much more reasonable. Here is the model with new priors:
 |Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `weight ~ dnorm(mu, sigma)` |
 |Trans. paras. | $\mu_i = \alpha + \beta l_i$ | `mu[i] <- a + b * length.s[i]`|
 |Prior | $\alpha \sim Normal(3.5, 1)$ | `alpha ~ dnorm(3.5, 1)` |
-|Prior | $\beta \sim logNormal(log(.15), .5)$ | `beta ~ dlnorm(log(.15), .5)` |
+|Prior | $\beta \sim logNormal(log(.175), .5)$ | `beta ~ dlnorm(log(.175), .5)` |
 |Prior | $\sigma \sim Uniform(0,1.5)$ | `sigma ~ dunif(0, 1.5)` |
 
 And here is the `quap` model:
@@ -848,7 +879,7 @@ As should become custom, we check if our model describes the data reasonably wel
 mu.model.post = extract.samples(mu.model.fit)
 ```
 
-Next we calculate the "transformed parameter" $\mu$ for each participant. Because we have `r nrow(mu.model.post)` posterior samples and `r nrow(dt)` participants, we end up with a `r nrow(mu.model.post)` time `r nrow(dt)` matrix of posterior predictions.
+Next we calculate the "linear predictor" $\mu$ for each participant. Because we have `r nrow(mu.model.post)` posterior samples and `r nrow(dt)` participants, we end up with a `r nrow(mu.model.post)` time `r nrow(dt)` matrix of posterior predictions.
 
 
 ```{r mucalcposterpred}
@@ -894,7 +925,7 @@ for (p in c(.1, .25, .5, .9)) {
 }
 ```
 
-Posterior predictive checks do not need to be limited to simlpy the outcome variable. We can check if any aspect of the data we care about works. Here we check if mean and sd of the predicted data lie within the credible interval of the posterior.
+Posterior predictive checks do not need to be limited to simlpy the outcome variable. We can check if any aspect of the data we care about works out. Here we check if mean and sd of the predicted data lie within the credible interval of the posterior.
 
 ```{r muposterpred2, fig.width=8 }
 par(mfrow = c(1,2))
@@ -922,7 +953,7 @@ for (k in 1:4) {
 }
 ```
 
-Experience helps for doing good posterior predictive check. One rule guiding principle is that important characteristics of the data should still be visible in the posterior predictions. 
+Experience helps for thinking about good posterior predictive checks. One rule or guiding principle is that important characteristics of the data should still be visible in the posterior predictions. 
 
 ## Describe the results
 
@@ -976,7 +1007,7 @@ plot(dt$length.s,
      ylab = "weight",
      xlab = "length",
      xaxt = "n",
-     main = "Credible interval of expected weight")
+     main = "Credible interval of expected weight\nrethinking::link()")
 conf_band(length.s.new,HDPI.lin_pred)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
@@ -990,7 +1021,7 @@ plot(dt$length.s,
      ylab = "weight",
      xlab = "length",
      xaxt = "n",
-     main = "Credible interval of predicted weight")
+     main = "Credible interval of predicted weight\nrethinking::sim()")
 conf_band(length.s.new,HDPI.pp)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
@@ -1002,7 +1033,7 @@ abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
 
 This is how one could describe the results:
 
-We found that a on standard deviation increases in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` gram (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) increase of birth weight.
+We found that a one standard deviation (1 sd) increase in birth length was associated with a `r round(mean(mu.model.post$b)*1000)` gram (credible interval `r paste(round(HPDI(mu.model.post$b*1000)), collapse = ", ")`) increase of birth weight.
 
 # Splines
 
@@ -1010,7 +1041,7 @@ Splines are an alternative to polynomial regression if one wants to model non-li
 
 In polynomial regression, the regression weight for each basis functions changes the predicted values over the entire range of the predictor variables.
 
-```{rr polynomial, fig.height=7}
+```{r polynomial, fig.height=7}
 x = seq(-3,3,.1)
 X.poly = poly(x, 2, raw = T)
 
@@ -1073,28 +1104,29 @@ b = rnorm(ncol(X.splines))
 pre.y = X.splines %*% b
 y = pre.y + rnorm(length(x),0,.3)
 plot(x,y)
+df = data.frame(x = x, y = y)
 ```
 
 If we want to fit such a data set, we have to decide into how many (overlapping) sections, each of which is modeled by a basis function, we split the space along the x axis. This is done with the `knot` parameter of the `bs` function in the `splines` package:
 
 ```{r}
-par(mfrow = c(2,1))
-num_knots = 5
-knot_list = quantile(df$x,probs=seq(0,1,length.out=num_knots))
+par(mfrow = c(2,1), mar=c(3,3,2,1), mgp=c(1.2,.25,0), tck=-.01)
+n_knots = 5
+knot_list = quantile(df$x,probs=seq(0,1,length.out=n_knots))
 B = bs(df$x, knots=knot_list, degree=3)
-matplot(B,type = 'l', main = "5 knots")
-num_knots = 12
-knot_list = quantile(df$x,probs=seq(0,1,length.out=num_knots))
+matplot(df$x,B,type = 'l', main = "5 knots")
+n_knots = 12
+knot_list = quantile(df$x,probs=seq(0,1,length.out=n_knots))
 B = bs(df$x, knots=knot_list, degree=3)
-matplot(B,type = 'l', main = "12 knots")
+matplot(df$x,B,type = 'l', main = "12 knots")
 ```
 
 
 Another thing we can decide is how large we allow weights $\omega$ for the Basis functions become.
 
-To understand this, we instepct this quap model:
+To understand this, we inspect this `quap` model:
 
-```{r}
+```{r, eval 0 F, echo = T}
 quap.spline.model = 
   alist(
     y ~ dnorm(mu,sigma),
@@ -1104,28 +1136,36 @@ quap.spline.model =
   )
 ```
 
+And we plot pior predictions for a handful of randomly choose parameters $\omega$
 
 ```{r}
-B %*% matrix(rnorm(ncol(B)*5,sd = 1),nrow = ncol(B)) %>% matplot(type = 'l', col = "red", lty = 1)
-B %*% matrix(rnorm(ncol(B)*5,sd = .1),nrow = ncol(B)) %>% matlines(col = "blue", lty = 1)
-legend("topright",
+B %*% matrix(rnorm(ncol(B)*5,sd = 1),nrow = ncol(B)) %>% 
+  matplot(df$x,.,type = 'l', col = "red", lty = 1)
+B %*% matrix(rnorm(ncol(B)*5,sd = .1),nrow = ncol(B)) %>% 
+  matlines(df$x,.,col = "blue", lty = 1)
+legend("topleft",
        col = c("red","blue"),
        lty = 1,
        legend = c(expression(omega~"~ normal(0,1)"),
                   expression(omega~"~ normal(0,.1)")), bty = "n")
 ```
-The last figure here shows the influence of number of knots (in rows) and the standard deviation for omega (in columns).
+The final figure shows the influence of number of knots (in rows) and the standard deviation for omega (in columns). the figure shows randomly generated predictions from models (posterior predictions) which highlights that posterior predictions are useful to understand model parameters and priors.
 
-```{r}
-par(mfrow = c(2,2))
-for (n_knots in c(5,15)) {
+```{r, fig.height=8, fig.width=9}
+par(mfrow = c(2,2), mar=c(3,3,2,1), mgp=c(1.2,.25,0), tck=-.01)
+for (n_knots in c(5,20)) {
   for(sd in c(0.1,1)) {
+    plot(df$x,df$y, col = "grey")
     knot_list = quantile(df$x,probs=seq(0,1,length.out=n_knots))
     B = bs(df$x, knots=knot_list, degree=3)
     B %*% matrix(rnorm(ncol(B)*5,sd = sd),nrow = ncol(B)) %>% 
-      matplot(type = 'l', col = "blue", lty = 1, ylim = c(-2,2))
+      matlines(df$x,.,type = 'l', col = "blue", lty = 1, ylim = c(-2,2))
     title(bquote("N(knots) = " ~ .(n_knots) ~", sd("~omega~") = " ~ .(sd)))
   }
 }
 ```
+
+Which model configuration, number of knots and standard deviation for $\omega$ looks most reasonable for you?
+
+If we use data to inform the prior, this should preferably not be the data you are planning to anlyze, but related similar data. Strictly speacking, the data should only influence the likelihood through the prior. However, the concept of prior predictive checks runs a bit counter to that view, and some argue that it is OK to look at the data to get a _broad_ idea about what priors are reasonable.
 
