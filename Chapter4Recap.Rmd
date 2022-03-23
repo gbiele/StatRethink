@@ -117,7 +117,7 @@ plot(samples, ylab = "value", xlab = "sample #")
 
 If we have samples and want to see how they are distributed, we can use a histogram or a density plot.
 
-```{r}
+```{r, fig.width=8}
 par(mfrow = c(1,2))
 hist(samples, main = "Histogram")
 plot(density(samples), main = "Density plot")
@@ -127,7 +127,7 @@ plot(density(samples), main = "Density plot")
 
 It is possible to observe multiple variables as outcome of a process. For instance, we might record the length and the weight of a newborn baby. To show how these variables are related, we plot them together.
 
-```{r}
+```{r, fig.width=8}
 dt = data.frame(length = rnorm(1000,50,5))
 expected_weight = 3.5 + scale(dt$length)*.5
 dt$weight = rnorm(1000,expected_weight,.5)
@@ -412,7 +412,7 @@ text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)), pos = 4)
 
 This looks reasonable, even though we surely know that there are no newborns with a weight below 0 or above 8 kilogram. But the point of the prior is not to forbid impossible values. Such impossible values should just be very rare, and if they have to be allowed in order to insure a weak influence of the prior on the results, this is OK.
 
-Note that our choice of priors is not incluenced by the data we have, but by domain knowledge we have before seeing that data.
+Note that our choice of priors is not influenced by the data we have, but by domain knowledge we have before seeing that data.
 
 How does it look if we use non-informative priors?
 
@@ -553,7 +553,24 @@ abline(lm(dt$weight~dt$length), lty = 3, col = "blue", lwd = 3)
 
 ## The model
 
-Next we "build" the new model, which can be visualized as follows:
+Next we "build" the new model, which also takes birth length into account.
+
+
+<br />
+
+| What | Previous model | New model |
+|---|---|---|
+|Likelihood | $y_i \sim Normal(\mu,\sigma)$ | $y_i \sim Normal(\mu_i,\sigma)$ |
+|Linear model | $\mu = \alpha$ | $\mu_i = \alpha + \beta X_i$ |
+|Prior | $\alpha \sim \dots$ | $\alpha \sim \dots$ |
+|Prior |                      | $\beta \sim \dots$ |
+|Prior | $\sigma \sim \dots$ | $\sigma \sim \dots$ |
+
+<br />
+
+
+The key difference of the new analysis is that we describe the expected weight as a function of an additional predictor, here $X$. $\beta$ is the _slope_ of the regression model, which indicates how important the variable $X$ is to predict the outcome. This linear regression model can be visualized as follows.
+
 
 ```{r moModelPlot1, fig.width=6, fig.height=6, echo = F}
 
@@ -578,11 +595,32 @@ text(18,coeffs[1] + 18*coeffs[2], expression(beta), pos = 4, col = "magenta", ce
 text(30,coeffs[1] + 30*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 3, col = "blue", cex = 1.5, srt=35)
 ```
 
+```{r, echo = F}
+min.l = min(floor(dt$length/10))*10
+max.l = max(ceiling(dt$length/10))*10
+delta.l = max.l - min.l
+min.w = min(round(dt$weight))
+max.w = max(ceiling(dt$weight))
+delta.w = max.w - min.w
+```
+
+
+By looking at the range of the data, length varies roughly between around `r min.l` and `r max.l` and weight varies roughly between `r min.w` and `r max.w`. Then we can see that for length`r max.l` - `r min.l` = `r delta.l` and for weigh `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate the `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
+
+We can use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
+
+
 ```{r}
 plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
 clr = adjustcolor("blue",alpha = .5)
-for (k in 1:50) abline(a = rnorm(1,-1.5,3), b = rnorm(1,.1,.2), col = clr)
+for (k in 1:50) {
+  abline(a = rnorm(1,-1.5,3),
+         b = rnorm(1,.1,.2),
+         col = clr)
+  }
 ```
+
+Here is the quap model.
 
 ```{r muquap1}
 mu.model.list =
@@ -595,13 +633,31 @@ mu.model.list =
   )
 ```
 
-
-We fit the `quap` model.
+And fit the `quap` model.
 
 ```{r fitmumodel1}
 mu.model.fit = quap(mu.model.list, data=dt)
 precis(mu.model.fit)
 ```
+
+One peculiar characteristic of this analysis is that the parameter values for $\alpha$ and $\beta$ are dependent. Remember that we discussed earlier that one can have dependency between any variables, which also includes parameter values, and that we can show this dependency by plotting both variables jointly in a (smooth) scatter plot.
+
+
+Here is a smooth scatter plot of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored. Remember, Bayesian analysis tried to find parameter combinations are configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
+
+```{r, echo = F}
+post = extract.samples(mu.model.fit)
+smoothScatter(
+  rnorm(100000,-1.5,3),
+  rnorm(100000,0.1,.1),
+  xlim = c(-1.5-3*3,-1.5+3*3),
+  ylim = c(0.1-3*.1,0.1+3*.1),
+  ylab = "b", xlab = "a",
+  colramp = colorRampPalette(c("white", "green4")))
+points(post$a,post$b, col = adjustcolor(tail(blues9,1),alpha = .5), pch = 16)
+```
+
+We can't see a lot here. Let us zoom in and highlight the samples in the posterior distribution with extreme values for $\alpha$ and $\beta$. 
 
 ```{r}
 post = extract.samples(mu.model.fit)
@@ -619,7 +675,9 @@ points(small_a.a, small_a.b,col = adjustcolor("red",alpha = .5), pch = 16)
 points(large_a.a, large_a.b,col = adjustcolor("blue",alpha = .5), pch = 16)
 ```
 
-```{r}
+<!-- To understand this scatter plot, remember that a Bayesian analysis returns the probability of parameters give the data. -->
+
+```{r, echo = F, eval = F}
 post$lp__ = NA
 for (k in 1:nrow(post)) {
   a = post$a[k]
@@ -638,19 +696,30 @@ plot(post$b,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 plot(post$sigma,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 ```
 
+How is it possible that we see parameter combinations that have a similar posterior probability, and yet have vary different parameter values? To understand this, we can plot precictions, i.e. regression lines, from such parameter values.
 
 ```{r}
 plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
 abline(a = mean(post$a), b = mean(post$b), lwd = 2, col = "green4")
-for (k in 1:length(small_a.a)) abline(small_a.a[k],small_a.b[k], col = adjustcolor("red",alpha = .125))
-for (k in 1:length(large_a.a)) abline(large_a.a[k],large_a.b[k], col = adjustcolor("blue",alpha = .125))
+for (k in 1:length(small_a.a)) 
+  abline(a = small_a.a[k],
+         b = small_a.b[k],
+         col = adjustcolor("red",alpha = .125))
+for (k in 1:length(large_a.a)) 
+  abline(a = large_a.a[k],
+         b = large_a.b[k],
+         col = adjustcolor("blue",alpha = .125))
 ```
 
-Parameters are hard to interpret. What do intercept $\alpha$ and slope $\beta$ mean intuitively?
+A linear regression tries to minimize the distance between the regression line and data points on the y axis. What this plot shows us is that different parameter combinations (low $\alpha$ with large $\beta$ vs. high $\alpha$ with small $\beta$) can lead to similar distances (likelihood values).
+
+The correlation in the posterior can make it hard to fit more complex models. In addition, the parameters of the model we just fit are are hard to interpret: What do intercept $\alpha$ and slope $\beta$ mean intuitively?
+
+To deal with these problems, some recommend to standardize predictor variables.
 
 ## Analysis with standardized predictor length
 
-Looking at the right-hand side of the plot, we see that it is not so easy to think about what the mean weight is, length has a difficult scale. We can just re-scale it.
+With standardization, we mean first and foremost to subtract the mean from the predictor variable, as is done in the next plot. One could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive.
 
 ```{r scaledata, fig.width=6, fig.height=6}
 dt$length.s = 
@@ -665,7 +734,7 @@ plot(dt$length.s,
 ```
 
 
-Now it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the weight goes up by 5 units (-3 to 2), length goes up by 4 units (2 to 6), that `r 4/5`kg per cm length.
+Now it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the length goes up by 20 units (-10 to 10), length goes up by 3.5 units (2 to 5.5), that is `r 3.5/20`kg per cm length.
 
 ## The model
 
@@ -683,10 +752,10 @@ coeffs = coef(lm(dt$weight~dt$length.s))
 abline(coeffs, col = "blue", lwd = 2)
 arrows(0,0,0,mean(dt$weight), code = 3, col = "red", lwd = 2)
 abline(h = c(0,coeffs[1] + -3*coeffs[2]), col = "grey", lty = 3)
-draw.arc(-3, coeffs[1] + -3*coeffs[2], 1, deg1 = 0, deg2 = coeffs[2]*45, lwd = 2, col = "magenta", n = 100)
-text(0,1, expression(alpha), pos = 4, col = "red", cex = 1.5)
-text(-2.2,coeffs[1] + -2.2*coeffs[2], expression(beta), pos = 1, col = "magenta", cex = 1.5)
-text(2,coeffs[1] + 2*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 1, col = "blue", cex = 1.5, srt=25.6)
+draw.arc(-3, coeffs[1] + -3*coeffs[2], 2.5, deg1 = 0, deg2 = coeffs[2]*270, lwd = 2, col = "magenta", n = 100)
+text(0,coeffs[1]/2, expression(alpha), pos = 4, col = "red", cex = 1.5)
+text(-1,coeffs[1] + -1*coeffs[2], expression(beta), pos = 1, col = "magenta", cex = 1.5)
+text(2,coeffs[1] + 2*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 3, col = "blue", cex = 1.5, srt=30)
 ```
 
 Here is the full model
@@ -718,6 +787,7 @@ plot(0,
      ylim = c(1,7),
      xlim = c(-11,11))
 clr = adjustcolor("blue",alpha = .5)
+abline(v = 0, lty = 3, col = "grey")
 for (k in 1:50)
   abline(rnorm(1,3.5,1.5), rnorm(1,.15,.5), col = clr)
 ```
@@ -732,8 +802,9 @@ plot(0,
      xlab = "scaled length",
      ylim = c(1,7),
      xlim = c(-11,11))
+abline(v = 0, lty = 3, col = "grey")
 for (k in 1:50)
-  abline(rnorm(1,3.5,1), rlnorm(1,log(.15),.5), col = clr)
+  abline(rnorm(1,3.5,1), rlnorm(1,log(.175),.5), col = clr)
 ```
 
 This looks much more reasonable. Here is the model with new priors:
@@ -754,7 +825,7 @@ mu.model.list =
     weight ~ dnorm(mu,sigma),
     mu <- a + b * length.s,
     a  ~ dnorm(3.5,1),
-    b  ~ dlnorm(-.25,.5),
+    b  ~ dlnorm(log(0.175),.5),
     sigma  ~ dunif(0,1.5)
   )
 ```
@@ -778,10 +849,6 @@ mu.model.post = extract.samples(mu.model.fit)
 ```
 
 Next we calculate the "transformed parameter" $\mu$ for each participant. Because we have `r nrow(mu.model.post)` posterior samples and `r nrow(dt)` participants, we end up with a `r nrow(mu.model.post)` time `r nrow(dt)` matrix of posterior predictions.
-
-```{r}
-
-```
 
 
 ```{r mucalcposterpred}
@@ -872,7 +939,7 @@ plot(dt$length.s,
      xaxt = "n")
 x.ticks = seq(35,60,by = 5)
 axis(1, 
-     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     at = x.ticks-mean(dt$length), 
      labels = x.ticks)
 for(k in 1:25) 
   abline(a = mu.model.post$a[k], 
@@ -913,7 +980,7 @@ plot(dt$length.s,
 conf_band(length.s.new,HDPI.lin_pred)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
-     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     at = x.ticks-mean(dt$length), 
      labels = x.ticks)
 abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
 
@@ -927,7 +994,7 @@ plot(dt$length.s,
 conf_band(length.s.new,HDPI.pp)
 x.ticks = seq(35,60,by = 5)
 axis(1, 
-     at = (x.ticks-mean(dt$length))/sd(dt$length), 
+     at = x.ticks-mean(dt$length), 
      labels = x.ticks)
 abline(mean(mu.model.post$a),mean(mu.model.post$b), col = "blue")
 ```
@@ -943,7 +1010,7 @@ Splines are an alternative to polynomial regression if one wants to model non-li
 
 In polynomial regression, the regression weight for each basis functions changes the predicted values over the entire range of the predictor variables.
 
-```{r polynomial, fig.height=7}
+```{rr polynomial, fig.height=7}
 x = seq(-3,3,.1)
 X.poly = poly(x, 2, raw = T)
 
@@ -961,8 +1028,8 @@ plot(x, y1, 'l', lwd = 2,
      col = "blue",
      ylab = "y (weighted sum of basis functions)")
 lines(x,y2, col = "red", lwd = 2, lty = 2)
-
 ```
+
 
 As a result, it is not possible to fit local trends.
 
@@ -991,5 +1058,74 @@ plot(x, y1, 'l', lwd = 2,
 lines(x,y2, col = "red", lty = 2, lwd = 2)
 ```
 
-
 As a result, splines can model local variations. 
+
+## A quick look at important parameters for splines.
+
+Let's assume that we have the following data set:
+
+```{r}
+set.seed(11)
+x = seq(-3,3,length.out = 250)
+knot.locations = seq(-3,3, length.out = 10)
+X.splines = bs(x, knots = knot.locations)
+b = rnorm(ncol(X.splines))
+pre.y = X.splines %*% b
+y = pre.y + rnorm(length(x),0,.3)
+plot(x,y)
+```
+
+If we want to fit such a data set, we have to decide into how many (overlapping) sections, each of which is modeled by a basis function, we split the space along the x axis. This is done with the `knot` parameter of the `bs` function in the `splines` package:
+
+```{r}
+par(mfrow = c(2,1))
+num_knots = 5
+knot_list = quantile(df$x,probs=seq(0,1,length.out=num_knots))
+B = bs(df$x, knots=knot_list, degree=3)
+matplot(B,type = 'l', main = "5 knots")
+num_knots = 12
+knot_list = quantile(df$x,probs=seq(0,1,length.out=num_knots))
+B = bs(df$x, knots=knot_list, degree=3)
+matplot(B,type = 'l', main = "12 knots")
+```
+
+
+Another thing we can decide is how large we allow weights $\omega$ for the Basis functions become.
+
+To understand this, we instepct this quap model:
+
+```{r}
+quap.spline.model = 
+  alist(
+    y ~ dnorm(mu,sigma),
+    mu <- B %*% omega ,
+    omega ~ dnorm(0,1),
+    sigma ~ dexp(1)
+  )
+```
+
+
+```{r}
+B %*% matrix(rnorm(ncol(B)*5,sd = 1),nrow = ncol(B)) %>% matplot(type = 'l', col = "red", lty = 1)
+B %*% matrix(rnorm(ncol(B)*5,sd = .1),nrow = ncol(B)) %>% matlines(col = "blue", lty = 1)
+legend("topright",
+       col = c("red","blue"),
+       lty = 1,
+       legend = c(expression(omega~"~ normal(0,1)"),
+                  expression(omega~"~ normal(0,.1)")), bty = "n")
+```
+The last figure here shows the influence of number of knots (in rows) and the standard deviation for omega (in columns).
+
+```{r}
+par(mfrow = c(2,2))
+for (n_knots in c(5,15)) {
+  for(sd in c(0.1,1)) {
+    knot_list = quantile(df$x,probs=seq(0,1,length.out=n_knots))
+    B = bs(df$x, knots=knot_list, degree=3)
+    B %*% matrix(rnorm(ncol(B)*5,sd = sd),nrow = ncol(B)) %>% 
+      matplot(type = 'l', col = "blue", lty = 1, ylim = c(-2,2))
+    title(bquote("N(knots) = " ~ .(n_knots) ~", sd("~omega~") = " ~ .(sd)))
+  }
+}
+```
+
