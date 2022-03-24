@@ -3,7 +3,7 @@ This repository holds R-Markdown documents that are created for the course based
 
 The html documents can be viewed here:
 
-[Bayesian updating](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chpater1/ExplainBayes.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+[Bayesian updating](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter1/ExplainBayes.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
 [Background material Chapter 2](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter2/Chapter2BG.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
