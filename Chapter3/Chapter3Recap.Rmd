@@ -1,0 +1,626 @@
+---
+title: "Chapter 3: Recap"
+author: "Guido Biele"
+date: "09.03.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1,h2{
+  font-size: 22pt;
+}
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+library(plotrix)
+draw_pie = function() {
+  par(mar = c(0,0,0,0))
+  pie(c(3,1), labels = "", border = "white")
+  draw.circle(0,0,.8)
+}
+e.rot = 45
+h.e = .25
+k.e = -.25
+a.e = .5
+b.e = .175
+draw_ellipse = function() {
+  draw.ellipse(h.e,k.e,a.e,b.e , angle = e.rot,
+               col = adjustcolor("grey",alpha = .75),
+               border = adjustcolor("grey",alpha = .75)) 
+}
+colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "", color1 = "blue", color2 = "grey") {
+  if(is.numeric(main)) main=round(main,4)
+  if(is.null(lower) & is.null(upper)) color1 = "grey"
+  h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
+  cols = rep(color1,length(h$breaks))
+  if (!is.null(lower)) cols[h$breaks < lower] = color2
+  if (!is.null(upper)) cols[h$breaks > upper] = color2
+  plot(h, col = cols, main = main, xlab = "samples",border = NA)
+}
+par(mar=c(2.5,2.5,0,1), mgp=c(2,.7,0), tck=-.01)
+library(rethinking)
+```
+
+
+## Probability concepts
+
+- Unconditional or marginal probability $P(A)$: The probability of an event independent of the state of related events
+- Joint probability $P(A,B)$ or $P(A \cap B)$: The probability that two events co-occur
+- Conditional probability $P(A|B)$: The probability that one event occurs given that we have fixed a related event to a specific value
+
+
+Example: We want to make statements about winter days and snow days. This means that there are 4 possible event types:
+
+$$
+\begin{alignat}{2}
+\text{no winter} &\; \cap \;  \text{no snow} \\
+\text{winter}    &\; \cap \;  \text{no snow} \\
+\text{no winter} &\; \cap \;  \text{snow} \\
+\text{winter}    &\; \cap \;  \text{snow}
+\end{alignat}
+$$
+We can visualize the probability that any given day falls into one of these for classes as follows.
+
+```{r, echo = F}
+draw_pie()
+draw_ellipse()
+legend("topleft",
+       fill = c("white","lightblue2",adjustcolor("grey",alpha = .75),"lightblue3"),
+       legend = c(
+         expression(no~winter ~ intersect(no~snow)),
+         expression(winter ~ intersect(no~snow)),
+         expression(no~winter ~ intersect(snow)),
+         expression(winter ~ intersect(snow))),
+       bty = "n")
+```
+
+Marginal probabilities are just the probabilities of event, independent of anything else
+
+```{r, echo = F}
+par(mfrow = c(1,2))
+draw_pie()
+title("Marginal probability\nP(winter)", line = -3)
+draw_pie()
+draw.circle(0,0,.8, col ="white")
+draw_ellipse()
+title("Unconditional probability\nP(snow)", line = -3)
+```
+
+The joint probability can be visualized as the intersection of bot event types winter and snow:
+
+```{r, echo = F}
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "")
+draw.circle(0,0,.8, col ="white")
+draw.ellipse(h.e,k.e,a.e,b.e , col = "lightblue", angle = e.rot, border = "lightblue")
+draw_ellipse()
+rect(0,0,.7,.2, col = "white", border = NA)
+rect(0,0,-.2,-.7, col = "white", border = NA)
+title("Joint probability", line = -1)
+title(expression(P(winter ~ intersect(snow))), line = -2)
+```
+
+Finally, the conditional probability fixes one event type to a specific value, and asks "Given we fixed this first event type, what is the probability of the second even type." We are focusing only on this subset off all possible event types:
+
+```{r, echo = F}
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "", border = "white")
+draw_ellipse()
+rect(0,0,.7,.2, col = "white", border = NA)
+rect(0,0,-.2,-.7, col = "white", border = NA)
+```
+
+And the conditional probability is then just the joint probability  relative to (divided by) the probability of the first, fixed event type.
+
+```{r, echo = F}
+par(mar = c(0,0,0,0), mfrow = c(2,1))
+pie(c(3,1), labels = "")
+draw.circle(0,0,.9, col ="white", border = "white")
+draw_ellipse()
+rect(0,0,.7,.2, col = "white", border = NA)
+rect(0,0,-.2,-.7, col = "white", border = NA)
+lines(c(-1,1),c(-1,-1), lwd = 2)
+title("Conditional probability", line = -1)
+title(expression(P(snow~"|"~winter)~"="~frac(P(winter ~ intersect(snow)),P(winter))), line = -3)
+pie(c(3,1), labels = "", border = "white")
+
+```
+
+
+```{r, echo = F}
+shift_rotate = function(xy,shift_x, shift_y, angle) {
+  theta = 2*pi/(1/(angle/360))
+  trans.mat = transf = matrix(c(cos(theta),-sin(theta),sin(theta),cos(theta)),nrow = 2)
+  
+  x.e = xy[1] - shift_x
+  y.e = xy[2] - shift_y
+  
+  xy_transf = trans.mat %*% matrix(c(x.e,y.e))
+  
+  return(xy.r = c(
+    x.r = shift_x + xy_transf[1],
+    y.r = shift_y + xy_transf[2]  
+  ))
+}
+
+in_ellipse = function(xy,h,k,a,b, e.rot) {
+  xy.r = shift_rotate(xy,h,k,e.rot)
+  (xy.r[1]-h)^2/a^2 + (xy.r[2]-k)^2/b^2 <= 1
+}
+
+rpoint_in_circle = function() {
+  r = 0.8 * sqrt(runif(1))
+  theta = runif(1) * 2 * pi
+  return(c(0 + r * cos(theta),
+           0 + r * sin(theta)))
+}
+```
+
+If we use simulations to calculate these probabilities, as illustrated in the next figure, the problem is reduced to simple counts:
+
+$$
+P(snow|winter) = \frac{\text{number of snowy winter days}}{\text{number of winter days}}
+$$
+
+```{r, echo = F}
+set.seed(123)
+draw_pie()
+draw_ellipse()
+
+N = 365
+is.winter = vector(length = N) # vector to count winter days
+is.snow = vector(length = N) # vector to count snow days
+
+for (k in 1:N) {
+  # generate random point with custom function
+  xy = rpoint_in_circle()
+  
+  # check if it is a snow day, i.e. in ellipse, with custom function
+  is.snow[k] = in_ellipse(xy,h.e,k.e,a.e,b.e,e.rot)
+  # check if it is a winter day
+  is.winter[k] = xy[1] > 0 & xy[2] < 0
+  
+  # plot points
+  points(xy[1],xy[2],
+         pch = ifelse(is.snow[k] == T,8,21), cex = .75,
+         bg = ifelse(is.winter[k] == T,"blue","red"),
+         col = ifelse(is.winter[k] == T,"blue","red"))
+
+}
+
+legend(.75,.8,
+       pch = c(8,21,15,15), bty = "n",
+       col = c("black","black","blue","red"),
+       legend = c("snow","no snow", "winter", "no winter"))
+```
+
+Here is the whole thing with A and B instead of snow and winter.
+
+
+$$
+\overset{\color{violet}{\text{conditional probability}}}{P(A|B)} = \frac{\overset{\color{red}{\text{joint probability}}}{P(A, B)}}{\overset{\color{blue}{\text{marginal probability}}}{P(B)}}
+$$
+and by multiplying with $P(B)$ on both sides, we get first 
+
+$$
+\overset{\color{violet}{\text{conditional probability}}}{P(A|B)} \cdot \overset{\color{blue}{\text{marginal probability}}}{P(B)} = \overset{\color{red}{\text{joint probability}}}{P(A,B)}
+$$
+
+which is the same as
+
+$$
+\overset{\color{red}{\text{joint probability}}}{P(A,B)} = \overset{\color{violet}{\text{conditional probability}}}{P(A|B)} \cdot \overset{\color{blue}{\text{marginal probability}}}{P(B)}
+$$
+
+This is the general product rule (or chain rule) that connects conditional probabilities with joint probabilities.
+
+
+## Deriving Bayes rule
+
+
+$$
+P(A,B) = \color{blue}{P(A|B) \cdot P(B)} \\
+P(A,B) = \color{red}{P(B|A) \cdot P(A)}
+$$
+
+Because both equations have $P(A,B)$ on the left hand side, we can also write
+
+$$
+\color{blue}{P(A|B) \cdot P(B)} = \color{red}{P(B|A) \cdot P(A)}
+$$
+
+If we want to know what $P(A|B)$ is, we now have to divide on both sides with $P(B)$, which gives us
+
+$$
+\color{blue}{P(A|B)} = \frac{\color{red}{P(B|A) \cdot P(A)}}{\color{blue}{P(B)}}
+$$
+
+This is Bayes Rule, which one uses to calculate the inverse conditional probability, i.e. when we have information about the probability of $B$ given $A$ ($P(B|A)$) and want to calculate the probability of $A$ given $B$ ($P(A|B)$).
+
+
+Chapter 3 also introduces a diagnostic example. More generally we can ask the question about what is the probability of a disease given a positive test results $P(D|T+)$.
+
+
+$$
+P(D|T+) = \frac{P(T+|D)\cdot P(D)}{P(T+)}
+$$
+
+This tells us the that probability of disease also depends of the unconditional probability (base rate) of the disease and of positive tests.
+
+Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is $
+$$
+P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)
+$$
+However, this is not so relevant for Bayesian inference.
+
+Because this last expression is so complicated, natural frequencies are popular with some
+
+![](NatFreq.jpg)
+
+
+## What are probability distribution, and where do we need them for Bayesian statistics?
+
+Probability distributions are a special form of functions. Here are some functions you have probably already encountered. 
+
+```{r, echo = F, fig.width=8, fig.height=8}
+par(mfrow = c(2,2))
+plot(seq(-3,3,.1), 
+     seq(-3,3,.1)^2,
+     type = "l", 
+     xlab = "x",
+     ylab = "f(x) = f(x)",
+     bty = "n", main = "Qudratic function")
+text(0,6,expression(f(x)~"="~x^2))
+plot(seq(0,pi*2,.1), 
+     sin(seq(0,pi*2,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "Sine function")
+text(5,.5,expression(f(x)~"="~sin(x)))
+plot(seq(0,10,.1), 
+     3 + 0.5 * seq(0,10,.1),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "linear regression function")
+text(2,7,expression(f(x)~"="~a+b*x))
+plot(seq(-3,3,.1), 
+     dnorm(seq(-3,3,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     main = "Normal distribution function",
+     bty = "n")
+text(0,.1, expression(f(x)~"="~frac(1,sigma~sqrt(2~pi))~e^{-frac(1,2)~(frac(x-mu,sigma))^2}))
+```
+
+In Bayesian statistics, we use probability distribution functions to represent uncertainty.
+
+Before we display uncertainty, let's look at how it function looks if we are certain to land on water. The x axis of the function goes from 0 to 1, because proportions are limited to this range of numbers.
+
+```{r, echo = F}
+curve(dbeta(x,100000,1),
+      n = 1000,
+      ylab = "density",
+      xlab = "p",
+      col = "blue",
+      bty = "n")
+```
+
+If we are certain to land on water, $P(water)$ = 1^[The figure shows density, not probability] and all other probabilities have the value zero. Note that density is not the same as probability.
+
+If we want to express uncertainty, our function has to allow all possible values (and forbid all impossible values) on the x-axis. If we had no information whatsoever to say something about the probability to land on water, all probabilities p get the same value.
+
+```{r, echo = F}
+curve(dbeta(x,1,1),
+      ylab = "density", 
+      xlab = "p", 
+      bty = "n",
+      col = "blue")
+```
+
+For this function to be a probability distribution, the area under the function (the integral) must sum up to 1.
+
+To see this, we can observe in the next plot that the area under the probability function remains constant while we go from believing weakly (left) to more strongly (right) that the probability to land on water is larger than 0.5.
+
+```{r, echo = F}
+filled.beta = function(a = 1, b = 1, col = "blue", border = NA, ylim = NULL, add = F) {
+  x = seq(0,1,.01)
+  y = dbeta(x,a,b)
+  x.poly <- c(x, tail(x,1), head(x,1))
+  y.poly <- c(y, 0, 0)
+  if (is.null(ylim)) ylim = c(0,max(y))
+  if (add == FALSE)
+    plot(0,type = "n", ylim = ylim, xlab = "p", ylab = "density", xlim = c(0,1), bty = "n")
+  polygon(x.poly, y.poly, col=col, border=border)
+}
+par(mfrow = c(1,2))
+filled.beta(1.3,1.1, col = adjustcolor("blue", alpha = .5), ylim = c(0,2))
+curve(dbeta(x,1.3*2,1.1*1.5), col = adjustcolor("blue", alpha = .5), add = T)
+filled.beta(1.3*2,1.1*1.5, col = adjustcolor("blue", alpha = .5), ylim = c(0,2))
+curve(dbeta(x,1.3,1.1), col = adjustcolor("blue", alpha = .5), add = T)
+```
+
+To summarize, one can think of a probability distribution as a function that expresses how likely different values of a parameter (here p) are and whose area under the curve (or integral) is 1.
+
+
+In Bayesian statistics, we use such distributions to express three things:
+
+1. <span style="color:blue">**Prior**</span> judgement about the probability of different parameter values before seeing the data. 
+2. The probability of different parameter values given the data. This is also called the <span style="color:red">**likelihood**</span>
+3. The <span style="color:violet">**posterior probability**</span> of different parameter values given our prior judgement and the data.
+
+Let's walk through a simple example. We start by describing our prior judgement, that we are slightly confident that that index finger touches water rather than land, with the beta distribution.
+
+First the prior.
+
+```{r, echo = F}
+p = seq(0,1,length.out = 100)
+prior = dbeta(p,2,1.5)
+prior = prior/sum(prior)
+plot(p,
+     prior,
+     type = 'l',
+     xlab = "p",
+     bty = "n",
+     col = "blue")
+```
+
+Next the likelihood. For the globe tossing example we use the binomial distribution to calculate the likelihood. Let us assume we had 4 trials and 3 successes.
+
+```{r, echo = F}
+trials = 4
+successes = 3
+likelihood = dbinom(successes,size = trials, prob = p)
+likelihood = likelihood/sum(likelihood)
+plot(p,
+     likelihood,
+     type = 'l',
+     xlab = "p",
+     ylab = "likelihood = P(data|p)",
+     bty = "n",
+     col = "red")
+```
+
+Now Let us re-introduce Bayes rule, which we described above as:
+
+$$
+P(A|B) = \frac{P(B|A) \cdot P(A)}{P(B)}
+$$
+
+If we just replace $A$ with $parameter$ and $B$ with $data$ and annotate the different terms we get
+
+$$
+\overset{\color{violet}{\text{posterior probability}}}{P(parameter|data)} = \frac{\overset{\color{red}{\text{likelihood}}}{P(data|parameter)} \cdot \overset{\color{blue}{\text{prior probability}}}{P(parameter)}}{\overset{\color{orange}{\text{evidence}}}{P(data)}}
+$$
+
+This shows us that if we just multiply the likelihood with the prior, we get something that is proportional to the posterior. This is what is meant if you see this expression:
+
+$$
+posterior \propto likelihood \cdot prior
+$$
+
+Let us just calculate and plot this: 
+
+```{r}
+posterior.likelihood = prior * likelihood
+```
+
+
+```{r, echo = F}
+plot(p,
+     posterior.likelihood,
+     type = 'l',
+     xlab = "p",
+     ylab = "density",
+     bty = "n",
+     col = "violet",
+     lty = 3,
+     main = "prior * likelihood",
+     lwd = 2)
+```
+
+
+This distribution is only proportional to the posterior distribution, because the product of posterior and likelihood does not sum up to 1. We can calculate the posterior probability distribution by dividing by the sum. 
+
+```{r}
+s = sum(posterior.likelihood)
+posterior = posterior.likelihood/s
+c(1/s, sum(posterior))
+```
+
+The following figure illustrates how we get from the the un-normalized posterior to the normalized posterior, which sums to 1, by multiplying with a constant, which is just `1/posterior.likelihood`.
+
+```{r, echo = F}
+plot(p,posterior.likelihood,'l',
+     ylim = c(0,0.025),ylab = "density",
+     col = "violet", lty = 3, lwd = 2)
+m = c(10,25,50)
+for (k in 1:length(m)) {
+  lines(p,posterior.likelihood*m[k])
+  text(p[which.max(posterior.likelihood)],
+       max(posterior.likelihood*m[k]),
+       paste0("* ",m[k]), pos = 3)
+}
+lines(p,posterior.likelihood*1/s,
+      col = "violet", lwd = 2)
+text(p[which.max(posterior.likelihood)],
+     max(posterior),
+     paste0("* ",1/s), pos = 3)
+```
+
+
+The next plot shows the posterior distribution together with the prior distribution and the likelihood. We are also adding a plot for the un-normalized posterior with a dotted line.
+
+```{r, echo = F}
+plot(p,
+     posterior,
+     type = 'l',
+     xlab = "p",
+     ylab = "density",
+     col = "violet",
+     lwd = 2)
+lines(p,prior * likelihood,col = "violet", lty = 3)
+lines(p,prior,col = "blue")
+lines(p,likelihood,col = "red")
+legend("topleft",
+       col = c("blue","red","violet"),
+       lty = 1,
+       legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
+```
+
+The figure shows that the posterior is a compromise between the prior distribution and the likelihood. 
+
+If we collect five times the data, we become more certain (the posterior distribution is narrower) and the influence of the prior is diminished so that the posterior will be very similar to the likelihood:
+
+```{r, echo = F}
+trials = 20
+successes = 15
+likelihood = dbinom(successes,size = trials, prob = p)
+likelihood = likelihood/sum(likelihood)
+posterior = prior * likelihood
+posterior = posterior/sum(posterior)
+plot(p,
+     posterior,
+     ylab = "density",
+     type = 'l',
+     xlab = "p",
+     col = "violet",
+     lwd = 2)
+lines(p,prior,col = "blue")
+lines(p,likelihood,col = "red")
+legend("topleft",
+       col = c("blue","red","violet"),
+       lty = 1,
+       legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
+```
+
+So it is not so easy to "cheat" with priors to get what one wants, provided one has collected sufficient data of course.
+
+
+## Ways to calculate the posterior
+
+### Grid approximation
+
+- We calculate the posterior probability for a number of prior probability values. 
+
+This works if we have a limited number of parameters.
+
+To get samples from this probability distribution, we use the posterior probabilities as weights when we sample from the prior values for which we calculate the posterior.
+
+### Quadratic (Laplace) approximation
+
+- We find the mode of the posterior distribution, which is also called the maximum a posteriori or MAP^[with some optimization scheme]  
+- We use the curvature at this mode^[How quickly the posterior changes if one moves away from the mode] to approximate how the entire posterior distribution looks like. 
+
+This works if the posterior distribution has a (multivariate) normal distribution. (Which also means that it has only one mode)
+
+To get samples we simulate from the (multivariate) normal distribution that describes the posterior.
+
+### Markov Chain Monte Carlo (MCMC)
+
+- A simulation based approach
+
+Also works for non-normal and multi-modal posterior distributions, but needs more time.
+
+MCMC directly produces samples.
+
+## Learning things from the posterior 
+
+The posterior distribution contains all our knowledge given the prior, model, and data. If possible, we should show the reader the full posterior. If the posterior distribution has a simple shape, which is often the case, we can calculate certain statistics to summarize the posterior.
+
+We walk through some concepts with the following posterior.
+
+```{r, echo = F}
+samples1 = rbeta(500000,10,2.5)
+colored.hist(samples1, length.out = 250)
+```
+
+I prefer histograms over density plots, because density plots can distort things
+
+### Mean, median, and mode
+```{r, echo = F, messsage = FALSE, warning=FALSE, results='hide'}
+colored.hist(samples1, length.out = 250)
+mode = mean(HPDI(samples1,.1))
+clrs = c("red","blue","black")
+abline(v = c(mean(samples1),median(samples1),mode), col = clrs, lwd = 2)
+legend("topleft",
+       lty = 1, lwd = 2,
+       col = clrs,
+       legend = c("mean","median","mode"),
+       bty = "n")
+```
+
+### Qunitiles
+
+```{r}
+Q05 = quantile(samples1,.05)
+colored.hist(samples1, length.out = 250, upper = Q05)
+```
+
+
+
+### Credible intervals
+
+An x% credible interval (CI) is the central interval that contains x% of the posterior distribution
+
+Can also be called posterior intervals. This is what some people think confidence intervals are.
+
+```{r}
+CI80 = PI(samples1, prob = .8)
+colored.hist(samples1, length.out = 250,
+             lower = CI80[1],
+             upper = CI80[2])
+title(paste("Interval length = ",round(diff(CI80),3)))
+abline(v = CI80, lwd = 2)
+text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4))
+```
+
+Credible intervals are calculated with quintiles. For instance, if the 80% credible intervals goes from the 10% ((100-80)/2) quintile to the 90% quintile.
+
+### Highest density posterior interval
+
+An x% Highest density posterior interval (HDPI) is the shortest interval that contains x% of the posterior distribution. 
+
+```{r}
+HPDI80 = HPDI(samples1, prob = .8)
+colored.hist(samples1, length.out = 250,
+             lower = HPDI80[1],
+             upper = HPDI80[2])
+title(paste("Interval length = ",round(diff(HPDI80),3)))
+abline(v = HPDI80, col = "blue", lwd = 2)
+abline(v = CI80, col = "lightblue", lwd = 2, lty = 3)
+text(HPDI80, c(4000,4000), labels = round(HPDI80,2), pos = c(2,4), col = "blue")
+```
+
+### Posterior predictions
+
+How do we know that our model is any good?
+
+In the workflow of Bayesian data analysis, we check "model fit" visually, by comparing if the predictions made by the model are consistent with the data.
+
+We do this by taking parameters from the posterior distribution, and then simulate data from the model with these parameters.
+
+If the model and parameters are good, the simulated data should look similar to the observed data.
