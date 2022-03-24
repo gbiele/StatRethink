@@ -83,7 +83,7 @@ If you are uncertain about how to proceed, check the table above
 
 ```{r}
 # Likelihood for the first data point
-
+L = dnorm(age[1],22,3)
 ```
 
 
@@ -91,31 +91,32 @@ Now calculate the probability of the data point given the parameter values for e
 
 ```{r}
 # Likelihoods for all individual data points
-
+L = dnorm(age,22,3)
 ```
 
-And now calculate the joint probability of all recorded ages.
+And now calculate the joint probability of all recorded ages. (Read the help for the `prod` function, i.e. type `?prod`in the console)
 
 ```{r}
 # Joint likelihoods for all individual data points
-
+prod(L)
 ```
 
 
-Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`.
+Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`. You should use the prior distributions you specified above for this,
 
 ```{r}
+P_par = c(NA,NA)
 # Prior probability for mu = 22
-
+P_par[1] = dnorm(22,25,2)
 # Prior probability for sd = 3
-
+P_par[2] = dexp(2,.5)
 ```
 
 
 And the joint prior probability for `mu = 22` and `sd = 2`.
 ```{r}
 # Point prior probability for mu = 22 and sd = 3
-
+prod(P_par)
 ```
 
 Now you should be able to calculate the numerator of the equation above for `mu = 22` and `sd = 3`. 
@@ -123,34 +124,44 @@ Now you should be able to calculate the numerator of the equation above for `mu 
 ```{r}
 # Joint probability of data and parameters for  mu = 22 and sd = 3 
 # given the prior distributions for mu and sd
-
+prod(L)*prod(P_par)
 ```
 
 
-### Grid approximation
-Now that you have calculated the joint probability of data and parameters given the prior distributions for mu and sd for one set of parameters, we can do this for a combination of parameters. You can use the parameters in the `data.frame` that is created below.
+Now that you have calculated the joint probability of data and parameters given the prior distributions for mu and sd for one set of parameters, we can do this for a combination of parameters. Continue either with __Grid approximation, version 1__ or __Grid approximation, version 2__.
 
-Please do this in the next code chunk. It is easiest to use a for loops for this.
+## Grid approximation, version 1
 
-Store the result for each parameter combination in the the variable LP (this stands for log-posterior, we explain this in the next session.).
+First set up the grid. You can use the the code example below. Feel free to change the range of the parameters you explore by changing the first and second number in the `seq` commands 
 
 ```{r}
+# Here we are making our grid
 params = 
   expand.grid(
-    mu = seq(20,30,1),
-    sd = seq(2.5,4.5, .25)
+    mu = seq(20,30,.1),
+    sd = seq(2.5,4.5, .025)
   )
 params = data.frame(params)
-params$LP = NA
-
-# your code after this line
-
-
-
-
-
-
+head(params)
+tail(params)
 ```
+
+
+Now you can calculate the unnormalized posterior for all parameter combinations.  It is easiest to use a for loops for this.
+
+Store the result for each parameter combination in the the variable `UP`.
+
+```{r}
+# Here comes your code in which you calculate the 'likelihood * prior expression'
+# (see the formula or your code above) for each combination of parameter values.
+
+for (k in 1:nrow(params)) {
+  mu = params$mu[k]
+  sd = params$sd[k]
+  params$UP[k] = prod(dnorm(age,mu,sd)) * dnorm(mu,25,2) * dexp(sd,0.5)
+}
+```
+
 
 ### Calculate the evidence
 
@@ -158,7 +169,7 @@ Use the data.frame `params` that you just created, specifically one column in it
 
 ```{r}
 # Calculate evidence
-
+evidence = sum(params$UP)
 ```
 
 
@@ -167,7 +178,7 @@ Use the data.frame `params` that you just created, specifically one column in it
 Now you can use the evidence to add a one more column to the `params` data frame, let's call it `PP`, which has the posterior probability for each parameter combination.
 ```{r}
 # Calculate posterior probabilities
-
+params$P = params$UP/evidence
 ```
 
 
@@ -175,6 +186,90 @@ Now you can use the evidence to add a one more column to the `params` data frame
 Make a plot of the posterior
 ```{r}
 # Plot posterior probabilities
+# The easiest is to use ggplot here, following this pattern
+# ggplot(params, aes(x = mu, y = sd, z = PP)) + geom_contour_filled()
+# which assumes that you have called you column for posterior
+# probabilities "PP"
+library(ggplot2)
+ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster()
+```
 
+
+## Grid approximation, version 2
+
+Here is a template to generate a grid of parameters. Your main task here is to add the code to calculate the unnormalaized posterior.
+You have to set `eval = TRUE` at the beginning of the posterior so that the code is run when you compile.
+
+```{r, eval = FALSE}
+N_grid_points <-100
+
+# Make a set of grid values for the two parameters
+my_mu<-seq(from=__, to=__, length.out=N_grid_points)
+my_sigma<-seq(from=0, to=__, length.out=N_grid_points)
+
+# Make an empty placeholder for the posterior
+posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
+
+# Calculate the posterior in each grid point
+for (i in 1:N_grid_points)
+  for (j in 1:N_grid_points)
+  {
+    posterior_unstandardized[i,j]<- # yourcode comes here
+  }
+```
+
+Next, you need to calculate the evidence and standardize the posterior
+
+```{r}
+
+```
+
+And here is some code to plot the results
+
+Plot the results.
+```{r, eval = FALSE}
+# Plot (2D) image of the posterior
+image(my_mu,my_sigma,posterior,  axes=FALSE);
+axis(1, at = seq(20, 30, by = 2))
+axis(2, at = seq(0, 5, by = 1))
+
+# Plot (3D) histogram
+library(plot3D)
+hist3D(z=posterior, border="black")
+```
+
+
+## Full solution version 2 + plot
+
+```{r, eval = T}
+N_grid_points <-100
+my_mu<-seq(from=20, to=30, length.out=N_grid_points)
+my_sigma<-seq(from=2.5, to=4.5, length.out=N_grid_points)
+
+# Make an empty placeholder for the posterior
+posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
+
+# Calculate the posterior in each grid point
+for (i in 1:N_grid_points)
+  for (j in 1:N_grid_points)
+  {
+    posterior_unstandardized[i,j] <- dnorm(my_mu[i],25,2)*dexp(my_sigma[j],0.5)*prod(dnorm(age,mean=my_mu[i], sd=my_sigma[j]))
+  }
+
+# standardize the posterior
+posterior=posterior_unstandardized/sum(posterior_unstandardized)
+```
+
+Plot the results.
+```{r}
+# Plot (2D) image of the posterior
+image(my_mu,my_sigma,posterior,  axes=FALSE);
+axis(1, at = seq(20, 30, by = 2))
+axis(2, at = seq(0, 5, by = 1))
+
+# Plot (3D) histogram
+library(plot3D)
+hist3D(z=posterior, border="black")
+```
 ```
 
