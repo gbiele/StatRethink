@@ -1,7 +1,7 @@
 ---
 title: "Chapter 4: Recap"
 author: "Guido Biele"
-date: "14.03.2022"
+date: "13.03.2022"
 output:
   html_document: 
     mathjax: default
@@ -377,8 +377,8 @@ And if we want to impress (or scare off) a colleague, we can write down the full
 
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
-\frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)}}
-{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
+\frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(\mu|3.5,1.5) Uniform(\sigma|0,1.5)}}
+{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(\mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
 $$
 <br />
 

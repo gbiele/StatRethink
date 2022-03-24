@@ -1,0 +1,180 @@
+---
+title: "BayesGrid"
+author: "GB"
+date: "24.03.2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise: Programm a simple grid approximation to obtain a posterior distribution
+
+Please download a copy of this document and fill in the relevant sections below.
+
+### Data
+
+Use this data about arrivals times relative to the start of a lecture.
+
+```{r}
+my_data = 
+  read.table(
+    "arrival.csv",
+    header = T,
+    sep = ",")
+head(my_data)
+```
+
+Here is the plot of the data
+
+```{r}
+with(my_data,
+     plot(age, time))
+```
+
+```{r}
+age = my_data$age
+hist(age)
+```
+
+
+### The Model
+
+For now we are only interested in estimating the mean age (`age`) using the following model.
+The table shows the (incomplete) model expressed with equations, quap code fragments, and how one would calculate quantities directltly in R.
+
+<br/>
+
+| What | Notation | quap code | r-code |
+|---|---|---|---|
+|Likelihood | $a_i \sim Normal(\mu,\sigma)$ | `age ~ dnorm(mu, sigma)` | `L[i] = dnorm(age[i], mu, sigma)` |
+|Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , .)` |
+|Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma ~ ...` |
+
+<br/>
+
+Your first task is to complete the model to do this. Please add the missing information in the table above. You need to add the parameter values to the priors. You also have to choose a distribution and parameter(s) for the standard deviation $\sigma$.
+
+### The posterior disribution
+
+The posterior distribution is calculated as follows:
+
+$$
+\overset{Posterior}{P(\mu,\sigma|w)} = 
+\frac{\prod_i \overset{Likelihood}{Normal(a_i|\mu,\sigma)} \cdot 
+              \overset{Prior}{Normal(\mu|...,...)YourDist(\sigma|...)}}
+{\overset{Evidence}{\int\int \prod_i Normal(a_i|\mu,\sigma) \cdot Normal(\mu|...,...)YourDist(\sigma|...)d\mu d\sigma}}
+$$
+
+<br/>
+
+Please add the missing information wherever are three dots $...$ or it reads $YourDist$.
+
+### Calculate the likelihood for a data point
+
+Lets assume that these parameter values
+
+- `mu = 22`
+- `sd = 3`
+
+Please calculate the likelihood for the first data point in the vector `temp` in the next code block.
+If you are uncertain about how to proceed, check the table above
+
+```{r}
+# Likelihood for the first data point
+
+```
+
+
+Now calculate the probability of the data point given the parameter values for each recorded age You do not need a loop to do this!
+
+```{r}
+# Likelihoods for all individual data points
+
+```
+
+And now calculate the joint probability of all recorded ages.
+
+```{r}
+# Joint likelihoods for all individual data points
+
+```
+
+
+Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`.
+
+```{r}
+# Prior probability for mu = 22
+
+# Prior probability for sd = 3
+
+```
+
+
+And the joint prior probability for `mu = 22` and `sd = 2`.
+```{r}
+# Point prior probability for mu = 22 and sd = 3
+
+```
+
+Now you should be able to calculate the numerator of the equation above for `mu = 22` and `sd = 3`. 
+
+```{r}
+# Joint probability of data and parameters for  mu = 22 and sd = 3 
+# given the prior distributions for mu and sd
+
+```
+
+
+### Grid approximation
+Now that you have calculated the joint probability of data and parameters given the prior distributions for mu and sd for one set of parameters, we can do this for a combination of parameters. You can use the parameters in the `data.frame` that is created below.
+
+Please do this in the next code chunk. It is easiest to use a for loops for this.
+
+Store the result for each parameter combination in the the variable LP (this stands for log-posterior, we explain this in the next session.).
+
+```{r}
+params = 
+  expand.grid(
+    mu = seq(20,30,1),
+    sd = seq(2.5,4.5, .25)
+  )
+params = data.frame(params)
+params$LP = NA
+
+# your code after this line
+
+
+
+
+
+
+```
+
+### Calculate the evidence
+
+Use the data.frame `params` that you just created, specifically one column in it, to calculate the _evidence_. If you are uncertain, check the equation above
+
+```{r}
+# Calculate evidence
+
+```
+
+
+### Normalize to get a proper posterior distribution.
+
+Now you can use the evidence to add a one more column to the `params` data frame, let's call it `PP`, which has the posterior probability for each parameter combination.
+```{r}
+# Calculate posterior probabilities
+
+```
+
+
+### Plot the posterior
+Make a plot of the posterior
+```{r}
+# Plot posterior probabilities
+
+```
+
