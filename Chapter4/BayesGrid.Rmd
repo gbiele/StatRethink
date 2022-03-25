@@ -1,6 +1,6 @@
 ---
 title: "BayesGrid"
-author: "GB"
+author: "GB & NC"
 date: "24.03.2022"
 output: html_document
 ---
