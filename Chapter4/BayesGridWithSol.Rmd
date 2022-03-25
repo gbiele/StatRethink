@@ -9,13 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Exercise: Programm a simple grid approximation to obtain a posterior distribution
+## Exercise: Programm a simple grid approximation to obtain a posterior distribution
 
-Please download a copy of `BayesGrid.Rmd` and the data file `arrival.csv` and fill in the relevant sections below.
+Please download a copy of this document and fill in the relevant sections below.
 
-
-
-# The data Data
+### Data
 
 Use this data about arrivals times relative to the start of a lecture.
 
@@ -41,14 +39,14 @@ hist(age)
 ```
 
 
-# The Model
+### The Model
 
-For now, we are only interested in estimating the mean age (`age`) using the following model.
-The table shows the incomplete model expressed with equations, `quap` code fragments, and how one would calculate quantities directly in R.
+For now we are only interested in estimating the mean age (`age`) using the following model.
+The table shows the (incomplete) model expressed with equations, quap code fragments, and how one would calculate quantities directltly in R.
 
 <br/>
 
-| What | Notation | quap code | R code |
+| What | Notation | quap code | r-code |
 |---|---|---|---|
 |Likelihood | $a_i \sim Normal(\mu,\sigma)$ | `age ~ dnorm(mu, sigma)` | `L[i] = dnorm(age[i], mu, sigma)` |
 |Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , .)` |
@@ -56,7 +54,7 @@ The table shows the incomplete model expressed with equations, `quap` code fragm
 
 <br/>
 
-Your first task is to complete the model to do this. Please add the missing information in the table above. You need to add the parameter values to the prior for $\mu$ and you have to choose a distribution and parameter(s) for the standard deviation $\sigma$.
+Your first task is to complete the model to do this. Please add the missing information in the table above. You need to add the parameter values to the priors. You also have to choose a distribution and parameter(s) for the standard deviation $\sigma$.
 
 ### The posterior disribution
 
@@ -71,11 +69,11 @@ $$
 
 <br/>
 
-Please add the missing information, using what you just added to the table, wherever are three dots $...$ or it reads $YourDist$.
+Please add the missing information wherever are three dots $...$ or it reads $YourDist$.
 
 ### Calculate the likelihood for a data point
 
-Let's assume these parameter values
+Lets assume that these parameter values
 
 - `mu = 22`
 - `sd = 3`
@@ -85,7 +83,7 @@ If you are uncertain about how to proceed, check the table above
 
 ```{r}
 # Likelihood for the first data point
-
+L = dnorm(age[1],22,3)
 ```
 
 
@@ -93,43 +91,44 @@ Now calculate the probability of the data point given the parameter values for e
 
 ```{r}
 # Likelihoods for all individual data points
-
+L = dnorm(age,22,3)
 ```
 
 And now calculate the joint probability of all recorded ages. (Read the help for the `prod` function, i.e. type `?prod`in the console)
 
 ```{r}
-# Joint likelihood for all individual data points
-
+# Joint likelihoods for all individual data points
+prod(L)
 ```
 
 
-Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`. You should use the prior distributions you specified above for this.
+Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`. You should use the prior distributions you specified above for this,
 
 ```{r}
+P_par = c(NA,NA)
 # Prior probability for mu = 22
-
+P_par[1] = dnorm(22,25,2)
 # Prior probability for sd = 3
-
+P_par[2] = dexp(2,.5)
 ```
+
 
 And the joint prior probability for `mu = 22` and `sd = 2`.
 ```{r}
-# Joint prior probability for mu = 22 and sd = 3
-
+# Point prior probability for mu = 22 and sd = 3
+prod(P_par)
 ```
 
-By putting the code you wrote until now, you should be able to calculate the numerator of the equation above, i.e. likelihood times prior probability (density), for parameters `mu = 22` and `sd = 3`. 
+Now you should be able to calculate the numerator of the equation above for `mu = 22` and `sd = 3`. 
 
 ```{r}
 # Joint probability of data and parameters for  mu = 22 and sd = 3 
 # given the prior distributions for mu and sd
-
+prod(L)*prod(P_par)
 ```
 
-# Grid approximation
 
-Now that you have calculated the joint likelihood of data and parameters given the prior distributions for `mu` and `sd` for one set of parameters, you can do this for a larger number of parameters combinations, which we can generate by constructing a grid where each point is a combination of one `mu` and one `sd` parameter value. Continue either with __Grid approximation, version 1__ or __Grid approximation, version 2__.
+Now that you have calculated the joint probability of data and parameters given the prior distributions for mu and sd for one set of parameters, we can do this for a combination of parameters. Continue either with __Grid approximation, version 1__ or __Grid approximation, version 2__.
 
 ## Grid approximation, version 1
 
@@ -137,9 +136,6 @@ First set up the grid. You can use the the code example below. Feel free to chan
 
 ```{r}
 # Here we are making our grid
-# expand.grid produces all combinations 
-# of the N (here 2) variables submitted
-# and punts them in a matrix with N columns
 params = 
   expand.grid(
     mu = seq(20,30,.1),
@@ -158,8 +154,11 @@ Store the result for each parameter combination in the the variable `UP`.
 ```{r}
 # Here comes your code in which you calculate the 'likelihood * prior expression'
 # (see the formula or your code above) for each combination of parameter values.
+
 for (k in 1:nrow(params)) {
- 
+  mu = params$mu[k]
+  sd = params$sd[k]
+  params$UP[k] = prod(dnorm(age,mu,sd)) * dnorm(mu,25,2) * dexp(sd,0.5)
 }
 ```
 
@@ -169,8 +168,8 @@ for (k in 1:nrow(params)) {
 Use the data.frame `params` that you just created, specifically one column in it, to calculate the _evidence_. If you are uncertain, check the equation above
 
 ```{r}
-# Calculate the evidence from the unnormalized posterior
-
+# Calculate evidence
+evidence = sum(params$UP)
 ```
 
 
@@ -179,7 +178,7 @@ Use the data.frame `params` that you just created, specifically one column in it
 Now you can use the evidence to add a one more column to the `params` data frame, let's call it `PP`, which has the posterior probability for each parameter combination.
 ```{r}
 # Calculate posterior probabilities
-
+params$P = params$UP/evidence
 ```
 
 
@@ -192,25 +191,19 @@ Make a plot of the posterior
 # which assumes that you have called you column for posterior
 # probabilities "PP"
 library(ggplot2)
-
+ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster()
 ```
 
 
 ## Grid approximation, version 2
 
-Here is a template to generate a grid of parameters. Your main task here is to add
-
-- the upper and lower boundaries for the parameter values you want to explore in the grid
-- the code to calculate the unormalized (or standardized) posterior.
-
-
+Here is a template to generate a grid of parameters. Your main task here is to add the code to calculate the unnormalaized posterior.
 You have to set `eval = TRUE` at the beginning of the posterior so that the code is run when you compile.
 
 ```{r, eval = FALSE}
 N_grid_points <-100
 
 # Make a set of grid values for the two parameters
-# replace the __ with values of your choice
 my_mu<-seq(from=__, to=__, length.out=N_grid_points)
 my_sigma<-seq(from=0, to=__, length.out=N_grid_points)
 
@@ -221,14 +214,14 @@ posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
 for (i in 1:N_grid_points)
   for (j in 1:N_grid_points)
   {
-    posterior_unstandardized[i,j]<- # your code comes here
+    posterior_unstandardized[i,j]<- # yourcode comes here
   }
 ```
 
 Next, you need to calculate the evidence and standardize the posterior
 
-```{r, eval = F}
-posterior = 
+```{r}
+
 ```
 
 And here is some code to plot the results
