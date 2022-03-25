@@ -9,11 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Exercise: Programm a simple grid approximation to obtain a posterior distribution
+Exercise: Program a simple grid approximation to obtain a posterior distribution
 
-Please download a copy of `BayesGrid.Rmd` and the data file `arrival.csv` and fill in the relevant sections below.
+Please download a copy of [BayesGrid.Rmd](https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGrid.Rmd) and the data file [arrival.csv](https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/arrival.csv) into the same folder and fill in the relevant sections below.
 
-
+To download the files follow the link and right-click anywhere on the page and the click "save as".
 
 # The data Data
 
@@ -153,13 +153,14 @@ tail(params)
 
 Now you can calculate the unnormalized posterior for all parameter combinations.  It is easiest to use a for loops for this.
 
-Store the result for each parameter combination in the the variable `UP`.
+Store the result for each parameter combination in the the variable `UP`. Set "eval = TRUE" at the beginning of the code block, so tha the code is executed when you knit the document!
 
-```{r}
+```{r, eval=FALSE}
 # Here comes your code in which you calculate the 'likelihood * prior expression'
 # (see the formula or your code above) for each combination of parameter values.
+params$UP = NA
 for (k in 1:nrow(params)) {
- 
+  params$UP[k] = 
 }
 ```
 
@@ -203,8 +204,7 @@ Here is a template to generate a grid of parameters. Your main task here is to a
 - the upper and lower boundaries for the parameter values you want to explore in the grid
 - the code to calculate the unormalized (or standardized) posterior.
 
-
-You have to set `eval = TRUE` at the beginning of the posterior so that the code is run when you compile.
+You have to set `eval = TRUE` at the beginning of the code block so that the code is run when you knit the document.
 
 ```{r, eval = FALSE}
 N_grid_points <-100
@@ -225,15 +225,15 @@ for (i in 1:N_grid_points)
   }
 ```
 
-Next, you need to calculate the evidence and standardize the posterior
+Next, you need to calculate the evidence and standardize the posterior. Don't forget to change "eval = FALSE" to "eval = TRUE".
 
-```{r, eval = F}
+```{r, eval = FALSE}
 posterior = 
 ```
 
 And here is some code to plot the results
 
-Plot the results.
+Plot the results. Don't forget to change "eval = FALSE" to "eval = TRUE".
 ```{r, eval = FALSE}
 # Plot (2D) image of the posterior
 image(my_mu,my_sigma,posterior,  axes=FALSE);
@@ -243,40 +243,5 @@ axis(2, at = seq(0, 5, by = 1))
 # Plot (3D) histogram
 library(plot3D)
 hist3D(z=posterior, border="black")
-```
-
-
-## Full solution version 2 + plot
-
-```{r, eval = T}
-N_grid_points <-100
-my_mu<-seq(from=20, to=30, length.out=N_grid_points)
-my_sigma<-seq(from=2.5, to=4.5, length.out=N_grid_points)
-
-# Make an empty placeholder for the posterior
-posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
-
-# Calculate the posterior in each grid point
-for (i in 1:N_grid_points)
-  for (j in 1:N_grid_points)
-  {
-    posterior_unstandardized[i,j] <- dnorm(my_mu[i],25,2)*dexp(my_sigma[j],0.5)*prod(dnorm(age,mean=my_mu[i], sd=my_sigma[j]))
-  }
-
-# standardize the posterior
-posterior=posterior_unstandardized/sum(posterior_unstandardized)
-```
-
-Plot the results.
-```{r}
-# Plot (2D) image of the posterior
-image(my_mu,my_sigma,posterior,  axes=FALSE);
-axis(1, at = seq(20, 30, by = 2))
-axis(2, at = seq(0, 5, by = 1))
-
-# Plot (3D) histogram
-library(plot3D)
-hist3D(z=posterior, border="black")
-```
 ```
 

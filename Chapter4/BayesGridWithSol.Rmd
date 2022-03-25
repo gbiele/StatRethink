@@ -197,8 +197,8 @@ ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster()
 
 ## Grid approximation, version 2
 
-Here is a template to generate a grid of parameters. Your main task here is to add the code to calculate the unnormalaized posterior.
-You have to set `eval = TRUE` at the beginning of the posterior so that the code is run when you compile.
+Here is a template to generate a grid of parameters. Your main task here is to add the code to calculate the un-normalized posterior.
+You have to set `eval = TRUE` at the beginning of the code block so that the code is run when you knit the document.
 
 ```{r, eval = FALSE}
 N_grid_points <-100
