@@ -1,0 +1,278 @@
+---
+title: "A brief introduction in terminology and concepts around directed acyclic graphs (DAGs)"
+author: "Guido Biele"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: pdflatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: pdflatex
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache.extra = packageVersion('tufte'),
+                      fig.margin = TRUE,
+                      warning = F,
+                      message = F,
+                      results = "hide",
+                      fig.width = 4,
+                      fig.height = 4)
+options(htmltools.dir.version = FALSE)
+```
+
+```{r simsetup, echo=F}
+N = 250
+K = 500
+source("dag_utils.R")
+```
+
+
+# Directed cyclic graphs (DAGs)
+
+Directed acyclic graphs allow to represent causal relationships by combining nodes as representations of variables and directed edges (arrows, paths) as representation of causal effects. For example, the following DAG shows that the _Exposure_ psycho-social treatment $Tr$ causes a change in the _Outcome_ symptom strength $Sy$.
+
+```{r sDAG, fig.width=2, fig.height=.5, fig.cap="\\label{fig:sDAG}The simplest DAG."}
+sDAG = dagitty("
+Tr E @0,0
+Sy O @1,0
+
+Tr Sy
+")
+plot_dag(sDAG)
+```
+
+## Chains and Mediators
+
+Often, causal relationships will be more complicated. For example, treatment effects could be mediated by parental behavior $pB$, such that the **_chain_** $Tr \rightarrow pB \rightarrow Sy$ opens a second, indirect path from $Tr$ to $Sy$.
+
+```{r chainDAG, fig.width=2, fig.height=1.5,  fig.cap="\\label{fig:chainDAG}A DAG with a chain."}
+chainDAG = dagitty("
+Tr E @0,0
+Sy O @1,0
+pB 1 @0.5,-0.5
+
+Tr Sy
+Tr pB
+pB Sy
+")
+plot_dag(chainDAG)
+```
+
+If a researcher were interested only in the direct treatment effect, a statistical analysis would need to close the indirect path. When analyzing the data with a regression model, this would be done by including $pB$ into a regression model. Specifically, in a regression model `lm(Sy ~ Tr)`^[This R command implements a linear regression model, where the R-formula $Sy \sim Tr$ means "regress $Sy$ on $Tr$"] the regression coefficient $\beta_{Tr}$ would estimate the total effect of treatment, and in a regression `lm(Sy ~ Tr + pB)` the coefficient $\beta_{Tr}$ would estimate the direct effect of treatment.
+
+# Forsk and Confounders
+
+Another type of indirect open path between exposure and outcome involves _forks_, which occur when a third variable causes two other variables. For example, it is possible that prior symptoms $pSy$ influences if one receives a treatment and how strong the symptoms are after treatment:
+
+```{r forkDAG, fig.width=2, fig.height=1.5, fig.cap="\\label{fig:forkDAG}A DAG with a fork can imply confounding."}
+forkDAG = dagitty("
+Tr  E @0,0
+Sy  O @1,0
+pSy 1 @0.5,0.5
+
+Tr  Sy
+pSy Tr Sy
+")
+plot_dag(forkDAG)
+```
+
+Prior symptoms are a common cause of treatment and symptoms after treatment, and open a _backdoor path_ from treatment to symptoms. As such it can cause an association between treatment and symptoms, even if treatment does not effect symptoms. If one wants to estimate the effect of treatment on symptoms while making sure that the estimate is not "contaminated" by the common cause prior symptoms, one has to close the backdoor path $Tr \leftarrow pSy \rightarrow Sy$. This can again be done by including the variable $pSy$ in a regression model, i.e. `lm(Sy ~ Tr + pSy)`. In a DAG, adjustment (conditioning on) a variable is often visualized with a circle around that variable.
+
+```{r adjustDAG, fig.width=2, fig.height=1.5, fig.cap="\\label{fig:adjustedDAG} Adustment closes an open path. "}
+adjustDAG = dagitty("
+Tr  E @0,0
+Sy  O @1,0
+pSy A @0.5,0.5
+
+Tr  Sy
+pSy Tr Sy
+")
+plot_dag(adjustDAG)
+```
+
+\newpage
+
+## Colliders
+
+The backdoor paths involving the _chain_ $Tr \rightarrow pB \rightarrow Sy$ or the _fork_ $Tr \leftarrow pSy \rightarrow Sy$ are open, because information can flow through $pB$ to $Sy$ or from $pSy$ to $Tr$ and $Sy$. Information cannot flow through an _inverted fork_ or _collider_, i.e. if two arrows point to a third variable. For example treatment and symptoms both influence scholastic performance ($Tr \rightarrow sP \leftarrow Sy$). 
+
+```{r colliderDAG, fig.width=2, fig.height=1.5, fig.cap="\\label{fig:colliderDAG}A DAG with a collider (inverted fork)."}
+exDAG = dagitty("
+Tr E @0,0
+Sy O @1,0
+sP 1 @0.5,0.5
+
+Tr Sy sP
+Sy sP
+")
+plot_dag(exDAG)
+```
+
+An analysis that wants to estimate the effect of treatment should not adjust for scholastic performance, because adjusting for (conditioning on) a collider opens the previously closed path via scholastic performance.
+
+## Absence of causal effects imply (conditional) independence
+When preparing a DAG, the focus is often on measured variables. This is, however, not the right approach. Instead, a DAG should contain all important causal variables, even if they are unobserved. 
+
+Continuing the above example, we can hypothesize that not everyone who is eligible to participate does so. Rather, parental education influences who participates in the study. If this DAG is true, we do not need to be concerned about bias due to self-selection into the study, because there is no open backdoor path from $Sy$ to $Tr$.
+
+```{r partDAG, warning=FALSE, message=FALSE, fig.cap="\\label{fig:part}Self selection without bias", fig.width=3, fig.height=1.25}
+partDAG= dagitty("
+Tr  E @0.00,1
+Pe  1 @-.5,0
+S   A @0.5,0
+Sy  O @1.00,0
+
+Pe S Tr
+Tr Sy
+")
+plot_dag(partDAG)
+```
+
+However, this might not be the most realistic "model of the world". In particular, we should think of other, potentially unmeasured causes that influence the treatment and/or the outcome and/or participation. For instance, one could hypothesize that there are unmeasured common genetic causes $Ug$ of $Sy$ and $Pe$. In this situation, adjustment for $Pe$ will allow to estimate unbiased treatment effects.
+
+
+```{r part2, warning=FALSE, message=FALSE, fig.cap="\\label{fig:part2}Self selection with adjustable bias", fig.width=3, fig.height=2.5}
+UgDAG= dagitty("
+Tr  E @0.00,1
+Pe  1 @-.5,0
+S   A @0.5,0
+Sy  O @1.00,0
+Ug  U @0,-1
+
+Ug Sy Pe 
+Pe S Tr
+Tr Sy
+")
+plot_dag(UgDAG)
+```
+
+Thinking further, one could additionally hypothesize that there are also unobserved environmental causes. For example, a person's social support network $Usn$ could influence what education the parents were able to obtain, and also if the parents manage to organize treatment for their child. This leads to a new DAG, which describes a situation in which adjustment can no longer remove bias. Instead, one would need to use inverse probability of participation weighting.
+
+```{r selbias, warning=FALSE, message=FALSE, fig.cap="\\label{fig:selbias}Self selection with bias than cannot be adjusted", fig.width=3, fig.height=2.5}
+UgUsnDAG= dagitty("
+Tr  E @0.00,1
+Pe  1 @-.5,0
+S   A @0.5,0
+Sy  O @1.00,0
+Usn U @-.5,1
+Ug  U @0,-1
+
+Usn Tr Pe 
+Ug Sy Pe 
+Pe S
+Tr Sy
+")
+plot_dag(UgUsnDAG)
+```
+
+The ability to just "draw" DAGs makes thinking about causal relationships easier. By just looking at graphs and evaluating them based on our domain-knowledge, we can try to figure out which DAG is the best description of the world. However, this is not a desirable solution, because it leaves the door open to subjective or even wishful thinking and motivated reasoning. 
+
+Instead, one should use the fact that each DAG comes also with _implied conditional independencies_, which we can use to evaluate the plausibility of each DAG. Adding paths (potentially with new variables) to a DAG will typically reduce the number of implied independencies Because it is hard to show that two variables are truly independent (i.e. their correlation is zero, potentially conditional on some other variables), omitting paths in a DAG imply strong causal claims.
+
+As an illustration of _implied conditional independencies_, we can briefly look at the last three DAGs. If we assume that there is self-selection into the study, whereby parental education determines participation, we get the following implied conditional independencies^[Where `a _||_ b` means $a$ is independent of $b$ and  `a _||_ b | c` means that this independence is conditional on $c$, i.e. $a$ and $b$ are independent if one adjusts for/holds constant $c$. The DAG literature also uses the term d-separation. One would say that for a dag $a \rightarrow c \rightarrow b$ the variable $c$ d-separates $a$ and $b$, that is conditioning on $c$, which is part of a chain from $a$ to $b$, blocks the path between $a$ and $b$.].
+
+```{r, results="show"}
+impliedConditionalIndependencies(partDAG)
+```
+
+
+If we additionally assume common unobserved genetic causes of $Pe$ and $Sy$, the implied conditional independencies change:
+
+```{r, results="show"}
+impliedConditionalIndependencies(UgDAG)
+```
+
+If we finally also assume that the unobserved social support network influences parental education and the ability to get treatment, we (unfortunately) still have the same conditional independencies:
+
+```{r, results="show"}
+impliedConditionalIndependencies(UgUsnDAG)
+```
+
+Remember that the last two DAGs are different in that adjustment can remove bias if the former DAG is true, but not if the latter graph is true. If we have competing DAGS with different implications for adjustment but equal conditional independencies, the best way to go is to use literature, or even better external data sources, to justify which DAG is the most plausible description of the causal structure in the sampling population. Literature of external data can also be used, if a DAG does not imply any conditional independencies.
+
+## Estimating and testing conditional independencies
+
+Lets use the first DAG in the previous section as an example:
+
+```{r, fig.width=3, fig.height=1.25, results="show", echo = F}
+plot_dag(partDAG)
+impliedConditionalIndependencies(partDAG)
+```
+
+
+To test if these implied conditional independencies are true for our data, we can run a set of regression. The conditional independence `Pe _||_ Sy | Tr` (i.e. given a particular treatment, symptoms are independent of parental education) tells us that in a regression 
+
+$Sy \sim Pe + Tr$
+
+where we adjust for the $Tr$ when estimating the association between $Sy$ and $Pe$, the regression coefficient for $Pe$ should be zero.
+
+This is a hard problem, because classical NHST does not help us here. To show that the regression coefficient for $Pe$ is zero, it is not sufficient to show that it is not significant. Instead, one has to do an equivalence test.^[_Absolutely never_ write something like "the two groups had the same age, because the difference in age was not statistically significant." This is wrong!] This boils down to showing that the 90% confidence interval of the regression coefficient for $Pe$ lies within an effect size that is for practical purposes equal to zero^[Narrow CIs require large N!]. 
+
+This simplified procedure can also easily be implemented in SPSS ^[R or Stata also calculate p-values]. If one sets the alpha level to .1 before running the regression, the CI's for coefficients will be 90% CI's. One can then check if the CIs lies within $\pm\tau$, where $\tau$ is the threshold for an effect that is for practical purposes equivalent with zero. This will be domain-dependent, but one rule of thumb could be that this is 10% of the effect size one specified for a power analysis.
+
+The explanation so far dealt only with verifying one of the conditional independencies of a DAG. To show that a DAG is consistent with your data, one needs to show that all conditional independencies hold, i.e. one needs to run a regression and do an equivalence test for each implied conditional independence. 
+
+
+## Summary ##
+In sum, these examples should illustrate following properties of DAGs
+
+* direct causal effects are represented by edges from an exposure to an outcome node
+
+* associations between node variables can emerge in absence of direct causal effects, when there are alternative open backdoor paths from the exposure node to the outcome node
+
+* paths that include forks or chains but no colliders are open
+
+* paths that do include a collider are closed
+
+* an open path can be closed by conditioning on (adjusting for) one of the variables in the middle of a fork or chain
+
+* paths that are closed due to a collider are opened by conditioning on (adjusting for) the collider or its descendant. ^[$B$ and $C$ are a descendants of $A$ if they come after $A$ on the causal path, as in $A \rightarrow B \rightarrow C$]
+
+* omitting paths also implies causal assumptions 
+
+* DAGs implies conditional independencies, which we can use to check if a DAG is a good representation of the causal structure in our data. Unfortunately, different DAGs can also imply identical conditional independencies and not all DAGs imply conditional independencies.
+
+
+```{r, eval = F, echo = F}
+H1 = dagitty("
+Tr  E @0.375,.5
+Pe  1 @0.00,0
+S   A @0.375,0
+Sy  O @1.00,0
+Ug  U @0.1875,-1
+
+Ug Sy Pe 
+Tr S
+Pe S
+Tr Sy
+")
+plot_dag(H1, curves = T)
+impliedConditionalIndependencies(H1)
+adjustmentSets(H1)
+```
+
+```{r, eval = F, echo = F}
+H2 = dagitty("
+Tr  E @0.375,.5
+Pe  1 @0.00,0
+S   A @0.375,0
+Sy  O @1.00,0
+Ug  U @0.1875,-1
+
+Ug Sy Pe 
+Tr S
+Pe S
+Tr Sy Pe
+")
+plot_dag(H2, curves = T)
+impliedConditionalIndependencies(H1)
+adjustmentSets(H2)
+```
