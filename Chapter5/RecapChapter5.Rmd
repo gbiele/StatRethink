@@ -114,7 +114,7 @@ drawdag(dag1, cex = 0.5, lwd = 1)
 Here, $D$ is the exogenous variable, so we simulate it first.
 
 ```{r class.source = 'fold-show'}
-N = 500
+N = 100
 D = rnorm(N)
 ```
 
@@ -153,6 +153,19 @@ As a recap, here is the model for a simple linear regression:
 
 Here we put the data together and run the model:
 
+```{r}
+coefkable = function(m,caption) {
+  cap = paste("Coeffcients for model",caption)
+  m %>% 
+    precis %>% 
+    as.matrix() %>% 
+    kable(caption = cap) %>% 
+    kable_styling(full_width = F)
+}
+```
+
+
+
 ```{r class.source = 'fold-show'}
 d = data.frame(C = C, B = B, D = D)
 
@@ -164,7 +177,8 @@ m.C_B <-quap(
     bB ~ dnorm(0,1),
     sigma ~ dexp(1)),
   data=d)
-precis(m.C_B)
+# un-hide previous code chunk for the coefkable function
+coefkable(m.C_B, "m.C_B")
 ```
 
 And we plot the associations implied by prior and posterior:
@@ -270,7 +284,7 @@ m.C_BD <-quap(
     bB ~ dnorm(0,1),
     sigma ~ dexp(1)),
   data=d)
-precis(m.C_BD)
+coefkable(m.C_BD,"m.C_BD")
 ```
 
 
@@ -297,16 +311,127 @@ To answer this question, we first need to establish that we can estimate two typ
 - _direct effects_, i.e. effect that go only via the direct arrow from the predictor to the outcome
 - _total effects_, the sum of the direct effects and indirect effects that are "communicated" via one ore more _mediator_ variables.
 
-The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$.
+The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we need to take $\small C$ only as an effect of $\small B$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small c$, we would have to include it into the regression. 
 
+Here is the regression model:
 
-- estimate and show `m.C_D` model 
+```{r class.source = 'fold-show'}
+m.C_D <-quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a+bD*D,
+    a ~ dnorm(0,.5),
+    bD ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+coefkable(m.C_D,"m.C_D")
+```
+Now we can plot the coefficients from the `m.C_D` and `m.C_BD` models together: 
 
-- Different questions require different regression models (mention table 2 fallacy)
+```{r}
+plot(coeftab(m.C_BD,m.C_D),par=c("bD"))
+```
+
+As expected, the total effect is larger than the direct effect.
+
+## Think before you regress, and afterwards
+
+One important consequence from thinking systematically about the process that produced the data, and representing and analysing them with DAGs, is that what variables belong into a regression depends on two things:
+
+- What is the (assumed) data generating structure
+- What do we want to estimate
+
+Depending on the answers to these questions, we different variables have to be included into a regression.
+
+One common mistake, which has the name _Table 2 fallacy_, where Table 2 is often the 2^nd^ table in medical articles^[Table 1 describes the sample], is to interpret multiple coefficients from a regression model as causal effects. This is in most cases not a valid approach.
 
 ## Plotting to learn
 
 ### Plotting against residuals tell us what multiple regression does
+
+We discussed earlier that in multiple regression each regression coeffcient captures the effect of a variable conditional on that one accounts for the effect of all other variables.
+
+This means that we only look at the effect of the variation in that variable that is independent from the variation of the other variables. If we look for example on the two variables $\small B$ and $\small D$, these are correlated:
+
+```{r}
+plot(D,B)
+```
+
+If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture the the effect of the complete variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
+
+One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$ is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B_R$.
+
+The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side show the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $B_r$ does not include any information that is also in $D$.
+
+```{r fig.height=5, fig.width=10}
+m.B_D <-quap(
+  alist(
+    B ~ dnorm(mu,sigma),
+    mu <- a+bD*D,
+    a ~ dnorm(0,.5),
+    bD ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+
+mu = colMeans(link(m.B_D,data=d))
+
+mu.l = colMeans(link(m.B_D,data=list(D = c(-3,3))))
+par(mfrow = c(1,2))
+idx = sample(nrow(d),50)
+plot(D[idx],B[idx], ylab = "B (estimated)", xlab = "D")
+lines(c(-3,3),mu.l, col = "blue")
+for (i in idx) {
+  lines(rep(D[i],2), c(B[i],mu[i]), col = "blue")
+}
+plot(D[idx],B[idx]-mu[idx], ylab = expression(B[r]), xlab = "D")
+```
+
+So we can now use $Br$ as a predictor of $\small C$ and plot the regression line:
+
+```{r class.source = 'fold-show'}
+d$Br =  B - mu
+m.C_Br <-quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a+bBr*Br,
+    a ~ dnorm(0,.5),
+    bBr ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+coefkable(m.C_Br,"m.C_Br") 
+```
+
+Here are the regression lines for the model with $\small B_R$ as a predictor (left) and with $\small B$ as a predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with teh regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
+
+```{r, fig.height=5, fig.width=10}
+par(mfrow = c(1,2))
+
+## Regression on residuals
+Br_seq = seq(from=-3,to=3,length.out=30)
+mu = link(m.C_Br,data=list(Br=Br_seq))
+mu.mean <-apply(mu,2,mean)
+mu.HPDI <-apply(mu,2,HPDI)
+plot( C~Br,data=d, cex = .5,
+      col=adjustcolor("black", alpha = .2),
+      ylim = c(-4.5,4.5),
+      xlim = c(-3,3))
+lines( B_seq,mu.mean,lwd=2, col = "blue")
+shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
+
+## Regression on original B
+B_seq = seq(from=-3,to=3,length.out=30)
+mu = link(m.C_B,data=list(B=B_seq))
+mu.mean <-apply(mu,2,mean)
+mu.HPDI <-apply(mu,2,HPDI)
+plot( C~B,data=d, cex = .5,
+      col=adjustcolor("black", alpha = .2),
+      ylim = c(-4.5,4.5),
+      xlim = c(-3,3))
+lines( B_seq,mu.mean,lwd=2, col = "blue")
+shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
+
+```
+
 
 ### Posterior predictions tell us if the model is any good
 
