@@ -53,13 +53,13 @@ library(png)
 
 Let's assume we want to generate a data set with the following variables:
 
-- Daily reading time of parents ($D$)
-- Number of books in the household ($B$)
-- Child reading ability ($C$)
+- Daily reading time of parents ($\small D$)
+- Number of books in the household ($\small B$)
+- Child reading ability ($\small C$)
 
 Before we start simulating anything, we might want to think about the possible causal relationship between these variables. Drawing graphs is a good way to do this. Here are some possible scenarios:
 
-```{r fig.height=3, fig.width=9}
+```{r fig.height=3, fig.width=9, warning = F}
 library(dagitty) 
 par(mfrow = c(1,3))
 dag1 = dagitty(
@@ -91,6 +91,8 @@ coordinates(dag3) = ccord.list
 drawdag(dag3, cex = 2)
 ```
 
+<br />
+
 These graphs are build from two type of components:
 
 - Nodes, which represent variables
@@ -98,18 +100,213 @@ These graphs are build from two type of components:
 
 All graphs are made of nodes and edges. What is special about directed acyclic graphs is that 
 
-1. the relationship between two variables is given a direction, such that variables at the start of the arrow are causes and variables at the end are effects 
-2. a succession of arrows does is not allowed to form a circle, e.g. $D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
+1. the relationship between two variables has a direction, such that variables at the start of the arrow are causes and variables at the end are effects 
+2. a succession of arrows must not form a circle, i.el. a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
 
+To simulate data from a DAG, we have to decide what distributions the variables have. To make it simple, we just use normally distributed data. The order in which we simulate variables is determined by the DAG. The first think we do is to check which variables are exogenous to our model (DAG), because these have to be modeled first.
+
+Let us focus on the left DAG, which we show here again:
+
+```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
+drawdag(dag1, cex = 0.5, lwd = 1)
+```
+
+Here, $D$ is the exogenous variable, so we simulate it first.
+
+```{r class.source = 'fold-show'}
+N = 500
+D = rnorm(N)
+```
+
+<br />
+
+$\small B$ and $\small C$ are both endogenous variables, but $\small B$ influences $\small C$, so we have to simulate $\small B$ first:
+
+```{r class.source = 'fold-show'}
+B = 1*D + rnorm(N)
+```
+
+<br />
+
+Finally, we can calculate $\small C$ as an effect of $\small D$ and $\small B$
+
+```{r class.source = 'fold-show'}
+C = 1*D + 0.2*(B) + rnorm(N) 
+```
+
+
+## A naive regression analysis
+
+As a recap, here is the model for a simple linear regression:
+
+<br/>
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `C ~ dnorm(mu, sigma)` |
+|Linear model | $\mu_i = \alpha + \beta B_i$ | `mu[i] <- a + b*B[i]`|
+|Prior | $\alpha \sim Normal(0,.5)$ | `alpha ~ dnorm(0, .5)` |
+|Prior | $\beta \sim Normal(0,2)$ | `beta ~ dnorm(0, 1)` |
+|Prior | $\sigma \sim Exponential(1)$ | `sigma ~ dunif(1)` |
+
+<br/>
+
+Here we put the data together and run the model:
+
+```{r class.source = 'fold-show'}
+d = data.frame(C = C, B = B, D = D)
+
+m.C_B <-quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a+bB*B,
+    a ~ dnorm(0,.5),
+    bB ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+precis(m.C_B)
+```
+
+And we plot the associations implied by prior and posterior:
+
+```{r, fig.height=5, fig.width=10}
+par(mfrow = c(1,2))
+prior = extract.prior(m.C_B)
+mu = link(m.C_B,
+          post=prior,
+          data=list(B=c(-3,3)))
+matplot(c(-3,3),
+        t(mu[1:50,]),
+        xlab = "B", ylab = "C", ylim = c(-4.5,4.5),
+        type = "l", col = "blue", lty = 1)
+title("Prior predictive samples")
+
+B_seq = seq(from=-3,to=3,length.out=30)
+mu = link(m.C_B,data=list(B=B_seq))
+mu.mean <-apply(mu,2,mean)
+mu.HPDI <-apply(mu,2,HPDI)
+plot( C~B,data=d, cex = .5,
+      col=adjustcolor("black", alpha = .2),
+      ylim = c(-4.5,4.5),
+      xlim = c(-3,3))
+lines( B_seq,mu.mean,lwd=2, col = "blue")
+shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
+title("Posterior predictive mean & HDPI")
+```
+
+So if we disregard our knowledge about daily reading duration for parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
+
+This example makes clear that we can come to wrong conclusions if our analysis model, here the simple linear regression $\small C \sim Normal(\alpha+\beta B,\sigma)$ (the right DAG in the first figure), does not match the data generating process (or model), which is $\small C \sim Normal(\alpha+\beta_1 B + \beta_2 D,\sigma)$ (the left DAG in the first figure).
+
+The question then is, how can we figure out what the correct data generating process (_true DAG_) is? Domain knowledge is obviously useful. In addition one can also use the fact that DAGs (can) imply conditional independencies. Two variables are conditional independent on a third variables when the first two variables are unrelated given that one knows the value of the third value or fixes it to a specific value.
+
+
+Let's look at the left and right DAGs from above again:
+
+```{r fig.height=1.3, fig.width=3, fig.align = 'center'}
+par(mfrow = c(1,2))
+drawdag(dag1, cex = 0.5, lwd = 1)
+drawdag(dag3, cex = 0.5, lwd = 1)
+```
+
+For the left DAG:
+
+- if we condition on $\small D$, $\small B$ and $\small C$ are still dependent because of $\small B \rightarrow C$
+- if we condition on $\small B$, $\small D$ and $\small C$ are still dependent because of $\small D \rightarrow C$
+- if we condition on $\small C$, $\small D$ and $\small B$ are still dependent because of $\small D \rightarrow B$
+
+So if the left DAG is correct, $\small D$ and $\small C$ are still related, after we account for the relationship of $\small B$ and $\small C$.
+
+On to the right DAG:
+
+- if we condition on $\small D$, $\small B$ and $\small C$ are still dependent because of $\small B \rightarrow C$
+- if we condition on $\small B$, $\small D$ and $\small C$ are independent
+- if we condition on $\small C$, $\small D$ and $\small B$ are still dependent because of $\small D \rightarrow B$
+
+Determining conditional dependencies gets harder when DAGs are more complex. In this case one can use software like the R package `dagitty` to determine conditional independencies as follows:
+
+```{r class.source = 'fold-show'}
+impliedConditionalIndependencies(dag1)
+```
+
+<br/>
+
+
+```{r class.source = 'fold-show'}
+impliedConditionalIndependencies(dag2)
+```
+
+```{r class.source = 'fold-show'}
+impliedConditionalIndependencies(dag3)
+```
+
+
+Now that we have learned that under some DGPs there should be conditional independcies, how can we test them?
+
+
+Remember that we defined conditional independence as independence given that we already know the third variable. One way to incorporate what we already know about a third variable is to use multiple (linear) regression.
+
+Assuming that $\small D$ is our outcome of interest, we can check if in a model that uses both $\small D$ and $\small B$ to predict $\small C$, $B$ remains associated with $C$. If it does, this speaks in favour of `dag1`. If it does not, it speaks in favour of `dag3`.
 
 
 # Multiple regression
 
 ## Extending the linear model
 
+To go from a simple to a multiple linear regression, we simlpy add a predictor variable to the linear predictor:
+
+| What | Notation | quap R-code |
+|---|---|---|
+|Simple linear model | $\mu_i = \alpha + \beta_1 B_i$ | `mu[i] <- a + bB*B[i]`|
+|Multiple linear model | $\mu_i = \alpha + \beta_B B_i + \beta_D D_i$ | `mu[i] <- a + bB*B[i] + bD*D[i]`|
+
+```{r class.source = 'fold-show'}
+m.C_BD <-quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a + bD*D + bB*B,
+    a ~ dnorm(0,0.2),
+    bD ~ dnorm(0,1),
+    bB ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+precis(m.C_BD)
+```
+
+
+Looking at the `quap` model, you can see that we use the same parameters for the priors for `bD` and `bB`. This makes sense because both variables have the same scale (variability). We might want to change this is the variables would have different scales / variabilities.
+
+
+Because this is a fairly simple model and less model checking is needed, we look next at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BB`,which used $\small B$ and $\small D$.
+
+```{r}
+plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(-.05,1.15))
+```
+
+First, we check the conditional independence that would justify to only use $\small B$ as a predictor, namely that $\small \beta_D$ or `bD` is (close to) zero in the coefficient from the `m.C_BD` model. The figure shows that this is clearly not the case.
+
+
+The other thing we can see is that the estimate association between number of books in the household and is weaker in the model which uses an analysis consistent with the correct data generating process. This is an example of _confounding bias_. If we omit a _common cause_ of our predictor and outcome from the analysis, this leads to a biased estimation of the association between predictor and outcome. Also note that the regression parameters we estimated with the `m.C_BD` model are consistent with the values we use to generate the data above.
+
+## Mediation, direct and indirect effects
+
+Did we now successfully estimate the effect of daily reading hours on child reading?
+
+To answer this question, we first need to establish that we can estimate two types of effects
+
+- _direct effects_, i.e. effect that go only via the direct arrow from the predictor to the outcome
+- _total effects_, the sum of the direct effects and indirect effects that are "communicated" via one ore more _mediator_ variables.
+
+The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$.
+
+
+- estimate and show `m.C_D` model 
+
+- Different questions require different regression models (mention table 2 fallacy)
+
 ## Plotting to learn
 
-### Plotting against residuals tell us what multipel regression does
+### Plotting against residuals tell us what multiple regression does
 
 ### Posterior predictions tell us if the model is any good
 
