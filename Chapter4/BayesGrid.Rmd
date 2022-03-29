@@ -80,7 +80,7 @@ Let's assume these parameter values
 - `mu = 22`
 - `sd = 3`
 
-Please calculate the likelihood for the first data point in the vector `temp` in the next code block.
+Please calculate the likelihood for the first data point in the vector `age` in the next code block.
 If you are uncertain about how to proceed, check the table above
 
 ```{r}
