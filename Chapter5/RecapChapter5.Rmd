@@ -1,0 +1,116 @@
+---
+title: "Chapter 5: Recap"
+author: "Guido Biele"
+date: "30.03.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 22pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+library(plotrix)
+library(DescTools)
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(psych)
+library(MASS)
+library(png)
+```
+
+
+# Directed acyclic graphs
+
+Let's assume we want to generate a data set with the following variables:
+
+- Daily reading time of parents ($D$)
+- Number of books in the household ($B$)
+- Child reading ability ($C$)
+
+Before we start simulating anything, we might want to think about the possible causal relationship between these variables. Drawing graphs is a good way to do this. Here are some possible scenarios:
+
+```{r fig.height=3, fig.width=9}
+library(dagitty) 
+par(mfrow = c(1,3))
+dag1 = dagitty(
+  "dag{
+  D->B;
+  B->C;
+  D->C
+  }")
+ccord.list = 
+  list(
+    x=c(D=0,B=2,C=1),
+    y=c(D=0,B=0,C=1))
+coordinates(dag1) = ccord.list
+drawdag(dag1, cex = 2)
+dag2 = dagitty(
+  "dag{
+  D->B;
+  D->C
+  }")
+coordinates(dag2) = ccord.list
+drawdag(dag2, cex = 2)
+
+dag3 = dagitty(
+  "dag{
+  D->B;
+  B->C
+  }")
+coordinates(dag3) = ccord.list
+drawdag(dag3, cex = 2)
+```
+
+These graphs are build from two type of components:
+
+- Nodes, which represent variables
+- Edges, which represent relationships between variables
+
+All graphs are made of nodes and edges. What is special about directed acyclic graphs is that 
+
+1. the relationship between two variables is given a direction, such that variables at the start of the arrow are causes and variables at the end are effects 
+2. a succession of arrows does is not allowed to form a circle, e.g. $D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
+
+
+
+# Multiple regression
+
+## Extending the linear model
+
+## Plotting to learn
+
+### Plotting against residuals tell us what multipel regression does
+
+### Posterior predictions tell us if the model is any good
+
+### Counterfactual plots tell us about the effect of intervention (if the causal model is true)
