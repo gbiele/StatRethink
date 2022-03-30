@@ -93,17 +93,19 @@ drawdag(dag3, cex = 2)
 
 <br />
 
-These graphs are build from two type of components:
+These graphs are build from two types of components:
 
 - Nodes, which represent variables
 - Edges, which represent relationships between variables
 
 All graphs are made of nodes and edges. What is special about directed acyclic graphs is that 
 
-1. the relationship between two variables has a direction, such that variables at the start of the arrow are causes and variables at the end are effects 
-2. a succession of arrows must not form a circle, i.el. a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
+1. the relationship between two variables has a direction, such that 
+    - variables at the start of the arrows are causes and 
+    - variables at the end are effects 
+2. a succession of arrows must not form a circle, i.e. a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
 
-To simulate data from a DAG, we have to decide what distributions the variables have. To make it simple, we just use normally distributed data. The order in which we simulate variables is determined by the DAG. The first think we do is to check which variables are exogenous to our model (DAG), because these have to be modeled first.
+To simulate data from a DAG, we have to decide what distributions the variables have. To make it simple, we just use normally distributed data. The order in which we simulate variables is determined by the DAG. The first thing we do is to check which variables are exogenous to our model (DAG), because these have to be modeled first.
 
 Let us focus on the left DAG, which we show here again:
 
@@ -121,7 +123,7 @@ D = rnorm(N)
 
 <br />
 
-$\small B$ and $\small C$ are both endogenous variables, but $\small B$ influences $\small C$, so we have to simulate $\small B$ first:
+$\small B$ and $\small C$ are both endogenous variables, but $\small B$ influences $\small C$, so we have to simulate $\small B$ next:
 
 ```{r class.source = 'fold-show'}
 B = 1*D + rnorm(N)
@@ -209,11 +211,11 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 title("Posterior predictive mean & HDPI")
 ```
 
-So if we disregard our knowledge about daily reading duration for parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
+So if we disregard our knowledge about daily reading duration of parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
 
 This example makes clear that we can come to wrong conclusions if our analysis model, here the simple linear regression $\small C \sim Normal(\alpha+\beta B,\sigma)$ (the right DAG in the first figure), does not match the data generating process (or model), which is $\small C \sim Normal(\alpha+\beta_1 B + \beta_2 D,\sigma)$ (the left DAG in the first figure).
 
-The question then is, how can we figure out what the correct data generating process (_true DAG_) is? Domain knowledge is obviously useful. In addition one can also use the fact that DAGs (can) imply conditional independencies. Two variables are conditional independent on a third variables when the first two variables are unrelated given that one knows the value of the third value or fixes it to a specific value.
+The question then is, how can we figure out what the correct data generating process (_true DAG_) is? Domain knowledge is obviously useful. In addition one can also use the fact that DAGs (can) imply conditional independencies. Two variables are independent conditional on a third variables when the first two variables are unrelated given that one knows the value of the third variable or fixes it to a specific value.
 
 
 Let's look at the left and right DAGs from above again:
@@ -230,13 +232,15 @@ For the left DAG:
 - if we condition on $\small B$, $\small D$ and $\small C$ are still dependent because of $\small D \rightarrow C$
 - if we condition on $\small C$, $\small D$ and $\small B$ are still dependent because of $\small D \rightarrow B$
 
-So if the left DAG is correct, $\small D$ and $\small C$ are still related, after we account for the relationship of $\small B$ and $\small C$.
+So if the left DAG is correct, $\small D$ and $\small C$ are still related after we account for the relationship of $\small B$ and $\small C$.
 
-On to the right DAG:
+Onto the right DAG:
 
 - if we condition on $\small D$, $\small B$ and $\small C$ are still dependent because of $\small B \rightarrow C$
 - if we condition on $\small B$, $\small D$ and $\small C$ are independent
 - if we condition on $\small C$, $\small D$ and $\small B$ are still dependent because of $\small D \rightarrow B$
+
+The DAG to te right has an implied conditional independence that we can check with our data.
 
 Determining conditional dependencies gets harder when DAGs are more complex. In this case one can use software like the R package `dagitty` to determine conditional independencies as follows:
 
@@ -261,7 +265,7 @@ Now that we have learned that under some DGPs there should be conditional indepe
 
 Remember that we defined conditional independence as independence given that we already know the third variable. One way to incorporate what we already know about a third variable is to use multiple (linear) regression.
 
-Assuming that $\small D$ is our outcome of interest, we can check if in a model that uses both $\small D$ and $\small B$ to predict $\small C$, $B$ remains associated with $C$. If it does, this speaks in favour of `dag1`. If it does not, it speaks in favour of `dag3`.
+Assuming that $\small D$ is our outcome of interest, we can check if in a model that uses both $\small D$ and $\small B$ to predict $\small C$, $\small B$ remains associated with $\small C$ when we also account for the effect of $\small D$. If it does, this speaks in favour of `dag1`. If it does not, it speaks in favour of `dag3`.
 
 
 # Multiple regression
@@ -274,6 +278,8 @@ To go from a simple to a multiple linear regression, we simlpy add a predictor v
 |---|---|---|
 |Simple linear model | $\mu_i = \alpha + \beta_1 B_i$ | `mu[i] <- a + bB*B[i]`|
 |Multiple linear model | $\mu_i = \alpha + \beta_B B_i + \beta_D D_i$ | `mu[i] <- a + bB*B[i] + bD*D[i]`|
+
+Accordingly, the `quap` model for multiple linear regression looks a lot like the one for simple linear regression.
 
 ```{r class.source = 'fold-show'}
 m.C_BD <-quap(
@@ -289,7 +295,7 @@ coefkable(m.C_BD,"m.C_BD")
 ```
 
 
-Looking at the `quap` model, you can see that we use the same parameters for the priors for `bD` and `bB`. This makes sense because both variables have the same scale (variability). We might want to change this is the variables would have different scales / variabilities.
+Looking at the `quap` model, you can see that we use the same parameters for the priors for `bD` and `bB`. This makes sense because both variables have the same scale (variability). We might want to change this if the variables  have different scales / variability.
 
 
 Because this is a fairly simple model and less model checking is needed, we look next at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BB`,which used $\small B$ and $\small D$.
@@ -301,7 +307,7 @@ plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(0,1.2))
 First, we check the conditional independence that would justify to only use $\small B$ as a predictor, namely that $\small \beta_D$ or `bD` is (close to) zero in the coefficient from the `m.C_BD` model. The figure shows that this is clearly not the case.
 
 
-The other thing we can see is that the estimate association between number of books in the household and is weaker in the model which uses an analysis consistent with the correct data generating process. This is an example of _confounding bias_. If we omit a _common cause_ of our predictor and outcome from the analysis, this leads to a biased estimation of the association between predictor and outcome. Also note that the regression parameters we estimated with the `m.C_BD` model are consistent with the values we use to generate the data above.
+The other thing we can see is that the estimated association between number of books in the household and is weaker in the model which uses an analysis consistent with the correct data generating process. This is an example of _confounding bias_, which is a more general term of which spurious association is a special case. If we omit a _common cause_ of our predictor and outcome from the analysis, this leads to a biased estimation of the association between predictor and outcome. Also note that the regression parameters we estimated with the `m.C_BD` model are consistent with the values we use to generate the data above.
 
 ## Mediation, direct and indirect effects
 
@@ -309,10 +315,10 @@ Did we now successfully estimate the effect of daily reading hours on child read
 
 To answer this question, we first need to establish that we can estimate two types of effects
 
-- _direct effects_, i.e. effect that go only via the direct arrow from the predictor to the outcome
+- _direct effects_, effects that go only via the direct arrow from the predictor to the outcome
 - _total effects_, the sum of the direct effects and indirect effects that are "communicated" via one ore more _mediator_ variables.
 
-The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we need to take $\small C$ only as an effect of $\small B$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small C$, we would have to include it into the regression. 
+The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculated while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we have to model $\small C$ only as an effect of $\small D$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small C$, we would have to include it into the regression. 
 
 Here is the regression model:
 
@@ -342,7 +348,7 @@ One important consequence of thinking systematically about the processes that pr
 - What is the (assumed) data generating process
 - What do we want to estimate
 
-Depending on the answers to these questions, we different variables have to be included into a regression.
+Depending on the answers to these questions, different variables have to be included into a regression.
 
 One common mistake, which has the name _Table 2 fallacy_, where Table 2 is often the 2^nd^ table in medical articles^[Table 1 describes the sample], is to interpret multiple coefficients from a regression model as causal effects. This is in most cases not a valid approach.
 
@@ -362,9 +368,9 @@ plot(D,B)
 
 If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture  the effect of the complete variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
 
-One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$ is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B_R$.
+One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$, is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B$.
 
-The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side show the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $B_r$ does not include any information that is also in $D$.
+The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side show the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
 
 ```{r fig.height=5, fig.width=10}
 m.B_D <-quap(
@@ -406,7 +412,7 @@ Br = B - mu
 plot(D[idx],Br[idx], ylab = expression(B[r]), xlab = "D")
 ```
 
-No we can use $Br$ as a predictor of $\small C$ and plot the regression line:
+No we can use $\small Br$ as a predictor of $\small C$ and plot the regression line:
 
 ```{r class.source = 'fold-show'}
 d$Br =  Br
@@ -421,7 +427,7 @@ m.C_Br <-quap(
 coefkable(m.C_Br,"m.C_Br") 
 ```
 
-Here are the regression lines for the model with $\small B_R$ as a predictor (left) and with $\small B$ as a predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with the regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
+Here are the regression lines for the model with $\small B_R$ as the predictor (left) and with $\small B$ as the predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with the regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
 
 ```{r, fig.height=5, fig.width=10}
 par(mfrow = c(1,2))
@@ -457,7 +463,7 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 Posterior predictions tell us if the model is any good.
 
 If our model capture the data well, the observed and model-predicted data should be correlated.
-We can visualize this correlation in a scatter plot. Because we do not expect that the prediction exactly coincide the observed values, it us useful to add credible of HDPIs to the predicted values. Then one can check if those overlap with the regression line that visualizes perfect coincidence of observed and predicted data.
+We can visualize this correlation in a scatter plot. Because we do not expect that the predictions exactly coincide the observed values, it is useful to add credible intervals or HDPIs to the predicted values. Then one can check if those overlap with the regression line that visualizes perfect coincidence of observed and predicted data.
 
 ```{r}
 # no newdata, so uses original data
@@ -473,9 +479,9 @@ C_PI = apply(C_sim,2,PI)  # prediction intervals
 
 When we add HDPIs or credible intervals, we can calculate those from the linear predictions, the right plot in the next figure, or from posterior predictions, the left plot in the next figure.
 
-If the main concern is if the observed data are within the most plausible predicted data, one should use credible intervals from posterior predictions. If one has for example 90% credible interval, 90% of the observed value should be within the credible interval of the predicted values.
+If the main concern is if the observed data are within the most plausible predicted data, one should use credible intervals from posterior predictions. If one has for example a 90% credible interval, 90% of the observed values should be within the credible interval of the predicted values.
 
-If the main concern is to detect systematic is strong deviations between observed and predicted data, these van be easier seen if one used credible intervals from the linear predictions.
+If the main concern is to detect systematic or strong deviations between observed and predicted data, these can be easier seen if one uses credible intervals from the linear predictions.
 
 ```{r fig.height=5, fig.width=10}
 par(mfrow = c(1,2))
@@ -512,7 +518,7 @@ for (i in idx)
 title("posterior predictions + credible intervals")
 ```
 
-In this example, there are no strong deviations between predicted and observed values. After all, the regression is based on the true model. Here are the same types of plots if the true DGP is a non-linear effect $\small D$ on $\small C$, but ourt model assumes only a linear relationship:
+In this example, there are no strong deviations between predicted and observed values. After all, the regression is based on the true model. Here are the same types of plots if the true DGP is a non-linear effect $\small D$ on $\small C$, but our model assumes only a linear relationship:
 
 ```{r fig.height=5, fig.width=10}
 d2 = d
@@ -570,14 +576,14 @@ Here, we see that the model systematically overestimates low values of child rea
 
 ## Counterfactual plots 
 
-Counterfactual plots tell us about the effect of intervention (if the causal model is true).
+Counterfactual plots tell us about the effect of an intervention, if the causal model is true).
 
-Let's assume you are thinking about an intervention to increase child reading. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of book in a household.
+Let's assume you are thinking about an intervention to improve child reading ability. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of book in a household.
 
 This can be calculated with counterfactuals, so called because they calculate outcomes under conditions that were actually not observed, which are computed according to following rules.
 
-- Set the manipulated variable to chosen values. This makes the manipulated variables independent of all other variables in the DAG/model, it makes it "exogenous"
-- Using coefficients from you model, calculate all down stream effect of manipulate variables. This includes direct and indirect effects on the outcome of interest.
+- Set the manipulated variable to chosen values (some of which were not realized in the data). This makes the manipulated variable independent of all other variables in the DAG/model, it makes it "exogenous"
+- Using coefficients from you model(s), calculate all down stream effects of the manipulate variable on the outcome. This includes direct and indirect effects on the outcome of interest.
 
 Here is as a refresher our DAG:
 
@@ -585,7 +591,7 @@ Here is as a refresher our DAG:
 drawdag(dag1, cex = 0.5, lwd = 1)
 ```
 
-If we want to manipulate $\small D$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need a regression coeffcients for all these paths. With `quap` we can estimate them in one model:
+If we want to manipulate $\small D$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need a regression coefficients for all these paths. With `quap` we can estimate them in one model:
 
 ```{r class.source = 'fold-show'}
 m.BC <-quap(
@@ -612,7 +618,7 @@ Next we specify a sequence of values for $\small D$, for which we would like to 
 D_seq  <-seq(from=-2,to=2,length.out=10)
 ```
 
-We can use the `sim` function from the `rethinking` package to simulate first values of $\small D$ and then, using the just simulate $\small D$ values also $\small C$ values.
+We can use the `sim` function from the `rethinking` package to simulate first values of $\small D$ and then, using the just simulate $\small D$ values, also $\small C$ values.
 
 > The `vars` argument to `sim` tells it both which observables to simulate and in which order.
 
@@ -636,7 +642,7 @@ shade(apply(s$C,2,PI),
 mtext( "Total counterfactual effect of D on C")
 ```
 
-This is a large effect. Next we calculate by how many sd child reading gets better if we go from increase daily reading of parents from 0 to 1 (which is also an sd of 1 because the sd of parental reading is 1.).
+This is a large effect. Next we calculate by how many sd child reading gets better if we go from increase daily reading of parents from 0 to 1 (which is also a 1 sd increase because the sd of parental reading is 1.).
 
 ```{r class.source = 'fold-show'}
 sim2_dat = data.frame(D = c(0,1))
@@ -646,9 +652,9 @@ s2 = rethinking::sim(m.BC,
 mean( s2$C[,2]-s2$C[,1])
 ```
 
-Now we look at counterfactuals for B, which we show to the left of the counterfactuals for D. We calculate the effect of B while we fix D to zero. ^[Fixing D to a specific value is OK here because this is a simple linear regression without interactions. Things get more complicated when interactions play a role or non-linear link functions are used, like e.g. for logistic regressions.]
+Now we look at counterfactuals for $\small B$. We calculate the effect of $\small B$ while we fix $\small D$ to zero. ^[Fixing $\small D$ to a specific value is OK here because this is a simple linear regression without interactions. Things get more complicated when interactions play a role or non-linear link functions are used, like e.g. for logistic regressions.]
 
-```{r }
+```{r class.source = 'fold-show'}
 sim_datB = data.frame(
   B=seq(from=-2,to=2,length.out=10),
   D=0)
@@ -657,7 +663,7 @@ sB  = rethinking::sim(m.BC,
                       vars="C")
 ```
 
-And we plot the simulated data.
+And we plot the simulated data, with the counterfactual effect of $\small D$ on the left side and of $\small B$ on the right side.
 ```{r fig.height=5, fig.width=10}
 par(mfrow = c(1,2))
 plot(sim_dat$D,colMeans(s$C),
@@ -680,7 +686,7 @@ shade( apply(sB,2,PI),
 mtext( "Total counterfactual effect of B on C")
 ```
 
-As expected, this effect is much weaker.
+As expected, the effect of $\small B$ is much weaker.
 
 ```{r class.source = 'fold-show'}
 simB2_dat = data.frame(B=c(0,1), D = 0)
