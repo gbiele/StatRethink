@@ -17,3 +17,6 @@ The html documents can be viewed here:
 
 [Exercise grid approximation](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGrid.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
+[Solution grid approximation](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGridWithSol.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+
+[Recap Chapter 5](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/Chapter5Recap.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)

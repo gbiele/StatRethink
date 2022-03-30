@@ -51,8 +51,8 @@ The table shows the incomplete model expressed with equations, `quap` code fragm
 | What | Notation | quap code | R code |
 |---|---|---|---|
 |Likelihood | $a_i \sim Normal(\mu,\sigma)$ | `age ~ dnorm(mu, sigma)` | `L[i] = dnorm(age[i], mu, sigma)` |
-|Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , .)` |
-|Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma ~ ...` |
+|Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , ., .)` |
+|Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma = ...` |
 
 <br/>
 

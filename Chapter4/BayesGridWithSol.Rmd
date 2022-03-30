@@ -49,8 +49,8 @@ The table shows the (incomplete) model expressed with equations, quap code fragm
 | What | Notation | quap code | r-code |
 |---|---|---|---|
 |Likelihood | $a_i \sim Normal(\mu,\sigma)$ | `age ~ dnorm(mu, sigma)` | `L[i] = dnorm(age[i], mu, sigma)` |
-|Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , .)` |
-|Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma ~ ...` |
+|Prior | $\mu \sim Normal(25,3)$ | `mu ~ dnorm(25, 3)` | `p_mu = dnorm(mu, 25 , 3)` |
+|Prior | $\sigma \sim Exponential(1)$ | `sigma ~ dexp(1)` | `p_sigma = dexp(sigma,1)` |
 
 <br/>
 
@@ -63,8 +63,8 @@ The posterior distribution is calculated as follows:
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
 \frac{\prod_i \overset{Likelihood}{Normal(a_i|\mu,\sigma)} \cdot 
-              \overset{Prior}{Normal(\mu|...,...)YourDist(\sigma|...)}}
-{\overset{Evidence}{\int\int \prod_i Normal(a_i|\mu,\sigma) \cdot Normal(\mu|...,...)YourDist(\sigma|...)d\mu d\sigma}}
+              \overset{Prior}{Normal(\mu|25,3)Exponential(\sigma|1)}}
+{\overset{Evidence}{\int\int \prod_i Normal(a_i|\mu,\sigma) \cdot Normal(\mu|25,3)Exponential(\sigma|1)d\mu d\sigma}}
 $$
 
 <br/>
@@ -84,6 +84,7 @@ If you are uncertain about how to proceed, check the table above
 ```{r}
 # Likelihood for the first data point
 L = dnorm(age[1],22,3)
+L
 ```
 
 
@@ -92,6 +93,7 @@ Now calculate the probability of the data point given the parameter values for e
 ```{r}
 # Likelihoods for all individual data points
 L = dnorm(age,22,3)
+head(L)
 ```
 
 And now calculate the joint probability of all recorded ages. (Read the help for the `prod` function, i.e. type `?prod`in the console)
@@ -107,9 +109,9 @@ Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`
 ```{r}
 P_par = c(NA,NA)
 # Prior probability for mu = 22
-P_par[1] = dnorm(22,25,2)
+P_par[1] = dnorm(22,25,3)
 # Prior probability for sd = 3
-P_par[2] = dexp(2,.5)
+P_par[2] = dexp(2,1)
 ```
 
 
@@ -158,7 +160,7 @@ Store the result for each parameter combination in the the variable `UP`.
 for (k in 1:nrow(params)) {
   mu = params$mu[k]
   sd = params$sd[k]
-  params$UP[k] = prod(dnorm(age,mu,sd)) * dnorm(mu,25,2) * dexp(sd,0.5)
+  params$UP[k] = prod(dnorm(age,mu,sd)) * dnorm(mu,25,3) * dexp(sd,1)
 }
 ```
 
@@ -191,7 +193,33 @@ Make a plot of the posterior
 # which assumes that you have called you column for posterior
 # probabilities "PP"
 library(ggplot2)
-ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster()
+ggplot(params, aes(x = mu, y = sd, fill = P)) + 
+  geom_raster() + 
+  theme_bw()
+```
+
+We can also draw posterior samples and plot those:
+
+```{r}
+post = 
+  data.frame(
+    sd = sample(params$sd,25e4,prob = params$UP, replace = T),
+    mu = sample(params$mu,25e4,prob = params$UP, replace = T)
+  )
+
+ggplot(post, aes(x = mu, y = sd)) +
+  geom_density_2d_filled() + 
+  ylim(4.5,2.5) + 
+  xlim(20,30) +
+  theme_bw() 
+```
+
+Note the `ggplot` for some reason reversed the y axis.
+
+```{r eval = F, echo = F}
+library(rayshader)
+tmp = ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster() + theme(legend.position = "none")
+plot_gg(tmp,shadow_intensity = 1)
 ```
 
 
@@ -200,49 +228,10 @@ ggplot(params, aes(x = mu, y = sd, fill = P)) + geom_raster()
 Here is a template to generate a grid of parameters. Your main task here is to add the code to calculate the un-normalized posterior.
 You have to set `eval = TRUE` at the beginning of the code block so that the code is run when you knit the document.
 
-```{r, eval = FALSE}
+```{r}
 N_grid_points <-100
 
 # Make a set of grid values for the two parameters
-my_mu<-seq(from=__, to=__, length.out=N_grid_points)
-my_sigma<-seq(from=0, to=__, length.out=N_grid_points)
-
-# Make an empty placeholder for the posterior
-posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
-
-# Calculate the posterior in each grid point
-for (i in 1:N_grid_points)
-  for (j in 1:N_grid_points)
-  {
-    posterior_unstandardized[i,j]<- # yourcode comes here
-  }
-```
-
-Next, you need to calculate the evidence and standardize the posterior
-
-```{r}
-
-```
-
-And here is some code to plot the results
-
-Plot the results.
-```{r, eval = FALSE}
-# Plot (2D) image of the posterior
-image(my_mu,my_sigma,posterior,  axes=FALSE);
-axis(1, at = seq(20, 30, by = 2))
-axis(2, at = seq(0, 5, by = 1))
-
-# Plot (3D) histogram
-library(plot3D)
-hist3D(z=posterior, border="black")
-```
-
-
-## Full solution version 2 + plot
-
-```{r, eval = T}
-N_grid_points <-100
 my_mu<-seq(from=20, to=30, length.out=N_grid_points)
 my_sigma<-seq(from=2.5, to=4.5, length.out=N_grid_points)
 
@@ -253,15 +242,21 @@ posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
 for (i in 1:N_grid_points)
   for (j in 1:N_grid_points)
   {
-    posterior_unstandardized[i,j] <- dnorm(my_mu[i],25,2)*dexp(my_sigma[j],0.5)*prod(dnorm(age,mean=my_mu[i], sd=my_sigma[j]))
+    posterior_unstandardized[i,j] <- 
+      prod(dnorm(age,mean=my_mu[i], sd=my_sigma[j])) * dnorm(my_mu[i],25,2)*dexp(my_sigma[j],0.5)
   }
+```
 
-# standardize the posterior
+Next, you need to calculate the evidence and standardize the posterior
+
+```{r}
 posterior=posterior_unstandardized/sum(posterior_unstandardized)
 ```
 
+And here is some code to plot the results
+
 Plot the results.
-```{r}
+```{r, eval = T}
 # Plot (2D) image of the posterior
 image(my_mu,my_sigma,posterior,  axes=FALSE);
 axis(1, at = seq(20, 30, by = 2))
@@ -269,7 +264,10 @@ axis(2, at = seq(0, 5, by = 1))
 
 # Plot (3D) histogram
 library(plot3D)
-hist3D(z=posterior, border="black")
+hist3D(z=posterior, border=NA)
+hist3D(z=posterior, border=NA, theta = 0, phi = 90)
+hist3D(z=posterior, border=NA, theta = 90, phi = 0)
 ```
-```
+
+
 
