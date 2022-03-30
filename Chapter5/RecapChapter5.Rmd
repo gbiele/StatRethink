@@ -36,7 +36,7 @@ h3,h4,h5,h6{
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
-par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 library(plotrix)
 library(DescTools)
 library(rethinking)
@@ -114,7 +114,8 @@ drawdag(dag1, cex = 0.5, lwd = 1)
 Here, $D$ is the exogenous variable, so we simulate it first.
 
 ```{r class.source = 'fold-show'}
-N = 100
+set.seed(12345)
+N = 250
 D = rnorm(N)
 ```
 
@@ -159,7 +160,7 @@ coefkable = function(m,caption) {
   m %>% 
     precis %>% 
     as.matrix() %>% 
-    kable(caption = cap) %>% 
+    kable(caption = cap, digits = 2) %>% 
     kable_styling(full_width = F)
 }
 ```
@@ -294,7 +295,7 @@ Looking at the `quap` model, you can see that we use the same parameters for the
 Because this is a fairly simple model and less model checking is needed, we look next at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BB`,which used $\small B$ and $\small D$.
 
 ```{r}
-plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(-.05,1.15))
+plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(0,1.2))
 ```
 
 First, we check the conditional independence that would justify to only use $\small B$ as a predictor, namely that $\small \beta_D$ or `bD` is (close to) zero in the coefficient from the `m.C_BD` model. The figure shows that this is clearly not the case.
@@ -311,7 +312,7 @@ To answer this question, we first need to establish that we can estimate two typ
 - _direct effects_, i.e. effect that go only via the direct arrow from the predictor to the outcome
 - _total effects_, the sum of the direct effects and indirect effects that are "communicated" via one ore more _mediator_ variables.
 
-The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we need to take $\small C$ only as an effect of $\small B$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small c$, we would have to include it into the regression. 
+The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculates while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we need to take $\small C$ only as an effect of $\small B$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small C$, we would have to include it into the regression. 
 
 Here is the regression model:
 
@@ -332,24 +333,26 @@ Now we can plot the coefficients from the `m.C_D` and `m.C_BD` models together:
 plot(coeftab(m.C_BD,m.C_D),par=c("bD"))
 ```
 
-As expected, the total effect is larger than the direct effect.
+As expected, the total effect from the `m.C_D` model is larger than the direct effect from the `m.C_BD` model.
 
 ## Think before you regress, and afterwards
 
-One important consequence from thinking systematically about the process that produced the data, and representing and analysing them with DAGs, is that what variables belong into a regression depends on two things:
+One important consequence of thinking systematically about the processes that produced the data, and representing and analysing them with DAGs, is that what variables belong into a regression analysis depends on two things:
 
-- What is the (assumed) data generating structure
+- What is the (assumed) data generating process
 - What do we want to estimate
 
 Depending on the answers to these questions, we different variables have to be included into a regression.
 
 One common mistake, which has the name _Table 2 fallacy_, where Table 2 is often the 2^nd^ table in medical articles^[Table 1 describes the sample], is to interpret multiple coefficients from a regression model as causal effects. This is in most cases not a valid approach.
 
-## Plotting to learn
+# Plotting to learn
 
-### Plotting against residuals tell us what multiple regression does
+## Plotting against residuals
 
-We discussed earlier that in multiple regression each regression coeffcient captures the effect of a variable conditional on that one accounts for the effect of all other variables.
+Plotting against residuals tell us what multiple regression does.
+
+We discussed earlier that in multiple regression each regression coefficient captures the effect of a variable conditional on that one accounts for the effect of all other variables.
 
 This means that we only look at the effect of the variation in that variable that is independent from the variation of the other variables. If we look for example on the two variables $\small B$ and $\small D$, these are correlated:
 
@@ -357,7 +360,7 @@ This means that we only look at the effect of the variation in that variable tha
 plot(D,B)
 ```
 
-If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture the the effect of the complete variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
+If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture  the effect of the complete variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
 
 One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$ is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B_R$.
 
@@ -373,23 +376,40 @@ m.B_D <-quap(
     sigma ~ dexp(1)),
   data=d)
 
+# calculate the linear predictor mu
+# for all observed data points
 mu = colMeans(link(m.B_D,data=d))
 
+# mu to plot regression lines
 mu.l = colMeans(link(m.B_D,data=list(D = c(-3,3))))
+
 par(mfrow = c(1,2))
+
+# select only a subset of values
+# otherwise the plot gets very busy
 idx = sample(nrow(d),50)
+
+# plot raw data
 plot(D[idx],B[idx], ylab = "B (estimated)", xlab = "D")
+
+# plot regression line
 lines(c(-3,3),mu.l, col = "blue")
+
+# plot residual lines
 for (i in idx) {
   lines(rep(D[i],2), c(B[i],mu[i]), col = "blue")
 }
-plot(D[idx],B[idx]-mu[idx], ylab = expression(B[r]), xlab = "D")
+
+# calculate residuals
+Br = B - mu
+# plot residuals of Br against predictor D 
+plot(D[idx],Br[idx], ylab = expression(B[r]), xlab = "D")
 ```
 
-So we can now use $Br$ as a predictor of $\small C$ and plot the regression line:
+No we can use $Br$ as a predictor of $\small C$ and plot the regression line:
 
 ```{r class.source = 'fold-show'}
-d$Br =  B - mu
+d$Br =  Br
 m.C_Br <-quap(
   alist(
     C ~ dnorm(mu,sigma),
@@ -401,7 +421,7 @@ m.C_Br <-quap(
 coefkable(m.C_Br,"m.C_Br") 
 ```
 
-Here are the regression lines for the model with $\small B_R$ as a predictor (left) and with $\small B$ as a predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with teh regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
+Here are the regression lines for the model with $\small B_R$ as a predictor (left) and with $\small B$ as a predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with the regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
 
 ```{r, fig.height=5, fig.width=10}
 par(mfrow = c(1,2))
@@ -432,7 +452,260 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 
 ```
 
+## Posterior predictions
 
-### Posterior predictions tell us if the model is any good
+Posterior predictions tell us if the model is any good.
 
-### Counterfactual plots tell us about the effect of intervention (if the causal model is true)
+If our model capture the data well, the observed and model-predicted data should be correlated.
+We can visualize this correlation in a scatter plot. Because we do not expect that the prediction exactly coincide the observed values, it us useful to add credible of HDPIs to the predicted values. Then one can check if those overlap with the regression line that visualizes perfect coincidence of observed and predicted data.
+
+```{r}
+# no newdata, so uses original data
+mu = link(m.C_BD)
+# summarize samples across cases
+mu_mean = apply(mu,2,mean)
+mu_PI = apply(mu,2,PI) # credible intervals
+# simulate observations
+# again no newdata, so uses original data
+C_sim = rethinking::sim(m.C_BD,n=1e3)
+C_PI = apply(C_sim,2,PI)  # prediction intervals
+```
+
+When we add HDPIs or credible intervals, we can calculate those from the linear predictions, the right plot in the next figure, or from posterior predictions, the left plot in the next figure.
+
+If the main concern is if the observed data are within the most plausible predicted data, one should use credible intervals from posterior predictions. If one has for example 90% credible interval, 90% of the observed value should be within the credible interval of the predicted values.
+
+If the main concern is to detect systematic is strong deviations between observed and predicted data, these van be easier seen if one used credible intervals from the linear predictions.
+
+```{r fig.height=5, fig.width=10}
+par(mfrow = c(1,2))
+## posterior predictions + prediction intervals
+plot(mu_mean[idx]~-d$C[idx],
+     col="blue", cex = .5,
+     xlab="Observed child reading",
+     ylab="Predicted child reading",
+     ylim = range(C_PI[,idx]))
+# regression line for perfect coincidence
+# of observed and predicted values
+abline( a=0,b=1,lty=2)
+# add credible intervals to predictions
+for (i in idx) 
+  lines(rep(d$C[i],2),
+        C_PI[,i],
+        col="blue")
+title("posterior predictions + prediction intervals")
+
+## posterior predictions + credible intervals
+plot(mu_mean[idx]~-d$C[idx],
+     col="blue", cex = .5,
+     xlab="Observed child reading",
+     ylab="Predicted child reading",
+     ylim = range(C_PI[,idx]))
+# regression line for perfect coincidence
+# of observed and predicted values
+abline( a=0,b=1,lty=2)
+# add credible intervals to predictions
+for (i in idx) 
+  lines(rep(d$C[i],2),
+        mu_PI[,i],
+        col="blue")
+title("posterior predictions + credible intervals")
+```
+
+In this example, there are no strong deviations between predicted and observed values. After all, the regression is based on the true model. Here are the same types of plots if the true DGP is a non-linear effect $\small D$ on $\small C$, but ourt model assumes only a linear relationship:
+
+```{r fig.height=5, fig.width=10}
+d2 = d
+d2$C = d2$D - .2* d2$C^2 + .2*d2$B + rnorm(N)
+m.C_BD2 <-quap(
+  alist(
+    C ~ dnorm(mu,sigma),
+    mu <- a + bD*D + bB*B,
+    a ~ dnorm(0,0.2),
+    bD ~ dnorm(0,1),
+    bB ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d2)
+mu = link(m.C_BD2)
+mu_mean = apply(mu,2,mean)
+mu_PI = apply(mu,2,PI) 
+C_sim = rethinking::sim(m.C_BD2,n=1e3)
+C_PI = apply(C_sim,2,PI)
+
+par(mfrow = c(1,2))
+## posterior predictions + prediction intervals
+plot(mu_mean[idx]~-d2$C[idx],
+     col="blue", cex = .5,
+     xlab="Observed child reading",
+     ylab="Predicted child reading",
+     ylim = range(C_PI[,idx]))
+
+# regression line for perfect coincidence
+# of observed and predicted values
+abline( a=0,b=1,lty=2)
+# add credible intervals to predictions
+for (i in idx) 
+  lines(rep(d2$C[i],2),
+        C_PI[,i],
+        col="blue")
+title("posterior predictions + prediction intervals")
+
+## posterior predictions + credible intervals
+plot(mu_mean[idx]~-d2$C[idx],
+     col="blue", cex = .5,
+     xlab="Observed child reading",
+     ylab="Predicted child reading",
+     ylim = range(C_PI[,idx]))
+# regression line for perfect coincidence
+# of observed and predicted values
+abline( a=0,b=1,lty=2)
+# add credible intervals to predictions
+for (i in idx) 
+  lines(rep(d2$C[i],2),
+        mu_PI[,i],
+        col="blue")
+title("posterior predictions + credible intervals")
+```
+Here, we see that the model systematically overestimates low values of child reading ability.
+
+## Counterfactual plots 
+
+Counterfactual plots tell us about the effect of intervention (if the causal model is true).
+
+Let's assume you are thinking about an intervention to increase child reading. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of book in a household.
+
+This can be calculated with counterfactuals, so called because they calculate outcomes under conditions that were actually not observed, which are computed according to following rules.
+
+- Set the manipulated variable to chosen values. This makes the manipulated variables independent of all other variables in the DAG/model, it makes it "exogenous"
+- Using coefficients from you model, calculate all down stream effect of manipulate variables. This includes direct and indirect effects on the outcome of interest.
+
+Here is as a refresher our DAG:
+
+```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
+drawdag(dag1, cex = 0.5, lwd = 1)
+```
+
+If we want to manipulate $\small D$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need a regression coeffcients for all these paths. With `quap` we can estimate them in one model:
+
+```{r class.source = 'fold-show'}
+m.BC <-quap(
+  alist(
+    ## D->C<-B
+    C ~ dnorm(mu,sigma),
+    mu <- a + bB*B + bD*D,
+    a ~ dnorm(0,0.2),
+    bD ~ dnorm(0,0.5),
+    bB ~ dnorm(0,0.5),
+    sigma ~ dexp(1),
+    ## D -> B
+    B ~ dnorm(mu_B,sigma_B),
+    mu_B <- aB + bDB*D,
+    aB ~ dnorm(0,0.2),
+    bDB ~ dnorm(0,0.5),
+    sigma_B ~ dexp(1)),
+  data=d)
+```
+
+Next we specify a sequence of values for $\small D$, for which we would like to estimate $\small C$:
+
+```{r class.source = 'fold-show'}
+D_seq  <-seq(from=-2,to=2,length.out=10)
+```
+
+We can use the `sim` function from the `rethinking` package to simulate first values of $\small D$ and then, using the just simulate $\small D$ values also $\small C$ values.
+
+> The `vars` argument to `sim` tells it both which observables to simulate and in which order.
+
+```{r class.source = 'fold-show'}
+# prepare the data
+sim_dat = data.frame(D = D_seq)
+# simulate B and then C,using D_seq
+s  = rethinking::sim(m.BC,
+         data = sim_dat,
+         vars = c("B", "C"))
+```
+
+```{r}
+plot(sim_dat$D,colMeans(s$C),
+      type="l", col = "blue",
+      xlab="manipulated D",
+     ylab="counterfactual C")
+shade(apply(s$C,2,PI),
+       sim_dat$D,
+      col = adjustcolor("blue",alpha = .2))
+mtext( "Total counterfactual effect of D on C")
+```
+
+This is a large effect. Next we calculate by how many sd child reading gets better if we go from increase daily reading of parents from 0 to 1 (which is also an sd of 1 because the sd of parental reading is 1.).
+
+```{r class.source = 'fold-show'}
+sim2_dat = data.frame(D = c(0,1))
+s2 = rethinking::sim(m.BC,
+                     data=sim2_dat,
+                     vars=c("B","C"))
+mean( s2$C[,2]-s2$C[,1])
+```
+
+Now we look at counterfactuals for B, which we show to the left of the counterfactuals for D. We calculate the effect of B while we fix D to zero. ^[Fixing D to a specific value is OK here because this is a simple linear regression without interactions. Things get more complicated when interactions play a role or non-linear link functions are used, like e.g. for logistic regressions.]
+
+```{r }
+sim_datB = data.frame(
+  B=seq(from=-2,to=2,length.out=10),
+  D=0)
+sB  = rethinking::sim(m.BC,
+                      data=sim_datB,
+                      vars="C")
+```
+
+And we plot the simulated data.
+```{r fig.height=5, fig.width=10}
+par(mfrow = c(1,2))
+plot(sim_dat$D,colMeans(s$C),
+      ylim=c(-2.5,2.5), type="l", col = "blue",
+      xlab="manipulated D",
+     ylab="counterfactual C")
+shade(apply(s$C,2,PI),
+       sim_dat$D,
+      col = adjustcolor("blue",alpha = .2))
+mtext( "Total counterfactual effect of D on C")
+
+
+plot(sim_datB$B,colMeans(sB),
+     ylim=c(-2.5,2.5), type="l", col = "blue",
+    xlab="manipulated B",
+     ylab="counterfactual C")
+shade( apply(sB,2,PI),
+       sim_datB$B,
+       col = adjustcolor("blue",alpha = .2))
+mtext( "Total counterfactual effect of B on C")
+```
+
+As expected, this effect is much weaker.
+
+```{r class.source = 'fold-show'}
+simB2_dat = data.frame(B=c(0,1), D = 0)
+s2 = rethinking::sim(m.BC,
+                     data=simB2_dat,
+                     vars=c("C"))
+mean(s2[,2]-s2[,1])
+```
+
+# Exercises
+
+Write down a multiple regression to evaluate the claim: Neither amount of funding nor size
+of laboratory is by itself a good predictor of time to PhD degree; but together these variables are both
+positively associated with time to degree. Write down the model definition and indicate which side of
+zero each slope parameter should be on.
+
+## Exercise E3
+```{r, fig.width=8, fig.height=8, class.source = 'fold-show'}
+Fu = rnorm(100)
+Si = scale(-1*(Fu + rnorm(100)))
+Ti = 0.3*Fu + 0.3*Si + rnorm(100)
+df = data.frame(Fu = Fu, Si = Si, Ti = Ti)
+pairs(df)
+summary(lm(Ti~Fu))
+summary(lm(Ti~Si))
+summary(lm(Ti~Si+ Fu))
+```
+
