@@ -146,7 +146,7 @@ As a recap, here is the model for a simple linear regression:
 
 | What | Notation | quap R-code |
 |---|---|---|
-|Likelihood | $w_i \sim Normal(\mu,\sigma)$ | `C ~ dnorm(mu, sigma)` |
+|Likelihood | $C_i \sim Normal(\mu,\sigma)$ | `C ~ dnorm(mu, sigma)` |
 |Linear model | $\mu_i = \alpha + \beta B_i$ | `mu[i] <- a + b*B[i]`|
 |Prior | $\alpha \sim Normal(0,.5)$ | `alpha ~ dnorm(0, .5)` |
 |Prior | $\beta \sim Normal(0,2)$ | `beta ~ dnorm(0, 1)` |

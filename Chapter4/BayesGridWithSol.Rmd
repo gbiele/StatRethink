@@ -111,7 +111,7 @@ P_par = c(NA,NA)
 # Prior probability for mu = 22
 P_par[1] = dnorm(22,25,3)
 # Prior probability for sd = 3
-P_par[2] = dexp(2,1)
+P_par[2] = dexp(3,1)
 ```
 
 
