@@ -19,4 +19,4 @@ The html documents can be viewed here:
 
 [Solution grid approximation](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGridWithSol.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
 
-[Recap Chapter 5](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter5/Chapter5Recap.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+[Recap Chapter 5](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter5/RecapChapter5.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
