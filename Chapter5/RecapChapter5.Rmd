@@ -46,10 +46,13 @@ library(kableExtra)
 library(psych)
 library(MASS)
 library(png)
+wikipediapreview::wp_init(use_unpkg = TRUE)
 ```
 
 
 # Directed acyclic graphs
+
+Directed acyclic graphs are the brain child of computer scientist Judea Pearl, who developed them to reason systemically about causal inference. Judea Pearl's [The Book of Why](https://en.wikipedia.org/wiki/The_Book_of_Why){.wiki} provides an accessible introduction to directed acyclic graphs and makes for a nice holiday reading.
 
 Let's assume we want to generate a data set with the following variables:
 
@@ -103,9 +106,9 @@ All graphs are made of nodes and edges. What is special about directed acyclic g
 1. the relationship between two variables has a direction, such that 
     - variables at the start of the arrows are causes and 
     - variables at the end are effects 
-2. a succession of arrows must not form a circle, i.e. a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
+2. a succession of arrows must not form a circle, that is, a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
 
-To simulate data from a DAG, we have to decide what distributions the variables have. To make it simple, we just use normally distributed data. The order in which we simulate variables is determined by the DAG. The first thing we do is to check which variables are exogenous to our model (DAG), because these have to be modeled first.
+To simulate data from a DAG, we have to decide what distributions the variables have. To keep things simple, we just use normally distributed data for now. The order in which we simulate variables is determined by the DAG. The first thing we do is to check which variables are exogenous to our model (DAG), because these have to be modeled first.
 
 Let us focus on the left DAG, which we show here again:
 
@@ -123,7 +126,7 @@ D = rnorm(N)
 
 <br />
 
-$\small B$ and $\small C$ are both endogenous variables, but $\small B$ influences $\small C$, so we have to simulate $\small B$ next:
+$\small B$ and $\small C$ are both endogenous variables, they are both determined by other variables in our model/DAG, but $\small B$ is a parent of $\small C$, so we have to simulate $\small B$ next:
 
 ```{r class.source = 'fold-show'}
 B = 1*D + rnorm(N)
@@ -140,9 +143,8 @@ C = 1*D + 0.2*(B) + rnorm(N)
 
 ## A naive regression analysis
 
-As a recap, here is the model for a simple linear regression:
+As a recap, here is the model for a simple linear regression that models $\small C$ as a function of $\small B$.
 
-<br/>
 
 | What | Notation | quap R-code |
 |---|---|---|
@@ -154,7 +156,7 @@ As a recap, here is the model for a simple linear regression:
 
 <br/>
 
-Here we put the data together and run the model:
+Here we put the data together and estimate the model with `quap`:
 
 ```{r}
 coefkable = function(m,caption) {
@@ -175,7 +177,7 @@ d = data.frame(C = C, B = B, D = D)
 m.C_B <-quap(
   alist(
     C ~ dnorm(mu,sigma),
-    mu <- a+bB*B,
+    mu <- a + bB*B,
     a ~ dnorm(0,.5),
     bB ~ dnorm(0,1),
     sigma ~ dexp(1)),
@@ -211,11 +213,13 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 title("Posterior predictive mean & HDPI")
 ```
 
-So if we disregard our knowledge about daily reading duration of parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
+So, if we disregard our knowledge about daily reading duration of parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
 
-This example makes clear that we can come to wrong conclusions if our analysis model, here the simple linear regression $\small C \sim Normal(\alpha+\beta B,\sigma)$ (the right DAG in the first figure), does not match the data generating process (or model), which is $\small C \sim Normal(\alpha+\beta_1 B + \beta_2 D,\sigma)$ (the left DAG in the first figure).
+## Conditional independencies in DAGs
 
-The question then is, how can we figure out what the correct data generating process (_true DAG_) is? Domain knowledge is obviously useful. In addition one can also use the fact that DAGs (can) imply conditional independencies. Two variables are independent conditional on a third variables when the first two variables are unrelated given that one knows the value of the third variable or fixes it to a specific value.
+This example makes clear that we can come to wrong conclusions if our analysis model, here the simple linear regression $\small C \sim Normal(\alpha+\beta B,\sigma)$ (the right DAG in the first figure), does not match the data generating process or model, which is $\small C \sim Normal(\alpha+\beta_1 B + \beta_2 D,\sigma)$ (the left DAG in the first figure).
+
+The question then is, how can we figure out what the correct data generating process (_true DAG_) is? Domain knowledge is obviously useful. In addition one can also use the fact that DAGs (can) imply conditional independencies. _Two variables are independent conditional on a third variables when the first two variables are unrelated given that one knows the value of the third variable or fixes it to a specific value._
 
 
 Let's look at the left and right DAGs from above again:
@@ -240,11 +244,12 @@ Onto the right DAG:
 - if we condition on $\small B$, $\small D$ and $\small C$ are independent
 - if we condition on $\small C$, $\small D$ and $\small B$ are still dependent because of $\small D \rightarrow B$
 
-The DAG to te right has an implied conditional independence that we can check with our data.
+The DAG to the right has an implied conditional independence that we can check with our data.
 
 Determining conditional dependencies gets harder when DAGs are more complex. In this case one can use software like the R package `dagitty` to determine conditional independencies as follows:
 
 ```{r class.source = 'fold-show'}
+library(dagitty)
 impliedConditionalIndependencies(dag1)
 ```
 
@@ -254,6 +259,8 @@ impliedConditionalIndependencies(dag1)
 ```{r class.source = 'fold-show'}
 impliedConditionalIndependencies(dag2)
 ```
+
+here `B _||_ C | D` means that $\small B$ is independent of $\small C$ conditional on $\small D$, which you can also find written as $(\small B \perp\!\!\!\perp \small C \mid \small D)$.
 
 ```{r class.source = 'fold-show'}
 impliedConditionalIndependencies(dag3)
@@ -265,30 +272,30 @@ Now that we have learned that under some DGPs there should be conditional indepe
 
 Remember that we defined conditional independence as independence given that we already know the third variable. One way to incorporate what we already know about a third variable is to use multiple (linear) regression.
 
-Assuming that $\small D$ is our outcome of interest, we can check if in a model that uses both $\small D$ and $\small B$ to predict $\small C$, $\small B$ remains associated with $\small C$ when we also account for the effect of $\small D$. If it does, this speaks in favour of `dag1`. If it does not, it speaks in favour of `dag3`.
+Assuming that $\small D$ is our outcome of interest, we can check if, in a model that uses both $\small D$ and $\small B$ to predict $\small C$, $\small B$ remains associated with $\small C$ when we also account for the effect of $\small D$. If it does, this speaks in favour of `dag1`. If it does not, it speaks in favour of `dag3`.
 
 
 # Multiple regression
 
 ## Extending the linear model
 
-To go from a simple to a multiple linear regression, we simlpy add a predictor variable to the linear predictor:
+To go from a simple to a multiple linear regression, we simply add a predictor variable to the linear predictor:
 
 | What | Notation | quap R-code |
 |---|---|---|
-|Simple linear model | $\mu_i = \alpha + \beta_1 B_i$ | `mu[i] <- a + bB*B[i]`|
+|Simple linear model | $\mu_i = \alpha + \beta_B B_i$ | `mu[i] <- a + bB*B[i]`|
 |Multiple linear model | $\mu_i = \alpha + \beta_B B_i + \beta_D D_i$ | `mu[i] <- a + bB*B[i] + bD*D[i]`|
 
-Accordingly, the `quap` model for multiple linear regression looks a lot like the one for simple linear regression.
+Accordingly, the `quap` model for the multiple linear regression looks a lot like the one for simple linear regression.
 
 ```{r class.source = 'fold-show'}
 m.C_BD <-quap(
   alist(
     C ~ dnorm(mu,sigma),
-    mu <- a + bD*D + bB*B,
+    mu <- a + bB*B + bD*D,
     a ~ dnorm(0,0.2),
-    bD ~ dnorm(0,1),
     bB ~ dnorm(0,1),
+    bD ~ dnorm(0,1),
     sigma ~ dexp(1)),
   data=d)
 coefkable(m.C_BD,"m.C_BD")
@@ -298,16 +305,16 @@ coefkable(m.C_BD,"m.C_BD")
 Looking at the `quap` model, you can see that we use the same parameters for the priors for `bD` and `bB`. This makes sense because both variables have the same scale (variability). We might want to change this if the variables  have different scales / variability.
 
 
-Because this is a fairly simple model and less model checking is needed, we look next at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BB`,which used $\small B$ and $\small D$.
+Because this is a fairly simple model and less model checking is needed, we directly look at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BD`,which used $\small B$ and $\small D$.
 
 ```{r}
 plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(0,1.2))
 ```
 
-First, we check the conditional independence that would justify to only use $\small B$ as a predictor, namely that $\small \beta_D$ or `bD` is (close to) zero in the coefficient from the `m.C_BD` model. The figure shows that this is clearly not the case.
+First, we check the conditional independence that would justify to only use $\small B$ as a predictor, namely that $\small \beta_D$ or `bD` is (close to) zero in the coefficient from the `m.C_BD` model. The figure shows that this is clearly not the case and that therefore the `m.C_B` is not the correct model to estimate the effect of $\small B$. Instead, we must use the `m.C_BD` model.
 
 
-The other thing we can see is that the estimated association between number of books in the household and is weaker in the model which uses an analysis consistent with the correct data generating process. This is an example of _confounding bias_, which is a more general term of which spurious association is a special case. If we omit a _common cause_ of our predictor and outcome from the analysis, this leads to a biased estimation of the association between predictor and outcome. Also note that the regression parameters we estimated with the `m.C_BD` model are consistent with the values we use to generate the data above.
+The other thing we can see is that the estimated association between number of books in the household and is weaker in the model `m.C_BD`, which uses an analysis consistent with the correct data generating process. This is an example of _confounding bias_, which is a more general term of which spurious association is a special case. If we omit a _common cause_ of our predictor and outcome from the analysis, this leads to a biased estimation of the association between predictor and outcome. Also note that the regression parameters we estimated with the `m.C_BD` model are consistent with the values we use to generate the data above.
 
 ## Mediation, direct and indirect effects
 
@@ -318,7 +325,7 @@ To answer this question, we first need to establish that we can estimate two typ
 - _direct effects_, effects that go only via the direct arrow from the predictor to the outcome
 - _total effects_, the sum of the direct effects and indirect effects that are "communicated" via one ore more _mediator_ variables.
 
-The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculated while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we have to model $\small C$ only as an effect of $\small D$. Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small C$, we would have to include it into the regression. 
+The `m.C_BD` model estimates the direct effect but not the total effect, because the coefficient for $\small D$ is calculated while adjusting for the indirect effect via $\small B$. If we want to estimate the total effect of $\small D$, we have to model $\small C$ only as an effect of $\small D$.^[Note that this is true for the current model. If there would be another confounder, i.e. a common cause for $\small B$ and $\small C$, we would have to include it into the regression.]
 
 Here is the regression model:
 
@@ -326,7 +333,7 @@ Here is the regression model:
 m.C_D <-quap(
   alist(
     C ~ dnorm(mu,sigma),
-    mu <- a+bD*D,
+    mu <- a + bD*D,
     a ~ dnorm(0,.5),
     bD ~ dnorm(0,1),
     sigma ~ dexp(1)),
@@ -339,7 +346,7 @@ Now we can plot the coefficients from the `m.C_D` and `m.C_BD` models together:
 plot(coeftab(m.C_BD,m.C_D),par=c("bD"))
 ```
 
-As expected, the total effect from the `m.C_D` model is larger than the direct effect from the `m.C_BD` model.
+As expected, the _total effect_ from the `m.C_D` model is larger than the _direct effect_ from the `m.C_BD` model.
 
 ## Think before you regress, and afterwards
 
@@ -360,17 +367,17 @@ Plotting against residuals tell us what multiple regression does.
 
 We discussed earlier that in multiple regression each regression coefficient captures the effect of a variable conditional on that one accounts for the effect of all other variables.
 
-This means that we only look at the effect of the variation in that variable that is independent from the variation of the other variables. If we look for example on the two variables $\small B$ and $\small D$, these are correlated:
+This means that we only look at the effect of the variation in that variable that is independent from the variation of the other variables. If we look for example at the two variables $\small B$ and $\small D$, these are correlated:
 
 ```{r}
 plot(D,B)
 ```
 
-If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture  the effect of the complete variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
+If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the coefficient $\beta$ will capture  the effect of the total variation of $\small B$, which includes some variation due to $\small D$. This becomes obvious if you remember that we simulated `B = 1*D + rnorm(N)`.
 
 One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$, is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B$.
 
-The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side show the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
+The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side shows the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
 
 ```{r fig.height=5, fig.width=10}
 m.B_D <-quap(
