@@ -377,9 +377,8 @@ If we run a regression like $\small C \sim Normal(\alpha + \beta B, \sigma)$ the
 
 One way to do a regression that returns the effect of $\small B$ that is not due to $\small D$, is to create a new variable $\small B_R$ that does not include information that is also in $\small D$. We can do this by regressing $\small B \sim Normal(\alpha + \beta D, \sigma)$ and calculating $\small B_R$ as the difference of the linear predictor ($\small \mu_i$ or $\small mu[i]$) and $\small B$.
 
-The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side shows the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
 
-```{r fig.height=5, fig.width=10}
+```{r}
 m.B_D <-quap(
   alist(
     B ~ dnorm(mu,sigma),
@@ -388,6 +387,19 @@ m.B_D <-quap(
     bD ~ dnorm(0,1),
     sigma ~ dexp(1)),
   data=d)
+```
+
+```{r, echo = F}
+if(!file.exists("residuals.mp4")) {
+  source("animation_residuals.R")
+  animate_residulas(m.B_D,d)
+}
+```
+
+
+The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side shows the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
+
+```{r fig.height=5, fig.width=10}
 
 # calculate the linear predictor mu
 # for all observed data points
@@ -400,7 +412,7 @@ par(mfrow = c(1,2))
 
 # select only a subset of values
 # otherwise the plot gets very busy
-idx = sample(nrow(d),50)
+idx = sample(nrow(d),75)
 
 # plot raw data
 plot(D[idx],B[idx], ylab = "B (estimated)", xlab = "D")
@@ -419,7 +431,12 @@ Br = B - mu
 plot(D[idx],Br[idx], ylab = expression(B[r]), xlab = "D")
 ```
 
-No we can use $\small Br$ as a predictor of $\small C$ and plot the regression line:
+Here is an animation that shows how residuals capture only the variation in $\small B$, after we have removed the effect of $\small D$. In the animation, we do this by gradually reducing the slope and ending at a value of 0 for the slope, which indicates no influence of $\small D$ on $\small B$.
+
+![Understanding residuals](residuals.mp4)
+
+
+Now we can use $\small Br$ as a predictor of $\small C$ and plot the regression line:
 
 ```{r class.source = 'fold-show'}
 d$Br =  Br
