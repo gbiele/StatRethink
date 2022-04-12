@@ -46,13 +46,12 @@ library(kableExtra)
 library(psych)
 library(MASS)
 library(png)
-wikipediapreview::wp_init(use_unpkg = TRUE)
 ```
 
 
 # Directed acyclic graphs
 
-Directed acyclic graphs are the brain child of computer scientist Judea Pearl, who developed them to reason systemically about causal inference. Judea Pearl's [The Book of Why](https://en.wikipedia.org/wiki/The_Book_of_Why){.wiki} provides an accessible introduction to directed acyclic graphs and makes for a nice holiday reading.
+Directed acyclic graphs are the brain child of computer scientist Judea Pearl, who developed them to reason systemically about causal inference. Judea Pearl's [The Book of Why](https://en.wikipedia.org/wiki/The_Book_of_Why) provides an accessible introduction to directed acyclic graphs and makes for a nice holiday reading.
 
 Let's assume we want to generate a data set with the following variables:
 
@@ -389,13 +388,6 @@ m.B_D <-quap(
   data=d)
 ```
 
-```{r, echo = F}
-if(!file.exists("residuals.mp4")) {
-  source("animation_residuals.R")
-  animate_residulas(m.B_D,d)
-}
-```
-
 
 The following figure shows observed and predicted values on the left, where vertical lines from observed values to the regression line are residuals. The right hand side shows the residuals plotted again $\small D$. As expected these are uncorrelated, which means that $\small B_r$ does not include any information that is also in $\small D$.
 
@@ -433,8 +425,14 @@ plot(D[idx],Br[idx], ylab = expression(B[r]), xlab = "D")
 
 Here is an animation that shows how residuals capture only the variation in $\small B$, after we have removed the effect of $\small D$. In the animation, we do this by gradually reducing the slope and ending at a value of 0 for the slope, which indicates no influence of $\small D$ on $\small B$.
 
-![Understanding residuals](residuals.mp4)
+```{r, echo = F}
+if(!file.exists("residuals.mp4")) {
+  source("animation_residuals.R")
+  animate_residulas(m.B_D,d)
+}
+```
 
+![Understanding residuals](residuals.mp4)
 
 Now we can use $\small Br$ as a predictor of $\small C$ and plot the regression line:
 
