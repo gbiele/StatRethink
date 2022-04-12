@@ -70,18 +70,18 @@ dag1 = dagitty(
   B->C;
   D->C
   }")
-ccord.list = 
+coord.list = 
   list(
     x=c(D=0,B=2,C=1),
     y=c(D=0,B=0,C=1))
-coordinates(dag1) = ccord.list
+coordinates(dag1) = coord.list
 drawdag(dag1, cex = 2)
 dag2 = dagitty(
   "dag{
   D->B;
   D->C
   }")
-coordinates(dag2) = ccord.list
+coordinates(dag2) = coord.list
 drawdag(dag2, cex = 2)
 
 dag3 = dagitty(
@@ -89,7 +89,7 @@ dag3 = dagitty(
   D->B;
   B->C
   }")
-coordinates(dag3) = ccord.list
+coordinates(dag3) = coord.list
 drawdag(dag3, cex = 2)
 ```
 
@@ -418,9 +418,9 @@ for (i in idx) {
 }
 
 # calculate residuals
-Br = B - mu
-# plot residuals of Br against predictor D 
-plot(D[idx],Br[idx], ylab = expression(B[r]), xlab = "D")
+BR = B - mu
+# plot residuals of BR against predictor D 
+plot(D[idx],BR[idx], ylab = expression(B[R]), xlab = "D")
 ```
 
 Here is an animation that shows how residuals capture only the variation in $\small B$, after we have removed the effect of $\small D$. In the animation, we do this by gradually reducing the slope and ending at a value of 0 for the slope, which indicates no influence of $\small D$ on $\small B$.
@@ -434,19 +434,19 @@ if(!file.exists("residuals.mp4")) {
 
 ![Understanding residuals](residuals.mp4)
 
-Now we can use $\small Br$ as a predictor of $\small C$ and plot the regression line:
+Now we can use $\small B_R$ as a predictor of $\small C$ and plot the regression line:
 
 ```{r class.source = 'fold-show'}
-d$Br =  Br
-m.C_Br <-quap(
+d$BR =  BR
+m.C_BR <-quap(
   alist(
     C ~ dnorm(mu,sigma),
-    mu <- a+bBr*Br,
+    mu <- a+bBR*BR,
     a ~ dnorm(0,.5),
-    bBr ~ dnorm(0,1),
+    bBR ~ dnorm(0,1),
     sigma ~ dexp(1)),
   data=d)
-coefkable(m.C_Br,"m.C_Br") 
+coefkable(m.C_BR,"m.C_BR") 
 ```
 
 Here are the regression lines for the model with $\small B_R$ as the predictor (left) and with $\small B$ as the predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with the regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
@@ -455,14 +455,15 @@ Here are the regression lines for the model with $\small B_R$ as the predictor (
 par(mfrow = c(1,2))
 
 ## Regression on residuals
-Br_seq = seq(from=-3,to=3,length.out=30)
-mu = link(m.C_Br,data=list(Br=Br_seq))
+BR_seq = seq(from=-3,to=3,length.out=30)
+mu = link(m.C_BR,data=list(BR=BR_seq))
 mu.mean <-apply(mu,2,mean)
 mu.HPDI <-apply(mu,2,HPDI)
-plot( C~Br,data=d, cex = .5,
+plot( C~BR,data=d, cex = .5,
       col=adjustcolor("black", alpha = .2),
       ylim = c(-4.5,4.5),
-      xlim = c(-3,3))
+      xlim = c(-3,3),
+      xlab = expression(B[R]))
 lines( B_seq,mu.mean,lwd=2, col = "blue")
 shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 
@@ -485,7 +486,7 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 Posterior predictions tell us if the model is any good.
 
 If our model capture the data well, the observed and model-predicted data should be correlated.
-We can visualize this correlation in a scatter plot. Because we do not expect that the predictions exactly coincide the observed values, it is useful to add credible intervals or HDPIs to the predicted values. Then one can check if those overlap with the regression line that visualizes perfect coincidence of observed and predicted data.
+We can visualize this correlation in a scatter plot. Because we do not expect that the predictions exactly coincide with the observed values, it is useful to add credible intervals or HDPIs to the predicted values. Then, one can check if those overlap with the regression line that visualizes perfect coincidence of observed and predicted data.
 
 ```{r}
 # no newdata, so uses original data
@@ -499,7 +500,7 @@ C_sim = rethinking::sim(m.C_BD,n=1e3)
 C_PI = apply(C_sim,2,PI)  # prediction intervals
 ```
 
-When we add HDPIs or credible intervals, we can calculate those from the linear predictions, the right plot in the next figure, or from posterior predictions, the left plot in the next figure.
+When we add HDPIs or credible intervals, we can calculate those for the linear predictions, the right plot in the next figure, or for posterior predictions, the left plot in the next figure. The difference in intervals for linear and posterior predictions is that the latter also captures uncertainty about predictions for each individual (which depends on the standard deviation $\sigma$ of the Gaussian likelihood), whereas the former only captures uncertainty about the slope of the regression line, i.e. $\beta$.
 
 If the main concern is if the observed data are within the most plausible predicted data, one should use credible intervals from posterior predictions. If one has for example a 90% credible interval, 90% of the observed values should be within the credible interval of the predicted values.
 
@@ -544,7 +545,7 @@ In this example, there are no strong deviations between predicted and observed v
 
 ```{r fig.height=5, fig.width=10}
 d2 = d
-d2$C = d2$D - .2* d2$C^2 + .2*d2$B + rnorm(N)
+d2$C = d2$D - .5* d2$D^2 + .2*d2$B + rnorm(N)
 m.C_BD2 <-quap(
   alist(
     C ~ dnorm(mu,sigma),
@@ -598,14 +599,14 @@ Here, we see that the model systematically overestimates low values of child rea
 
 ## Counterfactual plots 
 
-Counterfactual plots tell us about the effect of an intervention, if the causal model is true).
+Counterfactual plots tell us about the effect of an intervention, under the condition that we assume or have identified the correct data generating process our causal model (which may be represented as a DAG).
 
-Let's assume you are thinking about an intervention to improve child reading ability. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of book in a household.
+Let's assume you are thinking about an intervention to improve child reading ability. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of books in a household.
 
-This can be calculated with counterfactuals, so called because they calculate outcomes under conditions that were actually not observed, which are computed according to following rules.
+This can be calculated with counterfactuals, so called because they calculate outcomes under conditions that were actually not observed. Counterfactual outcomes are computed according to following rules:
 
-- Set the manipulated variable to chosen values (some of which were not realized in the data). This makes the manipulated variable independent of all other variables in the DAG/model, it makes it "exogenous"
-- Using coefficients from you model(s), calculate all down stream effects of the manipulate variable on the outcome. This includes direct and indirect effects on the outcome of interest.
+- Set the manipulated variable to chosen values (some of which were not realized in the data). This makes the manipulated variable independent of all other variables in the DAG/model, it makes it "exogenous".
+- Using coefficients from you model(s), calculate all down stream effects of the manipulated variable on the outcome. This includes direct and indirect effects.
 
 Here is as a refresher our DAG:
 
@@ -613,12 +614,12 @@ Here is as a refresher our DAG:
 drawdag(dag1, cex = 0.5, lwd = 1)
 ```
 
-If we want to manipulate $\small D$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need a regression coefficients for all these paths. With `quap` we can estimate them in one model:
+If we want to manipulate $\small D$ and examine the effect on $\small C$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need regression coefficients for all these paths. With `quap` we can estimate them in one model:
 
 ```{r class.source = 'fold-show'}
 m.BC <-quap(
   alist(
-    ## D->C<-B
+    ## D -> C <- B
     C ~ dnorm(mu,sigma),
     mu <- a + bB*B + bD*D,
     a ~ dnorm(0,0.2),
@@ -654,11 +655,13 @@ s  = rethinking::sim(m.BC,
 ```
 
 ```{r}
+PIs = apply(s$C,2,PI)
 plot(sim_dat$D,colMeans(s$C),
       type="l", col = "blue",
       xlab="manipulated D",
-     ylab="counterfactual C")
-shade(apply(s$C,2,PI),
+     ylab="counterfactual C",
+     ylim = range(PIs))
+shade(PIs,
        sim_dat$D,
       col = adjustcolor("blue",alpha = .2))
 mtext( "Total counterfactual effect of D on C")
@@ -674,7 +677,7 @@ s2 = rethinking::sim(m.BC,
 mean( s2$C[,2]-s2$C[,1])
 ```
 
-Now we look at counterfactuals for $\small B$. We calculate the effect of $\small B$ while we fix $\small D$ to zero. ^[Fixing $\small D$ to a specific value is OK here because this is a simple linear regression without interactions. Things get more complicated when interactions play a role or non-linear link functions are used, like e.g. for logistic regressions.]
+Now we look at counterfactuals for $\small B$. We calculate the effect of $\small B$ while we fix $\small D$ to zero.^[Fixing $\small D$ to a specific value is OK here because this is a simple linear regression without interactions. Things get more complicated when interactions play a role or non-linear link functions are used, like e.g. for logistic regressions.]
 
 ```{r class.source = 'fold-show'}
 sim_datB = data.frame(
@@ -689,7 +692,7 @@ And we plot the simulated data, with the counterfactual effect of $\small D$ on 
 ```{r fig.height=5, fig.width=10}
 par(mfrow = c(1,2))
 plot(sim_dat$D,colMeans(s$C),
-      ylim=c(-2.5,2.5), type="l", col = "blue",
+      ylim = range(PIs), type="l", col = "blue",
       xlab="manipulated D",
      ylab="counterfactual C")
 shade(apply(s$C,2,PI),
@@ -699,7 +702,7 @@ mtext( "Total counterfactual effect of D on C")
 
 
 plot(sim_datB$B,colMeans(sB),
-     ylim=c(-2.5,2.5), type="l", col = "blue",
+     ylim = range(PIs), type="l", col = "blue",
     xlab="manipulated B",
      ylab="counterfactual C")
 shade( apply(sB,2,PI),
@@ -718,6 +721,150 @@ s2 = rethinking::sim(m.BC,
 mean(s2[,2]-s2[,1])
 ```
 
+
+# Unmasking "hidden" relationships
+
+May effects depend on multiple causes and our previous example on the effect o parental reading on child reading has shown that we need to be careful about confounders, common caused of the treatment of interest and the outcome, in order to avoid overestimating treatment effects.
+
+In this section, we examine how ignoring concurrent causes can lead to underestimating true effects. As an example, we can think about the effect decision authority ($\small A$) and stress ($\small S$) on job satisfaction ($\small W$). What can we hypothesize about the relationship of these variables?
+
+- more decision authority leads to more job satisfaction $\small A \rightarrow \small W$
+- more decision authority leads to more stress $\small A \rightarrow \small S$
+- more stress leads to less job satisfaction $\small S \rightarrow \small W$
+
+Here is the relationship between the three variables summarized in one DAG.
+
+```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
+dag1 = dagitty(
+  "dag{
+  A->S;
+  S->W;
+  A->W
+  }")
+coord.list = 
+  list(
+    x=c(A=0,S=2,W=1),
+    y=c(A=0,S=0,W=1))
+coordinates(dag1) = coord.list
+drawdag(dag1, cex = 0.5, lwd = 1)
+```
+
+Based on this DAG, we can simulate data:
+
+```{r}
+set.seed(12345)
+N = 30
+A = rnorm(N)
+S = A*.5 + rnorm(N)
+W = 0.3*A - 0.3*S + rnorm(N,sd = 1.25)
+d = data.frame(A = A, S = S, W = W)
+```
+
+
+We use a `pairs` plot to get a first impression of the data.
+
+```{r fig.width=7, fig.height=7}
+pairs(d)
+```
+
+This plot does not show a clear relationship between stress and satisfaction! The reason is that decision authority and stress are positively related, but also have opposite effects on job satisfaction.
+
+## A naive analysis
+
+A naive analysis would for example simply assume that decision authority and stress are independent variables, that each influence job satisfaction. If this were true, one could estimate the effects with simple linear regressions. Here is the code for two simple `quap` models that do this:
+
+```{r}
+m.A <-quap(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- a + bA*A,
+    a ~ dnorm(0,.5),
+    bA ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+m.S <-quap(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- a + bS*S,
+    a ~ dnorm(0,.5),
+    bS ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+```
+
+Next, we plot the regression line with credible intervals to visualize how strong the estimated association is:
+
+```{r fig.height=5, fig.width=10}
+A_seq = seq(min(d$A), max(d$A), length.out = 50)
+S_seq = seq(min(d$S), max(d$S), length.out = 50)
+
+par(mfrow = c(1,2))
+
+mu = link(m.A,data=list(A=A_seq))
+mu.mean <-apply(mu,2,mean)
+mu.PI <-apply(mu,2,PI)
+plot( mu.mean~A_seq,data=d,'l',
+      ylim = c(-2,2),
+      ylab = "W", xlab = "A")
+shade( mu.PI, A_seq, col = adjustcolor("blue", alpha = .2))
+
+mu = link(m.S,data=list(S=S_seq))
+mu.mean <-apply(mu,2,mean)
+mu.PI <-apply(mu,2,PI)
+plot( mu.mean~S_seq,data=d,'l',
+      ylim = c(-2,2),
+      ylab = "W", xlab = "S")
+shade( mu.PI, S_seq, col = adjustcolor("blue", alpha = .2))
+```
+
+Let's check again if the model we used was reasonable. Given that we assumed that $\small A$ and $\small S$ are independent, this is that DAG that would justify the naive analysis: 
+
+```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
+naive.dag = dagitty(
+  "dag{
+  S->W;
+  A->W
+  }")
+coord.list = 
+  list(
+    x=c(A=0,S=2,W=1),
+    y=c(A=0,S=0,W=1))
+coordinates(naive.dag) = coord.list
+drawdag(naive.dag, cex = 0.5, lwd = 1)
+```
+
+And here are the implied conditional independencies of this DAG:
+
+```{r}
+impliedConditionalIndependencies(naive.dag)
+```
+
+A short look at the pairs plot above shows us that $\small A$ and $\small S$ are not independent.
+
+But we already new that this DAG was not correct. Now lets check the conditional indendencies of the true DAG:
+
+
+```{r}
+impliedConditionalIndependencies(dag1)
+```
+
+
+Indeed, this DAG does not have any conditional independencies. Another property of this DAG is that it is just one of many DAGs with the same skeleton, i.e. nodes and undirected connections, that can produce the same dependencies between variables. We can extract and plot all these dags, which belong in a markov equivalence class, wit a few short commands:
+
+```{r}
+ME.dags <-equivalentDAGs(dag1) # equivalentDAGs is part of dagitty
+drawdag(ME.dags)
+mtext("1", outer = T, line = -1,adj = .15)
+mtext("2", outer = T, line = -1,adj = .5)
+mtext("3", outer = T, line = -1,adj = .85)
+mtext("4", outer = T, line = -15,adj = .15)
+mtext("5", outer = T, line = -15,adj = .5)
+mtext("6", outer = T, line = -15,adj = .85)
+```
+
+The important insight here is that if we only observe a data set where $\small A$, $\small S$,  and $\small W$ are connected and no conditional independencies are present, we cannot infer which of the 6 DAGs shown in the previous figure generated the data. If we still want to make some progress, we need use domain knowledge to roul out a DAGs.
+
+
 # Exercises
 
 Write down a multiple regression to evaluate the claim: Neither amount of funding nor size
@@ -727,9 +874,11 @@ zero each slope parameter should be on.
 
 ## Exercise E3
 ```{r, fig.width=8, fig.height=8, class.source = 'fold-show'}
-Fu = rnorm(100)
-Si = scale(-1*(Fu + rnorm(100)))
-Ti = 0.3*Fu + 0.3*Si + rnorm(100)
+set.seed(1234)
+N = 75
+Fu = rnorm(N)
+Si = scale((Fu + rnorm(N)))
+Ti = 0.3*Fu - 0.3*Si + rnorm(N,sd = .6)
 df = data.frame(Fu = Fu, Si = Si, Ti = Ti)
 pairs(df)
 summary(lm(Ti~Fu))

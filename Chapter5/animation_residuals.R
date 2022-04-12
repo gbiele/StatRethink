@@ -23,7 +23,7 @@ animate_residulas = function(m.B_D,d) {
            length = 0, col = adjustcolor("blue",alpha = .5))
     points(x,y.tmp, col = clr)
     mtext(expression(B[ ]), side = 2, line = 2, col = clr1)
-    mtext(expression(B[r]), side = 2, line = 2, col = clr2)
+    mtext(expression(B[R]), side = 2, line = 2, col = clr2)
     dev.off()
     
   }
