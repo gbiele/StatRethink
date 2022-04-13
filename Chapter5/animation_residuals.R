@@ -6,7 +6,7 @@ animate_residulas = function(m.B_D,d) {
   baseplot = function(k, b = NULL, is = NULL, plot.abline = T) {
     png(paste0("animation/anim",sprintf("%03d", k), ".png"),
         width = 900, height = 750,pointsize = 24)
-    par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+    par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01, bg = "white")
     plot(0,type = "n", ylim = c(-3,3), xlim = range(x),
          ylab = "",
          xlab = "D")

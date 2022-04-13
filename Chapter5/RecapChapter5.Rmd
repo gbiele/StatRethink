@@ -35,8 +35,7 @@ h3,h4,h5,h6{
 ```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300)
-par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
 library(plotrix)
 library(DescTools)
 library(rethinking)
@@ -46,6 +45,10 @@ library(kableExtra)
 library(psych)
 library(MASS)
 library(png)
+```
+
+```{r, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 ```
 
 
@@ -63,7 +66,7 @@ Before we start simulating anything, we might want to think about the possible c
 
 ```{r fig.height=3, fig.width=9, warning = F}
 library(dagitty) 
-par(mfrow = c(1,3))
+par(mfrow = c(1,3), mar=c(3,3,0,1))
 dag1 = dagitty(
   "dag{
   D->B;
@@ -188,7 +191,7 @@ coefkable(m.C_B, "m.C_B")
 And we plot the associations implied by prior and posterior:
 
 ```{r, fig.height=5, fig.width=10}
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 prior = extract.prior(m.C_B)
 mu = link(m.C_B,
           post=prior,
@@ -224,7 +227,7 @@ The question then is, how can we figure out what the correct data generating pro
 Let's look at the left and right DAGs from above again:
 
 ```{r fig.height=1.3, fig.width=3, fig.align = 'center'}
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 drawdag(dag1, cex = 0.5, lwd = 1)
 drawdag(dag3, cex = 0.5, lwd = 1)
 ```
@@ -400,7 +403,7 @@ mu = colMeans(link(m.B_D,data=d))
 # mu to plot regression lines
 mu.l = colMeans(link(m.B_D,data=list(D = c(-3,3))))
 
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 
 # select only a subset of values
 # otherwise the plot gets very busy
@@ -452,7 +455,7 @@ coefkable(m.C_BR,"m.C_BR")
 Here are the regression lines for the model with $\small B_R$ as the predictor (left) and with $\small B$ as the predictor (right). As expected, the relationship is much stronger for $\small B$. Also compare the regression coeffcients for $\small B_R$ with the regression coeffcient for the $\small B$ in the model `m.C_BD`. They are nearly identical.
 
 ```{r, fig.height=5, fig.width=10}
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 
 ## Regression on residuals
 BR_seq = seq(from=-3,to=3,length.out=30)
@@ -507,7 +510,7 @@ If the main concern is if the observed data are within the most plausible predic
 If the main concern is to detect systematic or strong deviations between observed and predicted data, these can be easier seen if one uses credible intervals from the linear predictions.
 
 ```{r fig.height=5, fig.width=10}
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 ## posterior predictions + prediction intervals
 plot(mu_mean[idx]~-d$C[idx],
      col="blue", cex = .5,
@@ -561,7 +564,7 @@ mu_PI = apply(mu,2,PI)
 C_sim = rethinking::sim(m.C_BD2,n=1e3)
 C_PI = apply(C_sim,2,PI)
 
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 ## posterior predictions + prediction intervals
 plot(mu_mean[idx]~-d2$C[idx],
      col="blue", cex = .5,
@@ -638,7 +641,7 @@ m.BC <-quap(
 Next we specify a sequence of values for $\small D$, for which we would like to estimate $\small C$:
 
 ```{r class.source = 'fold-show'}
-D_seq  <-seq(from=-2,to=2,length.out=10)
+D_seq  = seq(from=-2, to=2, length.out=10)
 ```
 
 We can use the `sim` function from the `rethinking` package to simulate first values of $\small D$ and then, using the just simulate $\small D$ values, also $\small C$ values.
@@ -690,7 +693,7 @@ sB  = rethinking::sim(m.BC,
 
 And we plot the simulated data, with the counterfactual effect of $\small D$ on the left side and of $\small B$ on the right side.
 ```{r fig.height=5, fig.width=10}
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 plot(sim_dat$D,colMeans(s$C),
       ylim = range(PIs), type="l", col = "blue",
       xlab="manipulated D",
@@ -752,11 +755,11 @@ drawdag(dag1, cex = 0.5, lwd = 1)
 Based on this DAG, we can simulate data:
 
 ```{r}
-set.seed(12345)
-N = 30
+set.seed(1234)
+N = 75
 A = rnorm(N)
 S = A*.5 + rnorm(N)
-W = 0.3*A - 0.3*S + rnorm(N,sd = 1.25)
+W = 0.3*A - 0.3*S + rnorm(N,sd = 1)
 d = data.frame(A = A, S = S, W = W)
 ```
 
@@ -798,12 +801,12 @@ Next, we plot the regression line with credible intervals to visualize how stron
 A_seq = seq(min(d$A), max(d$A), length.out = 50)
 S_seq = seq(min(d$S), max(d$S), length.out = 50)
 
-par(mfrow = c(1,2))
+par(mfrow = c(1,2), mar=c(3,3,0,1))
 
 mu = link(m.A,data=list(A=A_seq))
 mu.mean <-apply(mu,2,mean)
 mu.PI <-apply(mu,2,PI)
-plot( mu.mean~A_seq,data=d,'l',
+plot( mu.mean~A_seq,data=d,'l',col = "blue",
       ylim = c(-2,2),
       ylab = "W", xlab = "A")
 shade( mu.PI, A_seq, col = adjustcolor("blue", alpha = .2))
@@ -811,7 +814,7 @@ shade( mu.PI, A_seq, col = adjustcolor("blue", alpha = .2))
 mu = link(m.S,data=list(S=S_seq))
 mu.mean <-apply(mu,2,mean)
 mu.PI <-apply(mu,2,PI)
-plot( mu.mean~S_seq,data=d,'l',
+plot( mu.mean~S_seq,data=d,'l', col = "blue",
       ylim = c(-2,2),
       ylab = "W", xlab = "S")
 shade( mu.PI, S_seq, col = adjustcolor("blue", alpha = .2))
@@ -841,7 +844,7 @@ impliedConditionalIndependencies(naive.dag)
 
 A short look at the pairs plot above shows us that $\small A$ and $\small S$ are not independent.
 
-But we already new that this DAG was not correct. Now lets check the conditional indendencies of the true DAG:
+But we already new that this DAG was not correct. Now lets check the conditional independencies of the true DAG:
 
 
 ```{r}
@@ -854,35 +857,83 @@ Indeed, this DAG does not have any conditional independencies. Another property 
 ```{r}
 ME.dags <-equivalentDAGs(dag1) # equivalentDAGs is part of dagitty
 drawdag(ME.dags)
-mtext("1", outer = T, line = -1,adj = .15)
-mtext("2", outer = T, line = -1,adj = .5)
-mtext("3", outer = T, line = -1,adj = .85)
-mtext("4", outer = T, line = -15,adj = .15)
-mtext("5", outer = T, line = -15,adj = .5)
-mtext("6", outer = T, line = -15,adj = .85)
+mtext("(1)", outer = T, line = -17, adj = 0+.025,cex = .75)
+mtext("(2)", outer = T, line = -17, adj = 1/3+.025,cex = .75)
+mtext("(3)", outer = T, line = -17, adj = 2/3+.025,cex = .75)
+mtext("(4)", outer = T, line = -36, adj = 0+.025,cex = .75)
+mtext("(5)", outer = T, line = -36, adj = 1/3+.025,cex = .75)
+mtext("(6)", outer = T, line = -36, adj = 2/3+.025,cex = .75)
 ```
 
-The important insight here is that if we only observe a data set where $\small A$, $\small S$,  and $\small W$ are connected and no conditional independencies are present, we cannot infer which of the 6 DAGs shown in the previous figure generated the data. If we still want to make some progress, we need use domain knowledge to roul out a DAGs.
+The important insight here is that if we only observe a data set where $\small A$, $\small S$,  and $\small W$ are connected and no conditional independencies are present, we cannot infer which of the 6 DAGs shown in the previous figure generated the data. If we still want to make some progress, we need use domain knowledge to rule out DAGs. For instance, if there is certain domain knowledge that stress influences job satisfaction and not the other way around, DAGs (2), (3), and (6) can be excluded, and if one is certain that stress does not cause decision autonomy, DAGs (4), (5) and (6) can be excluded.
+
+The key message here is that it is necessary to postulate a causal model, e.g. in form of a DAG, in order to decide over an analysis approach. If possible, we can use the data at hand to choose the correct, but more often than not domain knowledge is at least as important.
+
+## An informed analysis
+
+If we want to estimate the direct effect of $\small A$ given this causal model: 
+
+```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
+drawdag(dag1, cex = 0.5, lwd = 1)
+```
 
 
-# Exercises
+we need to investigate how $\small W$ varies when we vary $\small A$ _and hold $\small S$ constant_. To do this, we can again use counterfactuals, because we compute expected job satisfaction at combinations of $\small A$ and $\small W$ values that were not necessarily observed.
 
-Write down a multiple regression to evaluate the claim: Neither amount of funding nor size
-of laboratory is by itself a good predictor of time to PhD degree; but together these variables are both
-positively associated with time to degree. Write down the model definition and indicate which side of
-zero each slope parameter should be on.
+To prepare the calculation of counterfactuals, we first need to estimate job satisfaction as an effect of $\small A$ and $\small S$:
 
-## Exercise E3
-```{r, fig.width=8, fig.height=8, class.source = 'fold-show'}
-set.seed(1234)
-N = 75
-Fu = rnorm(N)
-Si = scale((Fu + rnorm(N)))
-Ti = 0.3*Fu - 0.3*Si + rnorm(N,sd = .6)
-df = data.frame(Fu = Fu, Si = Si, Ti = Ti)
-pairs(df)
-summary(lm(Ti~Fu))
-summary(lm(Ti~Si))
-summary(lm(Ti~Si+ Fu))
+```{r}
+m.AS <-quap(
+  alist(
+    W ~ dnorm(mu,sigma),
+    mu <- a + bA*A + bS*S,
+    a ~ dnorm(0,.5),
+    bA ~ dnorm(0,1),
+    bS ~ dnorm(0,1),
+    sigma ~ dexp(1)),
+  data=d)
+```
+
+
+Did the coefficients for $\small A$ and $\small S$ change? Here is a plot of the coeffcients from the diffrent models: 
+
+```{r}
+plot( coeftab(m.A,m.S,m.AS),pars=c("bA","bS"))
+```
+
+
+Next we use the `link` function from the `rethinking` package to calculate values $\small W$ for vary $\small A$ while we fix $\small S = 0$. We plot counterfactual effect with a solid line and add for comparison the effect from the unadjusted model (`m.A`) with a dotted line.
+
+```{r}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+xseq = seq(from=min(d$A)-0.15, to=max(d$A)+0.15, length.out=50)
+mu = link(m.AS,data=data.frame(A=xseq,S=0))
+mu.mean <-apply(mu,2,mean)
+mu.PI <-apply(mu,2,PI)
+plot( mu.mean~xseq,data=d,'l', col = "blue",
+      ylim = c(-2,2),
+      ylab = "W", xlab = "A")
+lines(x = xseq, y = coef(m.A)[1] + coef(m.A)[2]*xseq, col = "blue", lty = 3)
+shade( mu.PI, xseq, col = adjustcolor("blue", alpha = .2))
+```
+
+Of course, the model is still consistent with an effect of stress. To show this, we can plot the counterfactual effect of $\small A$ for different levels of $\small S$. The plot uses 50% credible intervals.
+
+
+```{r}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+plot(0,type = "n", ylim = c(-2.5,2.4), xlim = c(-2.85,max(xseq)), ylab = "W", xlab = "A")
+
+for (s in c(-2,0,2)) {
+  mu = link(m.AS,data=data.frame(A=xseq,S=s))
+  mu.mean <-apply(mu,2,mean)
+  mu.PI <-apply(mu,2,PI, prob = .5)
+  lines( mu.mean~xseq,data=d,'l', col = "blue",
+         ylim = c(-2,2),
+         ylab = "W", xlab = "S")
+  shade( mu.PI, xseq, col = adjustcolor("blue", alpha = .2))
+  text(min(xseq),mu.mean[1], paste0("S = ",s), pos = 2)
+}
+
 ```
 
