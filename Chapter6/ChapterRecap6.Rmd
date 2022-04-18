@@ -1,0 +1,221 @@
+---
+title: "Chapter 5: Recap"
+author: "Guido Biele"
+date: "20.04.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 22pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+library(plotrix)
+library(DescTools)
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(psych)
+library(MASS)
+library(png)
+library(dagitty)
+library(smoother)
+library(magick)
+source("dag_utils.R")
+```
+
+```{r, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+```
+
+
+# Directed acyclic graphs
+
+Directed acyclic graphs are the brain child of computer scientist Judea Pearl, who developed them to reason systemically about causal inference. Judea Pearl's [The Book of Why](https://en.wikipedia.org/wiki/The_Book_of_Why) provides an accessible introduction to directed acyclic graphs and makes for a nice holiday reading.
+
+
+DAGs are build from two types of components:
+
+- Nodes, which represent variables
+- Edges, which represent relationships between variables
+
+All graphs are made of nodes and edges. What is special about directed acyclic graphs is that 
+
+1. the relationship between two variables has a direction, such that 
+    - variables at the start of the arrows are causes and 
+    - variables at the end are effects 
+2. a succession of arrows must not form a circle, that is, a variable cannot cause itself, even indirectly^[If one has multiple measurements of the same variable over time, each measurement would be a new node]. For example, $\small D\rightarrow B\rightarrow C\rightarrow D$ is not allowed.
+
+
+
+# Confounding bias: Common cause of exposure and outcome
+
+- B = brain volume
+- D = disorder
+- S = sex
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+C_dag = dagitty(
+  "dag{
+  S->B;
+  S->D;
+  B->D
+  }")
+coord.list = 
+  list(
+    x=c(B=0,D=2,S=1),
+    y=c(B=0,D=0,S=-1))
+coordinates(C_dag) = coord.list
+drawmydag(C_dag, cex = 1, lwd = 1)
+```
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+C_dag_A = C_dag
+adjustedNodes(C_dag_A) = "S"
+drawmydag(C_dag_A, cex = 1, lwd = 1)
+```
+
+
+```{r echo = F}
+if (!file.exists("C_dag_flow.gif"))
+  flow_dag(C_dag,
+         nodes = list(c("D","S"),
+                      c("S","B")),
+         arrow.col = "red",
+         fn = "C_dag_flow.gif")
+if (!file.exists("C_A_dag_flow.gif"))
+flow_dag(C_dag_A,
+         nodes = list(c("D","S")),
+         arrow.col = "green3",
+         fn = "C_A_dag_flow.gif",
+         fps = 50)
+```
+
+
+Confounding bias             | Adjustment
+:-------------------------:|:-------------------------:
+![](C_dag_flow.gif)  |  ![](C_A_dag_flow.gif)
+
+# Bias from adjustment of mediators
+
+- T = treatment
+- M = motivation
+- W = well being
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+M_dag = dagitty(
+  "dag{
+  M->W;
+  T->M;
+  T->W
+  }")
+coord.list = 
+  list(
+    x=c(T=0,W=2,M=1),
+    y=c(T=0,W=0,M=-1))
+coordinates(M_dag) = coord.list
+drawmydag(M_dag, cex = 1, lwd = 1)
+```
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+M_dag_A = M_dag
+adjustedNodes(M_dag_A) = "M"
+drawmydag(M_dag_A, cex = 1, lwd = 1)
+```
+
+```{r echo = F}
+if (!file.exists("M_dag_flow.gif"))
+  flow_dag(M_dag,
+         nodes = list(c("T","M"),
+                      c("M","W")),
+         nodes2 = list(c("T","W")),
+         arrow.col = "green3",
+         fn = "M_dag_flow.gif")
+if (!file.exists("M_A_dag_flow.gif"))
+flow_dag(M_dag_A,
+         nodes = list(c("T","M")),
+         nodes2 = list(c("T","W")),
+         arrow.col = "red",
+         fn = "M_A_dag_flow.gif",
+         length.out = 100)
+```
+
+Mediation by M             | Bias from adjustment of mediator
+:-------------------------:|:-------------------------:
+![](M_dag_flow.gif)  |  ![](M_A_dag_flow.gif)
+
+
+# Bias from adjustment of colliders
+
+- E = internalising
+- I = externalising
+- B = in BUP
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+Cl_dag = dagitty(
+  "dag{
+  I->B;
+  E->B;
+  E->I
+  }")
+coord.list = 
+  list(
+    x=c(E=0,I=2,B=1),
+    y=c(E=0,I=0,B=1))
+coordinates(Cl_dag) = coord.list
+drawmydag(Cl_dag, cex = 1, lwd = 1)
+```
+
+
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+Cl_A_dag = Cl_dag
+adjustedNodes(Cl_A_dag) = "B"
+drawmydag(Cl_A_dag, cex = 1, lwd = 1)
+```
+
+```{r echo = F}
+if (!file.exists("Cl_dag_flow.gif"))
+  flow_dag(Cl_A_dag,
+         nodes = list(c("I","B")),
+         arrow.col = "green3",
+         fn = "Cl_dag_flow.gif")
+if (!file.exists("Cl_A_dag_flow.gif"))
+flow_dag(Cl_A_dag,
+         nodes = list(c("I","B"),
+                      c("B","E")),
+         arrow.col = "red",
+         fn = "Cl_A_dag_flow.gif",
+         length.out = 100)
+```
+
+
+Collider            | Selection bias from conditioning on a collider
+:-------------------------:|:-------------------------:
+![](Cl_dag_flow.gif)  |  ![](Cl_A_dag_flow.gif)
