@@ -1,7 +1,8 @@
 
-drawmydag = function(dag, cex = .75, lwd = 1) {
+drawmydag = function(dag, cex = .75, lwd = 1, radius = 3.5) {
   
   label_clr = rep("black",length(names(dag)))
+  names(label_clr) = names(dag)
   label_clr[which(names(dag) == latents(dag))] = "white"
   
   a_nodes = adjustedNodes(dag)
@@ -15,8 +16,12 @@ drawmydag = function(dag, cex = .75, lwd = 1) {
     clrshps = lapply(shps, function(x) "black")
     
     if (length(l_nodes) > 0) {
-      clrshps[[l_nodes]] = adjustcolor("black",alpha = .5)
+      clrshps[[l_nodes]] = adjustcolor("black",alpha = .25)
       shps[[l_nodes]] = "fc"
+      clrshps = unlist(clrshps)
+      clrshps = clrshps[l_nodes]
+    } else {
+      clrshps = unlist(clrshps)
     }
     
     if (length(a_nodes) > 0)
@@ -27,11 +32,11 @@ drawmydag = function(dag, cex = .75, lwd = 1) {
   
   drawdag(dag,
           latent_mark = "fc",
-          col_shapes = unlist(clrshps),
-          col_labels = label_clr,
+          col_shapes = clrshps,
+          #col_labels = label_clr,
           cex = cex,
           shapes = shps,
-          radius = 3.5,
+          radius = radius,
           lwd = lwd)
 }
 
