@@ -77,7 +77,9 @@ All graphs are made of nodes and edges. What is special about directed acyclic g
 
 One important use case for DAGs is to determine which variables need to be involved if one wants to estimate the causal effect of one variable on the other. The underlying message here is that is we want to understand (causal) relationships between variables, we should not choose statistical models based on goodness of fit or related model selection criteria like AIC, BIC, RMSEA, TIL ..., but based on our knowledge about the about the data generating process. This knowledge can be simply domain knowledge, but it might also be be gained from data by investigating implied conditional independencies.
 
-Due to it's reliance on observational data, the epidemiological literature on bias is much richer than the psychological literature. Here, _bias_ means that an association or causal effect we estimate from data ($\hat y$) diverges from the true association or causal effect that we are interested in ($y$), that is $bias = \hat y - y$. Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using only a non-random sub-set of the data. Here are the most well-known biases:
+Due to it's reliance on observational data, the epidemiological literature on bias is much richer than the psychological literature. Here, **bias means that an association or causal effect we estimate from data ($\hat y$) diverges from the true association or causal effect that we are interested in ($y$), that is $bias = \hat y - y$ **. 
+
+Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using a non-random sub-set of the data. Here are the most well-known biases:
 
 - confounding bias from missing adjustment for a common cause of exposure and outcomes 
 - bias from adjustment of a mediator (post treatment variables)
@@ -107,7 +109,7 @@ drawmydag(fork)
 
 Because both $\small X$ and $\small Y$ depend on $\small C$, they will be correlated, even if there is no direct effect of $\small X$ on $\small Y$ or vice versa.
 
-## The back door
+## The backdoor
 
 Imagine you want to investigate if the psychiatric disorder depression $\small D$  is caused by characteristics of brain structure $\small B$, e.g. grey matter volume. Your study sample has participants from both sexes $\small S$. As an expert clinical neuroscientist you know that 
 
@@ -136,12 +138,12 @@ which indicates that  $\small S$ is a common cause of  $\small B$ and  $\small D
 If we would now estimate the regression model 
 
 $$
-B_i \sim Normal(\alpha + \beta D_i, \sigma)
+D_i \sim Normal(\alpha + \beta B_i, \sigma)
 $$
 
 we would see that $\small \beta$ is clearly different from zero, even if there is no causal effect of brain structure on depression.
 
-This is due to a _back door_ path through which information can flow from $\small D$ to $\small B$. A back door path is an uninterrupted path that starts with an arrow pointing to the outcome of interest and that ends with and arrow pointing to the exposure. The following figure shows the back door path in red.
+This is due to a _backdoor_ path through which information can flow from $\small D$ to $\small B$. A backdoor path is an uninterrupted path that starts with an arrow pointing to the outcome of interest and that ends with and arrow pointing to the exposure. The following figure shows the backdoor path in red.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 coord.list = coordinates(C_dag)
@@ -164,7 +166,7 @@ N = 1000
 S = rbinom(N,1,.5)
 B = 0.5*S + scale(rnorm(N))
 D = -0.5*S + scale(rnorm(N))
-plot(D ~ B, col = S+1)
+plot(D ~ B, col = 2-S)
 legend("topleft", pch = 1, col = c("red", "black"), 
        legend = c("F","M"), bty = "white", bg = "white")
 abline(lm(D~B))
@@ -173,7 +175,7 @@ title(expression(D%~%normal(alpha + beta[B]*B,sigma)))
 
 ## De-biasing by adjusting for a common cause
 
-To obtain a correct estimate of the relationship between $\small B$ and $\small D$, we have to cut off the back door path.
+To obtain a correct estimate of the relationship between $\small B$ and $\small D$, we have to cut off the backdoor path.
 
 To interrupt and open path, we can adjust for any (non-collider) variable on the open path. In DAGs, adjustment is typically symbolized by drawing a circle around the variable name: 
 
@@ -188,25 +190,25 @@ Previously, we saw that we can think of the regression coefficient for $\small B
 
 ```{r, fig.width=10, fig.height=5}
 par(mfrow = c(1,2))
-plot(D ~ B, col = S+1)
+plot(D ~ B, col = 2-S)
 abline(lm(D~B))
 abline(coef(lm(D~B+S))[1:2], lwd = 2, col = "green3")
 title(expression(D%~%normal(alpha + beta[B]*B + beta[S] * S,sigma)))
 B_R = residuals(lm(B~S))
-plot(D ~ B_R, col = S+1, xlab = expression(B[R]))
+plot(D ~ B_R, col = 2-S, xlab = expression(B[R]))
 abline(lm(D~B_R), lwd = 2, col = "green3")
 title(expression(D%~%normal(alpha + beta[B[R]]*B[R],sigma)))
 ```
 
-An alternative view point, which only works if the confounder is a grouping variable, is that adjustment amount to _condition_ the association between $\small B$ and $\small D$ on sex $\small S$, that is we estimate the association for the two sex groups separately:
+An alternative view point is that adjustment amounts to _conditioning_ the association between $\small B$ and $\small D$ on sex $\small S$, that is we estimate the association for the two sex groups separately:
 
 ```{r fig.width=5, fig.height=5, fig.align = 'center'}
-plot(D ~ B, col = S+1)
-abline(lm(D[S == 0]~B[S == 0]), col = 1)
-abline(lm(D[S == 1]~B[S == 1]), col = 2)
+plot(D ~ B, col = 2-S)
+abline(lm(D[S == 0]~B[S == 0]), col = 2)
+abline(lm(D[S == 1]~B[S == 1]), col = 1)
 ```
 
-In sum: if exposure and outcome have a common cause, this opens up a back-door path, which in turn leads to a biased estimate of the causal effect if one does not adjust for common cause. This common cause is typically called a confounder or confounding variable, and adjustment produces un-biased effects of causal estimates by closing the back-door path.^[Assuming the DAG depicts the true data generating process.]
+In sum: **If exposure and outcome have a common cause, this opens up a back-door path, which in turn leads to a biased estimate of the causal effect if one does not adjust for common cause. This common cause is typically called a confounder or confounding variable, and adjustment produces un-biased effects of causal estimates by closing the back-door path.^[Assuming the DAG depicts the true data generating process.]**
 
 ```{r echo = F}
 if (!file.exists("C_dag_flow.gif"))
@@ -234,9 +236,9 @@ The strong focus on confounding as a main problem for (observational) studies ha
 
 ## Pipes depict mediator variables
 
-The effect of causes can be (partially or fully) mediated by auxiliary variables. Specifically, if we have the following _pipe_ structure the effect of $\small Y$ on $\small X$ is fully mediated my $\small M$ because there is no other path from $\small Y$ to $\small X$ tat does not go via $\small M$. 
+The effect of causes can be (partially or fully) mediated by auxiliary variables. Specifically, if we have the following _pipe_ structure, the effect of $\small Y$ on $\small X$ is fully mediated by $\small M$ because there is no other path from $\small Y$ to $\small X$ tat does not go via $\small M$. 
 
-In experimental studies, post-treatment variables are variables that manifest after the treatment was delivered. Post-treatment have a higher likelihood to be mediators.
+In experimental studies, post-treatment variables are variables that manifest after the treatment was delivered. Post-treatment variables have a higher likelihood to be mediators.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 pipe = dagitty(
@@ -256,7 +258,7 @@ drawmydag(pipe)
 
 Lets assume we are interested in the total effect of some treatment $\small T$ on wellbeing $\small W$. We have also collected some data about participants' motivation $\small M$ to get better, some time between treatment onset and the final wellbeing measurement. If we assume that 
 
-- treatment as a direct effect on wellbeing, but also 
+- treatment has a direct effect on wellbeing, but also 
 - an indirect effect via motivation
 
 we can display the data-generating process as follows:
@@ -318,7 +320,7 @@ plot(W~T, col = grayblue(N)[rank(M)], pch = 16)
 abline(lm(W ~ T), col = "green3", lwd = 2)
 title(expression(W%~%normal(alpha + beta[T]*T,sigma)))
 legend("topleft",pch = 16, col = c("gray","blue"), 
-       legend = c("low Motivation", "high Motivation"), bty = "n")
+       legend = c("low M", "high M"), bty = "n")
 plot(W~T, col = grayblue(N)[rank(M)], pch = 16)
 abline(coef(lm(W ~ T + M))[1:2], col = "red", lwd = 2)
 title(expression(W%~%normal(alpha + beta[T]*T + beta[M]*M,sigma)))
@@ -344,7 +346,7 @@ title(expression(W%~%normal(alpha + beta[T[R]]*T[R],sigma)))
 Note the direction of the arrows that depict how $\small T_R$ differs from $\small T$.
 
 
-In sum, if a variable $\small M$ lies on a path from the treatment $\small X$ to the outcome $\small Y$, such that the arrows points from the treatment to the mediator and from the mediator to the outcome ($\small T \rightarrow M \rightarrow Y$), we call this variable a mediator, and the corresponding structure a _pipe_. If one is interested in the total effect of $\small X$ on $\small Y$, one must _not_ adjust for $\small M$, because this would close the indirect path and thus lead to a biased estimation of the total effect.
+In sum: **If a variable $\small M$ lies on a path from the treatment $\small X$ to the outcome $\small Y$, such that the arrows points from the treatment to $\small M$ and from $\small M$ to the outcome ($\small T \rightarrow M \rightarrow Y$), we call this variable a mediator, and the corresponding structure a _pipe_. If one is interested in the total effect of $\small X$ on $\small Y$, one must _not_ adjust for $\small M$, because this would close the indirect path and thus lead to a biased estimation of the total effect.**
 
 ```{r echo = F}
 if (!file.exists("M_dag_flow.gif"))
@@ -371,7 +373,7 @@ Mediation by M             | Bias from adjustment of mediator
 
 # Selection bias from conditioning on a collider
 
-Until now, we have discusses biases that emerge when our data is a random sample of the population, yet our analysis model is not consistent with the data generating process. Selection bias is a bit different, because it depends less on the analysis model and more on how or where we select participants into the study sample.^[Different fields associate different types of bias with the term selection bias. I use selection bias to refer to bias due to non-random selection of participants into the study sample. In contrast, econometrics uses selection bias to refer to non-random selection into treatment.]
+Until now, we have discussed biases that emerge when our data is a random sample of the population, yet our analysis model is not consistent with the data generating process. Selection bias is a bit different, because it depends less on the analysis model and more on how or where we select participants into the study sample.^[Different fields associate different types of bias with the term selection bias. I use selection bias to refer to bias due to non-random selection of participants into the study sample. In contrast, econometrics uses selection bias to refer to non-random selection into treatment.]
 
 ## Colliders depict common consequences
 
@@ -413,7 +415,7 @@ flow_dag(collider,
 
 ## Bias from conditioning on a collider
 
-Lets assume you are working in a BUP (Child and youth psychiatric division) and you want to learn about the relationship between internalizing problems ($\small I$, e.g. depression, anxiety) and externalizing problems ($\small E$, e.g. ADHD, oppositional behavior). To do this, you analyse  scores for internalizing and externalizing traits, which your BUP has collected for all children that were examined in the BUP.
+Lets assume you are working in a BUP (Child and youth psychiatric division) and you want to learn about the relationship between internalizing problems ($\small I$, e.g. depression, anxiety) and externalizing problems ($\small E$, e.g. ADHD, oppositional behavior). To do this, you analyse  scores for internalizing and externalizing traits, which your BUP has collected for all children that were examined there.
 
 The process that generated you data can be described along the following lines:
 
@@ -440,7 +442,7 @@ drawmydag(Cl_dag)
 
 Note that $\small B$ is circled, that is we are conditioning on $\small B$. We say that we are conditioning on $\small B$ because the data we observe are conditioned on children being observed in the BUP. Children who are not in the BUP are not observed. Put differently, if we code $\small B = 1$ for children observed in the BUP and $\small B = 0$ for children not observed, we are looking only at data were the value of $\small B$ is fixed so one, i.e. we are conditioning on $\small B$.
 
-One important consequence of conditioning on $\small B$ is that the previously closed indirect path from $\small E$ to $\small I$ is now open. Generally, a collider variables closes a path and conditioning on a collider opens a path at the collider one conditioned on.
+One important consequence of conditioning on $\small B$ is that the previously closed indirect path from $\small E$ to $\small I$ is now open. Generally, a collider variable closes a path and conditioning on a collider opens a path at the collider one conditioned on.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 flow_dag(Cl_dag,
@@ -480,7 +482,7 @@ title(expression(I %~% normal(alpha + beta * E,sigma)))
 
 In contrast to bias from adjustment with a mediator or bis from confounding, selection bias cannot be solved by adding or removing an adjustment variable. To deal with selection bias, methods based on propensity scores^[propensity score methods use auxiliary variables to calculate the probability that a participant is included in a sample or receives a treatment], like matching or weighting, need to be used. Note though that propensity score methods and especially weighting do not work naturally (some would say not at all) in the Bayesian framework.
 
-In sum, if a back-door path from exposure to outcome is closed by a collider and we condition on the collider or one of its descendant, this will lead selection bias. This bias is called selection bias, because conditioning on a collider describes a situation where only a non-random sub-set of the population is selected into the study sample. 
+In sum: **If a back-door path from exposure to outcome is closed by a collider and we condition on the collider or one of its descendant, this will lead selection bias. This bias is called selection bias, because conditioning on a collider describes a situation where only a non-random sub-set of the population is selected into the study sample.**
 
 Selection bias should absolutely be considered at the study planning phase, because it will be challenging if not impossible to deal with selection bias if one does not plan to collect the relevant data.
 
@@ -506,7 +508,15 @@ Collider            | Selection bias from conditioning on a collider
 :-------------------------:|:-------------------------:
 ![](Cl_dag_flow.gif)  |  ![](Cl_A_dag_flow.gif)
 
+
+# Descendant
+
+If a mediator, a confounder, or a collider has a descendant, adjustment of the descendant will have an effect in the same direction as adjustment of its parent, but the effect will be smaller. How much smaller depends on the strength of the parent-child association.
+
 # Consider unobserved variables
+
+I still need to find a good example that is different than in the book and holds for esimation of total effects
+
 
 <!-- When thinking about DAGs it is often easier to think about variables one has measured.  -->
 
@@ -595,14 +605,16 @@ Successful adjustment depends on our adjustment model being close to the true da
 
 # M2
 
-If collinearity is a problem depends on the question of interest and the reason for collinearity.
+If collinearity is a problem, depends on the question of interest and the reason for collinearity.
 
-Left: If collinearity is due to the correlation of the (distal) cause and a mediator, a regression that includes both variables will identify the correct direct effects. (Though it will underestimate the total effect of the distal cause.)
+_Left:_ If collinearity is due to the correlation of the (distal) cause and a mediator, a regression that includes both variables will identify the correct direct effects. (Though it will underestimate the total effect of the distal cause.)
 
-Right: If collinearity is due to a common (unobserved) cause of 2 predictor variables, we cannot identify with high certainty the unique contribution of the two variables. A model that includes X1 and X2 provides us the conditional effects of both variables. But because both variables mediate the effect of the same unobserved variable, the conditional effect of X1 and X2 can be large or small, dependent on the value to which one fixes the other variable. The large standard error on the coefficients just reflects the fact that because X1 and X2 reflect the same process, we cannot say with high certainty to which value we should fix either X1 or X2 to fit the data as well as possible.
+_Right:_ If collinearity is due to a common (unobserved) cause of 2 predictor variables, we cannot identify with high certainty the unique contribution of the two variables. A model that includes X1 and X2 provides us the conditional effects of both variables. But because both variables mediate the effect of the same unobserved variable, the conditional effect of X1 and X2 can be large or small, dependent on the value to which one fixes the other variable. The large standard error on the coefficients just reflects the fact that because X1 and X2 reflect the same process, we cannot say with high certainty to which value we should fix either X1 or X2 to fit the data as well as possible.
 
 
 This is different if a model includes a distal cause and a mediator: Because only the mediator has a direct influence on the outcome, it is clearer to which value we need to fix M in order to fit the data well.
+
+The take home message here is that we should worry less about colinearity and rather specify which effect we want to estimate and then use DAGs to find out if or under what circumstance we can estimate it.
 
 
 
