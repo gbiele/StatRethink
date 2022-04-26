@@ -56,11 +56,11 @@ par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 
 One important goal of statistical inference is to learn about the data generating process. In the simple case, this can simply mean to find out if a certain independent variable influences our outcome of interest. If we do a randomized experiment, we can just compare the outcomes conditional on different values of the independent variable to find out if the independent variable is part of the data generating process.
 
-Keeping with our experiment example, we can also describe two alternative statistical models (e.g. a regression) that describe the data generating process, where one model assumes an effect of the independent variable, but the other does not. Then we could compare the two models to and declare the model that fits the data better to be the winner. The problem with this approach is that if the additional of one independent variable is the only difference between the two models, the model with more variables will always fit the data better, even if it is not the correct model.
+Keeping with our experiment example, we can also describe two alternative statistical models (e.g. regression) that describe the data generating process, where one model assumes an effect of the independent variable, but the other does not. Then we could compare the two models and declare the model that fits the data better to be the winner. The problem with this approach is that if the addition of one independent variable is the only difference between the two models, the model with more variables will always fit the data better, even if it is not the correct model.
 
 Hence, we need more sophisticated approaches to determine which of two models better capture the data generating process.
 
-Note that we are interested not in finding a model that describes the data we are seeing well, then we could just choose the best fitting model. Instead, we want to use the data at hand to learn about the process that generated the data we see. After all, only knowledge about this process generalizes to other situations.
+Note that we are not interested in finding a model that describes the data we are seeing well, then we could just choose the best fitting model. Instead, we want to use the data at hand to learn about the process that generated the data we see. After all, only knowledge about this process generalizes to other situations.
 
 # Overfitting and underfitting
 
@@ -72,13 +72,23 @@ For instance, assume that we are looking at the relationship between income and 
 N = 1000
 set.seed(123456)
 x = sort(rnorm(N,mean = 0))
-bf.s = splines::bs(x,knots = 3)
+bf.s = splines::bs(x,knots =3)
 bf.b = matrix(c(1,1,1,0),ncol = 1)
 mu = bf.s %*% bf.b
 y = rnorm(N, mu , sd = .1)
 par(mfrow = c(1,1))
-plot(x,y)
-lines(x, mu, col = "red")
+
+plot_xy = function(x,y,mu, idx = NULL) {
+  if (is.null(idx)) idx = 1:length(x)
+      plot(x[idx],y[idx], 
+           ylab = "",
+           xlab = "",
+           xlim = quantile(x,c(.01,.99)), 
+           ylim = quantile(y,c(.01,.99)))
+      lines(x,mu,col = "red")
+    }
+
+plot_xy(x,y,mu)
 
 
 # N = 500
@@ -98,14 +108,6 @@ plot_fits = function(x,y,mu,sample_size) {
   par(mfrow = c(4,4), mar=c(2,2,.5,.5), mgp=c(1.25,.25,0), tck=-.01)
   for (k in 1:4) {
     idx = sample(N,sample_size)
-    plot_xy = function(x,y,mu) {
-      plot(x[idx],y[idx], 
-           ylab = "",
-           xlab = "",
-           xlim = quantile(x,c(.01,.99)), 
-           ylim = quantile(y,c(.01,.99)))
-      lines(x,mu,col = "red")
-    }
     
     dt = data.frame(x = x[idx], y = y[idx])
     
@@ -117,18 +119,18 @@ plot_fits = function(x,y,mu,sample_size) {
       log_sigma ~ dnorm(0,1)
     )
     
-    plot_xy(x,y,mu)
+    plot_xy(x,y,mu,idx)
     plot_quap_preds(q.model,dt,"x", plot = F)
     
-    plot_xy(x,y,mu)
+    plot_xy(x,y,mu,idx)
     q.model[[2]]  = alist(mu <- a + b[1]*x + b[2]*x^2)[[1]]
     plot_quap_preds(q.model,dt,"x", start.list = list(b=rep(0,5)), plot = F)
     
-    plot_xy(x,y,mu)
+    plot_xy(x,y,mu,idx)
     q.model[[2]]  = alist(mu <- a + b[1]*x + b[2]*x^2 + b[3]*x^3)[[1]]
     plot_quap_preds(q.model,dt,"x", start.list = list(b=rep(0,5)), plot = F)
     
-    plot_xy(x,y,mu)
+    plot_xy(x,y,mu,idx)
     q.model[[2]]  = alist(mu <- a + b[1]*x + b[2]*x^2 + b[3]*x^3 + b[4]*x^4)[[1]]
     plot_quap_preds(q.model,dt,"x", start.list = list(b=rep(0,5)), plot = F)
     
@@ -147,14 +149,18 @@ plot_fits(x,y,mu,sample_size = 75)
 ```
 
 
-The variations in the inferred data associations between different samples is now smaller, but we still see overfitting and also underfitting, i.e. the inability of the simplest model to capture the non-linear relationship.
+The variation in the inferred associations between different samples is now smaller, but we still see overfitting and also underfitting, i.e. the inability of the simplest model to capture the non-linear relationship.
 
 As an aside, we can also see that a polynomial model has difficulties in capturing the true non-linear an monotonic relationship, which was generated with a spline model.
 
 
+The goal of model comparison is then to identify the model that best describes the data generating process, i.e. that does suffer the least from over of underfitting.
+
 # Evaluating accuracy
 
-You are working with a drug rehabilitation center and you are trying to evaluate different statistical models that predict if a patients will have a relapse within 4 weeks after leaving the center. Your data looks as follows:
+To identify which models is good, we need som measure or model accuracy, or consistency of model and data.
+
+Imagine, you are working with a drug rehabilitation center and trying to evaluate different statistical models that predict if a patients will have a relapse within 4 weeks after leaving the center. Your data look as follows:
 
 ```{r}
 set.seed(1234)
@@ -180,7 +186,7 @@ kable(dt[, c("treatment.weeks", "relapse", "pred.no_relapse", "pred.weeks")]) %>
   kable_styling(full_width = F)
 ```
 
-One simple way to calculate accuracy here would be to calculate the average probability to make a correct prediction. Here is the value 
+A simple way to calculate accuracy would be to compute the average probability to make a correct prediction. Here are these average probabilities for the two models:
 
 ```{r, class.source = "fold-show"}
 av_acc.no_relapse = 
@@ -198,7 +204,7 @@ av_acc.weeks
 We can see that by this metric, the model that ignores additional information and the true data generating process performs better.
 The ability to favor models that are inconsistent with the data generating process is an undesirable property of an accuracy criterion.
 
-Recall that in Bayesian updating we used the joint probability of the data given the model, which is something different than the average probability we just calculated. One intuition of why this is useful is that because it involves multiplication of all probabilities, it does not allow us to ignore some of the data as long as we predict most of the data well. Yet another view point is that the averaging allows us to favor models that make impossible predictions, like the probability of relapse is zero fro everyone.
+Recall that in Bayesian updating we used the joint probability of the data given the model, which is something different than the average probability we just calculated. One intuition of why the joint probability is useful is that because it involves multiplication of all probabilities, it does not allow us to ignore some of the data as long as we predict most of the data well. Yet another view point is that the averaging allows us to favor models that make impossible predictions, like the probability of relapse is zero fro everyone.
 
 Hence, here is the joint probability for our two models:
 
@@ -215,7 +221,7 @@ joint_prob.weeks
 
 Now we see that the model that is consistent with the data generating process has a better "score". Compare the code for the average accuracy and the joint probability to see that the key difference is that the former approach sums over probabilities whereas the latter multiplies.
 
-Instead of multiplying probabilities, we can also sum sol-probabilities:
+Instead of multiplying probabilities, we can also sum log-probabilities:
 
 ```{r, class.source = "fold-show"}
 joint_log_prob.no_relapse = 
@@ -227,6 +233,8 @@ joint_log_prob.weeks =
 joint_log_prob.no_relapse
 joint_log_prob.weeks
 ```
+
+Multiplying probabilities and adding log probabilities leads to the same results that differ onøy due to numerical problems that arise when multiplying small probabilities:
 
 ```{r, class.source = "fold-show"}
 joint_prob.weeks - exp(joint_log_prob.weeks)
@@ -251,7 +259,7 @@ $$
 H(p) = -E\;log(p_i) = \sum_{i=1}^{n} p_i log(p_i)
 $$
 
-Here, $E$ is the expectation or the weighted mean, where the weights are given by the probability for the events.
+Here, $\small E$ is the expectation or the weighted mean, where the weights are given by the probability for the events.
 
 In `R` code we can write:
 
@@ -262,15 +270,15 @@ H = function(p) -sum(p*log(p))
 
 # Continuity
 
-Now lets look at the simple case of only two possible events. The following plot shows on the x-axis the probability of the first event $\small p_1$ and on the y axis the entropy:
+Now lets look at the simple case of only two possible events. The following plot (bottom) shows on the x-axis the probability of the first event $\small p_1$ and on the y axis the entropy:
 
-```{r, fig.width=7, fig.height=7}
+```{r, fig.width=6, fig.height=6}
 p1 = seq(.01,.99, length.out = 99)
 entropy = do.call(
   c,
   lapply(p1, function(p1) H(c(p1,1-p1)))
 )
-par(mfrow = c(2,1))
+layout(matrix(c(1,2,2), ncol = 1))
 par(mar=c(0,3,1,1), mgp=c(1.25,.3,0), tck=-.01)
 plot(0,type = "n", xlim = c(0,1), ylim = c(0,1), 
      xlab = "", xaxt = "n",
@@ -283,9 +291,9 @@ par(mar=c(3,3,1,1), mgp=c(1.25,.3,0), tck=-.01)
 plot(p1,entropy, type = 'l', xlab = expression(p[1]))
 ```
 
-## Number of events
-
 The figure shows that when we have two events and assign them equal probability, then uncertainty/entropy are large, whereas untertainty/entropy become smaller when we asign one of the tow options a higher probability.
+
+## Number of events
 
 What happens with entropy if we increase the number of events?
 
@@ -300,7 +308,7 @@ names(entropies) = n
 barplot(entropies, ylab = "entropy", xlab = "number possible events with equal probability")
 ```
 
-A related property is that if I start with two probabilities, e.g.
+A related property is that if we start with two probabilities, e.g.
 
 ```{r class.source = "fold-show"}
 P2 = c(A1 = .5, A2 = .5)
@@ -380,7 +388,48 @@ $$
 
 # Using entropy to measure accuracy
 
-To understand why entropy is useful to measure the accuracy of a model, one can reframe the problem and ask if a model contains the same information as the true data generating process. We can talk about information in the model in the data generating process and the model, because we can calculate the probability of certain outcome both for the observed data and the model prediction (what we create with the `sim` function from rethinking packages).
+To understand why entropy is useful to measure the accuracy of a model, one can reframe the problem and ask if a model contains the same information as the true data generating process. We can talk about information in the model in the data generating process and the model, because we can calculate the probability of certain outcome both for the true data generating process and the model prediction (what we create with the `sim` function from rethinking packages).
+
+Lets use our initial example again to make clear what we mean when we measure accuracy:
+
+- We assume there is a true DGP and data derived from it
+- We sample from the population data and estimate a model to infer a candidate DGP
+- We want to estimate the accuracy of our model, i.e. the deviation between the true DGP and the infered a candidate DGP
+
+```{r, fig.width=10.5, fig.height=3.5}
+par(mfrow = c(1,3))
+plot(x,y)
+lines(x, mu, col = "red")
+title("DGP and population data")
+set.seed(1)
+idx = sample(N,25)
+
+dt = data.frame(x = x[idx], y = y[idx])
+
+q.model = alist(
+  y ~ dnorm(mu,exp(log_sigma)),
+  mu <- a + b[1]*x + b[2]*x^2,
+  a ~ dnorm(0.5,1),
+  b ~ dnorm(0,10),
+  log_sigma ~ dnorm(0,1)
+)
+
+plot_xy(x,y,mu, idx)
+plot_quap_preds(q.model,dt,"x", plot = F, start.list = list(b = rep(0,3)))
+mtext(1,text = "x", line = 2.5)
+mtext(2,text = "y", line = 2.5)
+title("DGP, sample & inferred DGP / model")
+
+preds = plot_quap_preds(q.model,dt,"x", plot = F,
+                       start.list = list(b = rep(0,3)),
+                       return.yhat = TRUE)
+preds$y = predict(bf.s,newx = preds$x) %*% bf.b 
+plot(preds$x, preds$yhat,'l', col = "blue", ylab = "y", xlab = "x")
+lines(preds$x, preds$y,'l', col = "red")
+arrows(x0 = preds$x, y0 = preds$y, y1 = preds$yhat,length = .025, code = 3)
+title("Difference between true DGP and candidate model")
+```
+
 
 Once we have understood that we can calculate the probability of certain events for both observed and model-predicted data and use those predictions to calculate entropy, it becomes clear that we can calculate the accuracy of a model as the difference in entropy for observed and model-predicted data, which is called the _Kullback-Leibler divergence_ or KL divergence or short $\small D_{KL}$.
 
@@ -399,9 +448,7 @@ Here, $\small p_i \,log(p_i)$ is the entropy and $\small p_i \,log(q_i)$ is the 
 Here is an R function for  the _Kullback-Leibler divergence_:
 
 ```{r  class.source = "fold-show"}
-dKL = function(p,q) {
-  sum(p*(log(p)-log(q)))
-}
+dKL = function(p,q) sum(p*(log(p)-log(q)))
 ```
 
 which we can use to plot the divergence between the distribution `p = c(.375,.625)` and alternative distributions `q`:
@@ -422,3 +469,11 @@ axis(1, pos=0, at=seq(0,1,.25))
 
 ```
 
+## Estimating divergence
+
+So far, we have determined that 
+
+- entropy is a good measure of information and 
+- KL divergence is a good measure of distance between the true model and the model predictions.
+
+However, we generally do not know the true model, we only have a sample of data that was generated from this sample.

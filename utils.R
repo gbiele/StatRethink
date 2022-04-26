@@ -2,7 +2,7 @@
 
 
 
-plot_quap_preds = function(q.model, dt, pred.var, out.var = as.character(q.model[[1]])[2], plot.data = TRUE, start.list = NULL, fix.ylim = NULL) {
+plot_quap_preds = function(q.model, dt, pred.var, out.var = as.character(q.model[[1]])[2], plot.data = TRUE, start.list = NULL, fix.ylim = NULL, return.yhat = FALSE) {
   q.fit = quap(q.model, dt, start = start.list)
   post = extract.samples(q.fit,n = 10000)
   s.from = min(dt[,pred.var]) - diff(range(dt[,pred.var]))*.15
@@ -19,17 +19,21 @@ plot_quap_preds = function(q.model, dt, pred.var, out.var = as.character(q.model
     n.ci = prod(dim(ci))
     ylim = range(sort(ci)[fix.ylim:(n.ci-fix.ylim)])
   }
-    
-  if (plot.data == TRUE)
-    plot(dt[,pred.var], dt[,out.var],
-         ylab = out.var,
-         xlab = pred.var,
-         ylim = ylim,
-         pch = 16)
-  lines(pred_seq, mu, col = "blue")
-  shade(ci, pred_seq, col = adjustcolor("blue",alpha = .25))
-  R2 = R2.qf(q.fit,dt)
-  mtext(side = 1, bquote(R^2~"="~.(round(R2,2))),adj = .95, cex = .75, line = -1.5)
+  
+  if(return.yhat == FALSE) {
+    if (plot.data == TRUE)
+      plot(dt[,pred.var], dt[,out.var],
+           ylab = out.var,
+           xlab = pred.var,
+           ylim = ylim,
+           pch = 16)
+    lines(pred_seq, mu, col = "blue")
+    shade(ci, pred_seq, col = adjustcolor("blue",alpha = .25))
+    R2 = R2.qf(q.fit,dt)
+    mtext(side = 1, bquote(R^2~"="~.(round(R2,2))),adj = .95, cex = .75, line = -1.5)
+  } else {
+    return(data.frame(x = pred_seq, yhat = mu))
+  }
 }
 
 
