@@ -1617,7 +1617,18 @@ axis(1, pos=0, at=seq(0,1,.25))</code></pre>
 and the model predictions.</li>
 </ul>
 <p>However, we generally do not know the true model, we only have a
-sample of data that was generated from this sample.</p>
+sample of data that was generated from this sample. This is not really a
+problem, because out initial goal was one of model comparison. So what
+we really want to do is to compare the deviances of to models <span class="math inline">\(\small D_{KL}(p,q) - D_{KL}(p,r)\)</span>. Here is
+how the deviances are defined:</p>
+<p><span class="math display">\[
+D_{KL}(p,q)  = \sum_i p_i \,log(p_i) - p_i \, log(q_i) \\
+D_{KL}(p,r)  = \sum_i p_i \,log(p_i) - p_i \, log(r_i)
+\]</span> luckily, we can simplify this: Both deviances sum over <span class="math inline">\(\small p_i \,log(p_i)\)</span> and multiply the
+probability of the data with <span class="math inline">\(\small
+p_i\)</span>. Therefore we can remove these terms and are then in the
+delightful situation that we only need to know about <span class="math inline">\(\small log(q_i)\)</span> and <span class="math inline">\(\small log(r_i)\)</span> if we want to compare
+candidate models!</p>
 </div>
 </div>
 
