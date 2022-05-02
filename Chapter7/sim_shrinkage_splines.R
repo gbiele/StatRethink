@@ -18,15 +18,16 @@ quap.spline.model =
 
 N.sim = 500
 b.sds = exp(seq(log(1),log(15) , length.out = 8))
-b.sds = c(1,2,5,10,20)
+b.sds = c(1,2,3,5,10,20)
 elpd.test = elpd.train = matrix(NA,nrow = N.sim, ncol = length(b.sds))
+yhats = vector(mode = "list", length = length(b.sds))
 for (my.seed in 1:N.sim) {
-  if (my.seed <= 20)
+  if (my.seed <= 25)
     png(paste0("anim/F", my.seed, ".png"), width = 15, height = 10,
       res = 300, units = "cm")
   set.seed(my.seed)
   idx = sample(length(x),75)
-  test.idx = sample(length(x),75)
+  test.idx = sample(setdiff(1:1000,idx),75)
   # plot(x,y, col = adjustcolor("black", alpha = .1))
   # points(x[idx],y[idx], pch = 16)
   # lines(x,mu, col = "red")
@@ -35,20 +36,20 @@ for (my.seed in 1:N.sim) {
   B.m = B.m[,-ncol(B.m)]
   par(mfrow = c(2,3), mar=c(2.5,2.5,0,.5), mgp=c(1,.1,0), tck=-.01)
   for (b.sd in b.sds) {
-    if (my.seed <= 20) {
-      plot(x,y, col = adjustcolor("black", alpha = .025))
-      points(x[idx],y[idx], pch = 16, 
-             col = adjustcolor("black", alpha = .5), cex = .5)
-      lines(x,mu, col = "red")
-    }
     q.fit = 
       quap(quap.spline.model,
            data = list(bf.s = B.m[idx,], y = y[idx]),
            start = list(b=rep(0, ncol(B.m)), sigma = .1))
     
-    if (my.seed <= 20) {
-      p = extract.samples(q.fit)
-      yhat = rowMeans(B.m %*% t(p$b))
+    
+    p = extract.samples(q.fit)
+    yhat = rowMeans(B.m %*% t(p$b))
+    yhats[[which(b.sd == b.sds)]] = rbind(yhats[[which(b.sd == b.sds)]],yhat)
+    if (my.seed <= 25) {
+      plot(x,y, col = adjustcolor("black", alpha = .025))
+      points(x[idx],y[idx], pch = 16, 
+             col = adjustcolor("black", alpha = .5), cex = .5)
+      lines(x,mu, col = "red")
       lines(x,yhat,col = "blue")
       text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
     }
@@ -56,7 +57,14 @@ for (my.seed in 1:N.sim) {
     q.fit@data = list(bf.s = B.m[test.idx,], y = y[test.idx])
     elpd.test[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
   }
-  if (my.seed <= 20) dev.off()
+  if (my.seed <= 25) dev.off()
+}
+save(elpd.test,elpd.train, b.sds, yhats, file = "sim_lppd.Rdata")
+for (b.sd in b.sds) {
+  plot(x,y, col = adjustcolor("black", alpha = .025))
+  lines(x,mu, col = "red")
+  matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, col = adjustcolor("blue",alpha = .2))
+  text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
 }
 
 

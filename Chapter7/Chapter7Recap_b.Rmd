@@ -66,9 +66,11 @@ Hopefully you can see that large deviations between the true DGP in red and the 
 
 
 To confirm this, the following plot shows deviances from a simulation that 
-- sampled 500 times training and test data, 
-- estimate model parameters on the training set
-- calculated deviances on the test set.
+- samples 1000 times training and test data, 
+- estimates model parameters on the training set
+- calculates deviances for the training and test data sets.
+
+The following figure shows deviances +/- 1 sd.
 
 ```{r}
 load("sim_lppd.Rdata")
@@ -99,12 +101,13 @@ ylim = range(c(lower.test, upper.test))
 plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim,
       ylab = "Deviance test", xlab = "sd(b)", xaxt = "n")
 arrows(xs+.2,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
-axis(1, at = 1:5, labels = c(1,2,5,10,20))
+axis(1, at = 1:6, labels = b.sds)
 
 #text(xs,m.train, labels = round(m.train,2), pos = 2, cex = .5)
 #text(xs,m.test, labels = round(m.test,2), pos = 2, cex = .5, col = "blue")
 ```
 
+Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data.
 
 <!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
 
