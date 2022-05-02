@@ -704,7 +704,8 @@ The following figure shows the estimated relationships for different samples dra
 ![]("shrinkage.gif")
 
 
-Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coeffcients is narrow (top left) compared to when it is wider (bottom right)
+Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coeffcients is narrow (top left) compared to when it is wider (bottom right).
+
 
 <!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
 

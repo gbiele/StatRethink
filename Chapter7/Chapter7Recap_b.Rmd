@@ -1,0 +1,122 @@
+---
+title: "Chapter 7: Recap"
+author: "Guido Biele"
+date: "27.04.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 22pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+source("../utils.R")
+```
+
+```{r, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+```
+
+
+# Shrinkage
+
+Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that "overfit". This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
+
+A complementary approach to work against "overfitting" is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically normally distributed, have a mean of zero and a _relatively_ small standard deviation. Here _relative_ refers to the scale on which a predictor is measured.
+
+To show how shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
+
+The following figure shows the estimated relationships for different samples drawn from the population.
+
+![](shrinkage.gif)
+
+
+Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coefficients is narrow (top left) compared to when it is wider (bottom right).
+
+
+To confirm this, the following plot shows deviances from a simulation that 
+- sampled 500 times training and test data, 
+- estimate model parameters on the training set
+- calculated deviances on the test set.
+
+```{r}
+load("sim_lppd.Rdata")
+D.test = -2*elpd.test
+D.train = -2*elpd.train
+m.test = colMeans(D.test)
+m.train = colMeans(D.train)
+
+within_sd = function(m) {
+  apply(apply(m,2, function(x) x - rowMeans(m)), 2, sd)
+}
+
+lower.test = m.test - within_sd(elpd.test)
+upper.test = m.test +  within_sd(elpd.test)
+lower.train = m.train - within_sd(elpd.train)
+upper.train = m.train + within_sd(elpd.train)
+
+par(mfrow = c(2,1), mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
+ylim = range(c(lower.train, upper.train))
+xs = 1:ncol(elpd.test)
+plot(xs,m.train, ylim = ylim, 
+     ylab = "Deviance train", xlab = "", xaxt = "n")
+axis(1, at = 1:5, labels = c(1,2,5,10,20))
+arrows(xs,y0 = lower.train, y1 = upper.train, length = 0)
+
+
+ylim = range(c(lower.test, upper.test))
+plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim,
+      ylab = "Deviance test", xlab = "sd(b)", xaxt = "n")
+arrows(xs+.2,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
+axis(1, at = 1:5, labels = c(1,2,5,10,20))
+
+#text(xs,m.train, labels = round(m.train,2), pos = 2, cex = .5)
+#text(xs,m.test, labels = round(m.test,2), pos = 2, cex = .5, col = "blue")
+```
+
+
+<!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
+
+```{r, echo = FALSE, eval = FALSE}
+X = expand.grid(edu = seq(-2,2,1), gender = c(0,1))
+dt = do.call(rbind,lapply(1:4, function(x) X))
+b = c(.75,.2,-.035,.1)
+dt$y = model.matrix(~poly(edu,2,raw = T) + gender, dt) %*% b
+ids = which(dt$edu == 2 & dt$gender == 1)
+dt[ids[1],"y"] = dt[ids[1],"y"] + .75
+dt = dt[-ids[3:4],]
+dt$y = dt$y + rnorm(nrow(dt),0,.1)
+plot(dt$edu,dt$y)
+```
+
