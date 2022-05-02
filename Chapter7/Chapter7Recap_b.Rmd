@@ -123,3 +123,20 @@ dt$y = dt$y + rnorm(nrow(dt),0,.1)
 plot(dt$edu,dt$y)
 ```
 
+# Cross validation
+
+So far we have implemented some simple cross validation manually, by simply simply splitting our total sample in half. However, data can also be split differently, e.g. 20% training data 80% test data or the other way around.
+
+One popular way to split data to fit the data on $N-1$ data points and to use the $N$th data point as test data. This is referred to as _Leave one out cross validation_ or LOOCV.
+
+One thing that is easily implemented with LOOCV is to calculated the deviance as the average deviance over the $N$ LOOCV deviances. for LOOCV, there are always only N-1 training data sets.
+
+This is different for alternative schemes. For instance, at a samples size of 20, there are `r choose(20,10)` to construct the training data set. Here, averaging about all possible test-data deviances would be too computationally expensive.
+
+The key thing to keep in mind when doing cross validation is that dependent observations (more specificall, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets.
+
+## LOOCV and PSIS
+
+The computationally challenging part of LOOCV is that one needs to estimate the model $N-1$ times.
+
+Fortunately, one can approximate LOOCV with a method called _importance sampling_. Here, not all $lppd$ receive the same weight when calculating the deviance, but $lppd$ values of observations that have a strong influence  
