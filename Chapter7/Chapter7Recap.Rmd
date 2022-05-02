@@ -691,3 +691,32 @@ legend("topright", pch = c(1,16),
        legend = c("training","test"), bty = "n")
 ```
 
+# Shrinkage
+
+Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that "overfit". This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
+
+A complementary approach to work against "overfitting" is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically normally distributed, have a mean of zero and a _relatively_ small standard deviation. Here _relative_ refers to the scale on which a predictor is measured.
+
+To show how shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
+
+The following figure shows the estimated relationships for different samples drawn from the population.
+
+![]("shrinkage.gif")
+
+
+Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coeffcients is narrow (top left) compared to when it is wider (bottom right)
+
+<!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
+
+```{r, echo = FALSE, eval = FALSE}
+X = expand.grid(edu = seq(-2,2,1), gender = c(0,1))
+dt = do.call(rbind,lapply(1:4, function(x) X))
+b = c(.75,.2,-.035,.1)
+dt$y = model.matrix(~poly(edu,2,raw = T) + gender, dt) %*% b
+ids = which(dt$edu == 2 & dt$gender == 1)
+dt[ids[1],"y"] = dt[ids[1],"y"] + .75
+dt = dt[-ids[3:4],]
+dt$y = dt$y + rnorm(nrow(dt),0,.1)
+plot(dt$edu,dt$y)
+```
+
