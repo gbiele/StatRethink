@@ -3,7 +3,10 @@
 
 
 plot_quap_preds = function(q.model, dt, pred.var, out.var = as.character(q.model[[1]])[2], plot.data = TRUE, start.list = NULL, fix.ylim = NULL, return.yhat = FALSE) {
-  q.fit = quap(q.model, dt, start = start.list)
+  if (class(q.model) == "map") {
+  } else {
+    q.fit = quap(q.model, dt, start = start.list)
+  }
   post = extract.samples(q.fit,n = 10000)
   s.from = min(dt[,pred.var]) - diff(range(dt[,pred.var]))*.15
   s.to = max(dt[,pred.var]) + diff(range(dt[,pred.var]))*.15

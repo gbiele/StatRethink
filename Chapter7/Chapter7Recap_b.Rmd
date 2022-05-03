@@ -36,6 +36,7 @@ h3,h4,h5,h6{
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+
 library(rethinking)
 library(magrittr)
 library(knitr)
@@ -460,4 +461,240 @@ What this plot also shows is that if we wanted to compared models `W.T` and `W.a
 precis(W.T) %>% round(2)
 ```
 
-One intuition for this is that if the data are relatively noisy, model comparison techniques will have difficulties to be sure if one model is clearly better then others, even if within one model the effect of treatment is clear. Model comparison techniques only care about out of sample predictions and penalize for additonal parameters. If due to noisy data adding a causal variable does not improve prediction by much, this model will not clearly outperform simpler models.
+One intuition for this is that if the data are relatively noisy, model comparison techniques will have difficulties to be sure if one model is clearly better then others, even if within one model the effect of treatment is clear. Model comparison techniques only care about out of sample predictions and penalize for additional parameters. If due to noisy data adding a causal variable does not improve prediction by much, this model will not clearly outperform simpler models.
+
+
+## Functional form and robust regression
+
+To correctly estimate effects it is not sufficient to choose the correct adjustment variables, but the functional form should also be (approximately?) correct.
+
+Functional form refers to the for of the function that describes a relationship. The default for linear regression is a linear relationship, but we have seen that relation ships can be non-linear.
+
+We have collected the data in the following plot.
+
+```{r}
+N = 500
+set.seed(1)
+x = sort(rnorm(N,mean = 0))
+bf.s = splines::bs(x,df = 3)
+bf.b = matrix(c(1,1,1),ncol = 1)
+mu = bf.s %*% bf.b
+nn = 75
+sidx = sample(N,nn)
+y.n = rnorm(nn, mu[sidx] , sd = .1)
+y = rstudent(nn, nu = 3, mu = mu[sidx], sigma = .1)
+par(mfrow = c(1,1))
+plot(x[sidx],y, xlab = "x", pch = 16)
+#points(x[sidx],y.n, col = adjustcolor("black",alpha = .25))
+#lines(x,mu, col = "red", lwd = 2)
+x = x[sidx]
+```
+
+
+Now we wan to know if the relationship between x and y is linear, or non linear.
+
+To do this, we fit a series of models of increasing complexity. To simplify this, we set up a basic model and define design matrices for different models:
+
+```{r}
+quap.spline.model = 
+  alist(
+    y ~ dnorm(mu,sigma),
+    mu <- X %*% b ,
+    b ~ dnorm(0,1),
+    sigma ~ dnorm(.25,.1)
+  )
+
+library(splines)
+B3 = bs(x, df = 3) %>% cbind(1)
+B6 = bs(x, df = 6) %>% cbind(1)
+B18 = bs(x, df = 18) %>% cbind(1)
+LM = model.matrix(~ 0 + x) %>% cbind(1)
+```
+
+
+Before we fit the models, lets look at prior predictions for `mu`:
+
+```{r}
+par(mfrow = c(2,2), mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
+o = order(x)
+
+pp = function(X) {
+  b = matrix(rnorm(ncol(X)*55),ncol = 55)
+  yhat = X %*% b
+  matplot(x[o],yhat[o,],type = 'l', col = "blue", lty = 1, xlab = "x", ylab = "x")
+}
+
+pp(LM)
+pp(B3)
+pp(B6)
+pp(B18)
+```
+
+With the basic model with have set up, we can now easily fit the linear regression and the spline models.
+
+```{r}
+q.B3 = 
+  quap(quap.spline.model,
+       data = list(X = B3, y = y, x = x),
+       start = list(b=rep(0, ncol(B3)), sigma = .1))
+q.B6 = 
+  quap(quap.spline.model,
+       data = list(X = B6, y = y, x = x),
+       start = list(b=rep(0, ncol(B6)), sigma = .1))
+q.B18 = 
+  quap(quap.spline.model,
+       data = list(X = B18, y = y, x = x),
+       start = list(b=rep(0, ncol(B18)), sigma = .1))
+q.LM = 
+  quap(quap.spline.model,
+       data = list(X = LM, y = y, x = x),
+       start = list(b=rep(0, ncol(LM)), sigma = .1))
+
+# work around a bug
+attr(q.B3,"nobs") = 50
+attr(q.B6,"nobs") = 50
+attr(q.B18,"nobs") = 50
+attr(q.LM,"nobs") = 50
+```
+
+And we plot the model predictions: 
+
+```{r}
+par(mfrow = c(1,1), mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
+plot_preds = function(q.fit, add = FALSE, col = "blue") {
+  mu.mat = link(q.fit,n = 1e4)
+  mu = apply(mu.mat,2,mean)
+  mu.ci = apply(mu.mat,2,function(x) quantile(x,c(.05,.95)))
+  x = q.fit@data[["x"]]
+  o = order(x)
+  if (add == FALSE) {
+    plot(x,y, ylim = range(mu.ci))
+  }
+  lines(x[o],mu[o],'l', col = col)
+  shade(mu.ci[,o],x[o], col = adjustcolor(col,alpha = .25))
+}
+
+plot(x,y, ylim = c(0,1.35), pch = 16)
+plot_preds(q.LM, add = TRUE, "orange")
+plot_preds(q.B3, add = TRUE, "blue")
+plot_preds(q.B6, add = TRUE, "purple")
+plot_preds(q.B18, add = TRUE, "violet")
+```
+
+Unsurprisingly, more flexible models fit the data better. But which model has the best estimated out of sample predictions? This time we use `PSIS-LOO` to compare the models:
+
+```{r}
+compare(q.B3,q.B6,q.B18,q.LM, func = "PSIS", n = 1e4) %>% round(2)
+```
+
+OK this warning tells us that there are some very influential data points that determine to a large degree the PSIS-LOO values. Even if we are tempted to compare models now, there is really no point because we can't trust the PSIS-LOO values.
+
+TO improve the situation. lets look which points influential. To do this, we can use `PSIS` with the flag `pointwise == TRUE` to get the parameter `k` for each data point. 
+"k" is 
+
+```{r}
+par(mfrow = c(2,2),  mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
+
+plot_influencial = function(q.fit) {
+  plot(x,y, pch = 16)
+  plot_preds(q.fit, add = TRUE, "blue")
+  PSISLOO = PSIS(q.fit, pointwise = TRUE,n = 5e4)
+  points(x[which(PSISLOO$k > .7)],y[which(PSISLOO$k > .7)], pch = 16, col = "orange")
+  points(x[which(PSISLOO$k > 1)],y[which(PSISLOO$k > 1)], pch = 16, col = "red")
+  text(2,.2, paste("sigma = ",round(coef(q.fit)["sigma"],3)), pos = 2)
+}
+
+plot_influencial(q.LM)
+plot_influencial(q.B3)
+plot_influencial(q.B6)
+plot_influencial(q.B18)
+```
+
+Note that more complex models have a higher number of influential data points. The intuition here is that the flexibility of `mu`allows the error variance to be smaller. The price one pays is that data points there are far away from `mu` become very influential because the density fall off quickly.
+
+The PSIS warnings are another instance of the _fold theorem of statistical modelling_ which states that modeling and estimation problems are often a result of mis-specified statistical models.
+
+The figure makes clear that the model does a bad job dealing with outliers. One method to deal with outliers and that comes under the name "robust regression" uses the student t distribution as an error model (instead of the normal distribution.):
+
+```{r}
+curve(dnorm(x, mean = , sd = 1), -4, 4, n = 500, ylab = "density", lty = 3)
+curve(dstudent(x, nu = 2, mu = 0, sigma = 1), -4, 4, n = 500,  add = TRUE)
+legend("topleft", lty = c(1,3),
+       legend = c("dnorm(0,1)","dstudent(0,2,1)"),
+       bty = "n")
+```
+
+Because the density of the student t distribution is lower close to zero and higher longer away from zero, observed values that are far away from `mu` will have a larger likelihood and will this be less influential.
+
+The next figure shows that by using a student t error distribution, we can increase the likelihood of values far away from `mu`, decrease the likelihod of values close to `mu` and thus reduce the relative importance of the outlier values.
+
+```{r warning = F}
+plot_influencial(q.B3)
+yhat = colMeans(link(q.B3,n = 1e4))
+sigma = coef(q.B3)["sigma"]
+PSISLOO = PSIS(q.B3, pointwise = TRUE, n = 5e4)
+xs = seq(-1,1,.01)
+d = dnorm(xs,0,sigma)/4
+ds = dstudent(xs,0,nu = 2, sigma)/4
+
+for (j in which(PSISLOO$k > .7)) {
+  lines(d+x[j],xs+yhat[j], lty = 3)
+  lines(ds+x[j],xs+yhat[j])
+  lines(x = rep(x[j],2), y = c(min(xs), max(xs))+yhat[j], col = "grey")
+}
+```
+
+Now lets re-estimate the models with a student-t error distribution.
+
+```{r}
+quap.spline.model = 
+  alist(
+    y ~ dstudent(3, mu, sigma),
+    mu <- X %*% b ,
+    b ~ dnorm(0,1),
+    sigma ~ dnorm(.25,.1)
+  )
+
+q.B3 = 
+  quap(quap.spline.model,
+       data = list(X = B3, y = y, x = x),
+       start = list(b=rep(0, ncol(B3)), sigma = .1))
+q.B6 = 
+  quap(quap.spline.model,
+       data = list(X = B6, y = y, x = x),
+       start = list(b=rep(0, ncol(B6)), sigma = .1))
+q.B18 = 
+  quap(quap.spline.model,
+       data = list(X = B18, y = y, x = x),
+       start = list(b=rep(0, ncol(B18)), sigma = .1))
+q.LM = 
+  quap(quap.spline.model,
+       data = list(X = LM, y = y, x = x),
+       start = list(b=rep(0, ncol(LM)), sigma = .1))
+
+# work around a bug
+attr(q.B3,"nobs") = 50
+attr(q.B6,"nobs") = 50
+attr(q.B18,"nobs") = 50
+attr(q.LM,"nobs") = 50
+```
+
+And we compare the models again.
+
+```{r}
+compare(q.B3,q.B6,q.B18,q.LM, func = "PSIS", n = 1e4) %>% round(2)
+```
+
+This time there are no warnings!
+
+Here are the new models predictions:
+
+```{r}
+plot(x,y, ylim = c(0,1.35), pch = 16)
+plot_preds(q.LM, add = TRUE, "orange")
+plot_preds(q.B3, add = TRUE, "blue")
+plot_preds(q.B6, add = TRUE, "purple")
+plot_preds(q.B18, add = TRUE, "violet")
+```
+
+

@@ -16,13 +16,13 @@ quap.spline.model =
     sigma ~ dnorm(.25,.1)
   )
 
-N.sim = 25
+N.sim = 50
 b.sds = exp(seq(log(1),log(15) , length.out = 8))
 b.sds = c(1,2,3,5,10,20)
 elpd.test = elpd.train = matrix(NA,nrow = N.sim, ncol = length(b.sds))
 yhats = vector(mode = "list", length = length(b.sds))
-for (my.seed in 1:N.sim) {
-  if (my.seed <= 25)
+for (my.seed in 26:N.sim) {
+  if (my.seed <= 50)
     png(paste0("anim/F", my.seed, ".png"), width = 15, height = 10,
       res = 300, units = "cm")
   set.seed(my.seed)
@@ -45,19 +45,23 @@ for (my.seed in 1:N.sim) {
     p = extract.samples(q.fit)
     yhat = rowMeans(B.m %*% t(p$b))
     yhats[[which(b.sd == b.sds)]] = rbind(yhats[[which(b.sd == b.sds)]],yhat)
-    if (my.seed <= 25) {
+    if (my.seed <= 50) {
       plot(x,y, col = adjustcolor("black", alpha = .025))
       points(x[idx],y[idx], pch = 16, 
              col = adjustcolor("black", alpha = .5), cex = .5)
       lines(x,mu, col = "red")
       lines(x,yhat,col = "blue")
+      if (my.seed > 2) {
+        matlines(x,t(yhats[[which(b.sd == b.sds)]][1:my.seed,]), lty = 1, 
+                 col = adjustcolor("blue",alpha = .05))
+      }
       text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
     }
     elpd.train[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
     q.fit@data = list(bf.s = B.m[test.idx,], y = y[test.idx])
     elpd.test[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
   }
-  if (my.seed <= 25) dev.off()
+  if (my.seed <= 50) dev.off()
 }
 save(elpd.test,elpd.train, b.sds, yhats,x,y, file = "sim_lppd.Rdata")
 for (b.sd in b.sds) {
@@ -90,7 +94,7 @@ make_gif = function(dir = NULL, fn = NULL, fps = 20) {
 }
 
 
-make_gif("anim/", "shrinkage.gif", fps = 2)
+make_gif("anim/", "shrinkage.gif", fps = 4)
 
 log_p = do.call(rbind,
                 lapply(1:15, 
