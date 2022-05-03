@@ -495,7 +495,7 @@ Now we wan to know if the relationship between x and y is linear, or non linear.
 
 To do this, we fit a series of models of increasing complexity. To simplify this, we set up a basic model and define design matrices for different models:
 
-```{r}
+```{r class.source = "fold-show"}
 quap.spline.model = 
   alist(
     y ~ dnorm(mu,sigma),
@@ -532,7 +532,7 @@ pp(B18)
 
 With the basic model with have set up, we can now easily fit the linear regression and the spline models.
 
-```{r}
+```{r class.source = "fold-show"}
 q.B3 = 
   quap(quap.spline.model,
        data = list(X = B3, y = y, x = x),
@@ -563,6 +563,7 @@ And we plot the model predictions:
 par(mfrow = c(1,1), mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
 plot_preds = function(q.fit, add = FALSE, col = "blue") {
   mu.mat = link(q.fit,n = 1e4)
+  if(is.list(mu.mat)) mu.mat = mu.mat[["mu"]]
   mu = apply(mu.mat,2,mean)
   mu.ci = apply(mu.mat,2,function(x) quantile(x,c(.05,.95)))
   x = q.fit@data[["x"]]
@@ -629,10 +630,10 @@ Because the density of the student t distribution is lower close to zero and hig
 The next figure shows that by using a student t error distribution, we can increase the likelihood of values far away from `mu`, decrease the likelihod of values close to `mu` and thus reduce the relative importance of the outlier values.
 
 ```{r warning = F}
-plot_influencial(q.B3)
-yhat = colMeans(link(q.B3,n = 1e4))
-sigma = coef(q.B3)["sigma"]
-PSISLOO = PSIS(q.B3, pointwise = TRUE, n = 5e4)
+plot_influencial(q.B18)
+yhat = colMeans(link(q.B18,n = 1e4))
+sigma = coef(q.B18)["sigma"]
+PSISLOO = PSIS(q.B18, pointwise = TRUE, n = 5e4)
 xs = seq(-1,1,.01)
 d = dnorm(xs,0,sigma)/4
 ds = dstudent(xs,0,nu = 2, sigma)/4
@@ -644,17 +645,20 @@ for (j in which(PSISLOO$k > .7)) {
 }
 ```
 
-Now lets re-estimate the models with a student-t error distribution.
+Now lets re-estimate the data with a student-t error distribution. Here is the basic model.
 
-```{r}
+```{r class.source = "fold-show"}
 quap.spline.model = 
   alist(
-    y ~ dstudent(3, mu, sigma),
+    y ~ dstudent(nu, mu, sigma),
     mu <- X %*% b ,
+    nu <- 1 + dexp(1),
     b ~ dnorm(0,1),
     sigma ~ dnorm(.25,.1)
   )
+```
 
+```{r}
 q.B3 = 
   quap(quap.spline.model,
        data = list(X = B3, y = y, x = x),
@@ -678,6 +682,8 @@ attr(q.B6,"nobs") = 50
 attr(q.B18,"nobs") = 50
 attr(q.LM,"nobs") = 50
 ```
+
+
 
 And we compare the models again.
 
