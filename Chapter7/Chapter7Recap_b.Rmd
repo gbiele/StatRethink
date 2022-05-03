@@ -55,7 +55,109 @@ Model comparison (done correctly) helps to choose the model that provides a good
 
 A complementary approach to work against "overfitting" is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically normally distributed, have a mean of zero and a _relatively_ small standard deviation. Here _relative_ refers to the scale on which a predictor is measured.
 
-To show how shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
+
+To visualize how shrinkage works, we generate a small data set for which we want to estimate the mean:
+
+```{r}
+set.seed(5)
+y = (rnorm(15) %>% scale()) + 1
+hist(y)
+```
+
+We want a Bayesian estimate of the mean of `y` $\small y \sim normal(mu, 1)$ with two different priors $\small mu \sim normal(0,\sigma)$ for mu:
+
+```{r}
+par(mar = c(5,3,.5,.1))
+curve(dnorm(x,0,1), -10, 10, n = 500,
+      ylab = "density", xlab = "mu", col = "blue", lwd = 3)
+curve(dnorm(x,0,3), n = 500, add = T,
+      ylab = "density", xlab = "mu", col = adjustcolor("blue",alpha = .5), lwd = 3)
+legend("topleft",
+       lty = 1, lwd = 3,
+       col = c("blue",adjustcolor("blue",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
+       bty = "n")
+```
+
+Here, we calculate the likelihood and the prior probability of different estimates for the mean of `y`
+
+```{r class.source = "fold-show"}
+mus = seq(-1,3,.01)
+P = 
+  apply(
+    data.frame(mu = mus), 1, 
+    function(mu)  {
+      c(
+        mu = mu,
+        # P(data| mu)
+        llikelihood = sum(dnorm(y,mean = mu, log = T)), 
+        # P(mu), mu ~ normal(0,1)
+        Psd1 = dnorm(mu,0, sd = 1, log = T),
+         # P(mu), mu ~ normal(0,3)
+        Psd3 = dnorm(mu,0, sd = 3, log = T)
+      )
+    }
+  )
+P[,1:5]
+```
+
+Next, we calculate the posterior probabilities:
+
+```{r class.source = "fold-show"}
+post1 = exp(P["llikelihood",] + P["Psd1.mu",])
+post3 = exp(P["llikelihood",] + P["Psd3.mu",])
+```
+
+Now we can show likelihood, prior and posterior together:
+
+```{r, fig.height=7, width = 4}
+par(mfrow = c(3,1), mar=c(2.75,2.75,0,.25), mgp=c(1.25,.1,0), tck=-.01)
+plot(mus,exp(P["llikelihood",]),'l', xlab = "", ylab = "P(y|mu)", col = "red", lwd = 2)
+
+curve(dnorm(x,0,1), min(mus), max(mus), n = 500,
+      ylab = "P(mu)", xlab = "", col = "blue", lwd = 3)
+curve(dnorm(x,0,3), n = 500, add = T,
+      ylab = "density", xlab = "", col = adjustcolor("blue",alpha = .5), lwd = 3)
+legend("topright",
+       lty = 1, lwd = 3,
+       col = c("blue",adjustcolor("blue",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
+       bty = "n")
+
+plot(mus,post1,'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
+lines(mus,post3,'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
+abline(v = c(mus[which.max(post1)],mus[which.max(post3)]), lty = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)))
+legend("topright",
+       lty = 1, lwd = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
+       bty = "n")
+```
+We zoom in to see more clearly how the narrow prior shrinks the estimated mu towards zero
+
+```{r}
+par(mar = c(5,3,.5,.1))
+ids = which(mus > 0 & mus < 1.5)
+plot(mus[ids],post1[ids],'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
+lines(mus[ids],post3[ids],'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
+abline(v = c(mus[which.max(post1)],mus[which.max(post3)]), lty = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)))
+arrows(x0 = mus[which.max(post3)],
+      x1 = mus[which.max(post1)],
+      y0 = mean(c(max(post1),max(post3))),
+      lwd = 3, length = .15)
+legend("topright",
+       lty = 1, lwd = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
+       bty = "n")
+```
+
+
+## An example
+
+To show that shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
 
 The following figure shows the estimated relationships for different samples drawn from the population.
 
@@ -74,7 +176,9 @@ The following figure shows deviances +/- 1 sd.
 
 ```{r}
 load("sim_lppd.Rdata")
-D.test = -2*elpd.test
+
+plot_deviances = function() {
+  D.test = -2*elpd.test
 D.train = -2*elpd.train
 m.test = colMeans(D.test)
 m.train = colMeans(D.train)
@@ -102,33 +206,39 @@ plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim,
       ylab = "Deviance test", xlab = "sd(b)", xaxt = "n")
 arrows(xs+.2,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
 axis(1, at = 1:6, labels = b.sds)
-
-#text(xs,m.train, labels = round(m.train,2), pos = 2, cex = .5)
-#text(xs,m.test, labels = round(m.test,2), pos = 2, cex = .5, col = "blue")
-```
-
-Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. This becomes also clear, if we plot many estimated DGPs together:
-
-```{r, fig.width=15, fig.height=10, echo = FALSE}
-library(splines)
-set.seed(11)
-x = seq(-3,3,length.out = 250)
-knot.locations = seq(-3,3, length.out = 10)
-B = bs(x, knots = knot.locations)
-b = rnorm(ncol(B))
-pre.y = B %*% b
-y = pre.y + rnorm(length(x),0,.5)
-par(mfrow = c(2,3), mar=c(2.5,2.5,0,.5), mgp=c(1,.1,0), tck=-.01)
-for (b.sd in b.sds) {
-  plot(x,y, col = adjustcolor("black", alpha = .025))
-  matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, 
-           col = adjustcolor("blue",alpha = .05))
-  text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
-  lines(x,pre.y, col = "red", lwd = 2)
 }
+
+plot_deviances()
+
 ```
 
+Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. This becomes also clear, if we plot many estimated DGPs together. In the following figure, each blue lines show the expected `y` values inferred from 100 random samples and the red lines the true relationship between x an y.
 
+```{r, echo = FALSE, results='hide'}
+if(!file.exists("sim_shrinkage_spaghetti.png")) {
+  library(splines)
+  N = 1000
+  set.seed(123456)
+  x = sort(rnorm(N,mean = 0))
+  bf.s = splines::bs(x,knots = 3)
+  bf.b = matrix(c(1,1,1,0),ncol = 1)
+  mu = bf.s %*% bf.b
+  y = rnorm(N, mu , sd = .1)
+  png("sim_shrinkage_spaghetti.png", width = 15, height = 8, units = "cm", res = 450)
+  par(mfrow = c(2,3), mar=c(2.5,2,0,.25), mgp=c(1,.1,0), tck=-.01)
+  for (b.sd in b.sds) {
+    plot(x,y, col = adjustcolor("black", alpha = .025))
+    matlines(x,t(yhats[[which(b.sd == b.sds)]][1:100,]), lty = 1, 
+             col = adjustcolor("blue",alpha = .05))
+    text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
+    lines(x,mu, col = "red", lwd = 2)
+  }
+  dev.off()
+}
+
+```
+
+![](sim_shrinkage_spaghetti.png)
 <!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
 
 ```{r, echo = FALSE, eval = FALSE}
@@ -147,22 +257,22 @@ plot(dt$edu,dt$y)
 
 So far we have implemented some simple cross validation manually, by simply simply splitting our total sample in half. However, data can also be split differently, e.g. 20% training data 80% test data or the other way around.
 
-One popular way to split data to fit the data on $N-1$ data points and to use the $N$th data point as test data. This is referred to as _Leave one out cross validation_ or LOOCV.
+One popular way to split data to fit the data on $\small N-1$ data points and to use the $\small N$th data point as test data. This is referred to as _Leave one out cross validation_ or LOO-CV.
 
-One thing that is easily implemented with LOOCV is to calculated the deviance as the average deviance over the $N$ LOOCV deviances. for LOOCV, there are always only N-1 training data sets.
+One thing that is easily implemented with LOO-CV is to calculated the deviance as the average deviance over the $\small N$ LOO-CV deviances. for LOO-CV, there are always only N-1 training data sets.
 
 This is different for alternative schemes. For instance, at a samples size of 20, there are `r choose(20,10)` to construct the training data set. Here, averaging about all possible test-data deviances would be too computationally expensive.
 
-The key thing to keep in mind when doing cross validation is that dependent observations (more specificall, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets.
+The key thing to keep in mind when doing cross validation is that dependent observations (more specifically, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets.
 
 ## LOO-CV and PSIS-LOO
 
-The computationally challenging part of LOO-CV is that one needs to estimate the model $N-1$ times.
+The computationally challenging part of LOO-CV is that one needs to estimate the model $\small N-1$ times.
 
-Fortunately, one can approximate LOO-CV with a method called pareto smoothed importance sampling **PSIS-LOO**. Here, not all $lppd$ receive the same weight when calculating the deviance, but 
+Fortunately, one can approximate LOO-CV with a method called pareto smoothed importance sampling (PSIS-LOO). Here, not all $\small lppd$ receive the same weight when calculating the deviance, but 
 
-- $lppd$ values of observations that have a strong influence receive a higher weight and 
-- pareto-smoothing (of the tails of the $lppd$ distribution) is used to get better weights.
+- $\small lppd$ values of observations that have a strong influence receive a higher weight and 
+- pareto-smoothing (of the tails of the $\small lppd$ distribution) is used to get better weights.
 
 # Information criteria
 
@@ -177,31 +287,177 @@ All well known information criteria, like **AIC**, **DIC**, **WAIC** use the sam
 
 - AIC: number of parameters
 - BIC: number of parameters and sample size
-- DIC: variance of deviances (effective # parameters)
-- WAIC: variance of posterior predictions (effective # parameters)
+- DIC: variance of deviances (-> "effective # parameters")
+- WAIC: variance of posterior predictions (-> "effective # parameters")
 
 
 Never heard of WAIC, why should you used it?
 
 - fewer requirements (about posterior distribution, relative weight of prior and likelihood, number parameters vs sample size)
-- can provide warning signals if they are unreliable
+- can provide warning signals if are unreliable
 - allow calculation of standard errors, which puts differences between models in perspective
 
 
 ## Are model comparison criteria any good?
 
-Benchmark is out of sample prediction or cross validation, where we draw first a training sample from the DGP, estimate model parameters, draw a test sample (of same size) and estimate the out of sample deviance as our parameter of interest.
+The **benchmark is out of sample prediction or cross validation**, where we 
 
-In the following figure, these **cross validation* values are represented by dots (empty for flat priors black for shrinkage priors).
+- draw first a training sample from the DGP, 
+- estimate model parameters, 
+- draw a test sample (of same size) and 
+- estimate the out of sample deviance as our parameter of interest.
+
+In the following figure from he book, these **cross validation** values are represented by dots (empty for flat priors black for shrinkage priors).
 
 Lines in the figures are _average values_ over 1000 simulations and show that on average information criteria, **(LOO)-CV**, **PSIS-LOO** and **WAIC** do a good job of approximating full cross validation. 
 
 ![](criteria_sim.PNG)
 
-When looking at averages, positive and negative differences to full corss validation can cancel. Therefore, it is good to also look at the average absolute, i.e. for each simulated data set we calculate the absolute of the differences between cross validation llpd and the approximation. This is shown in the following figure:
+When looking at averages, positive and negative differences to full cross validation can cancel. Therefore, it is good to also look at the average absolute, i.e. for each simulated data set we calculate the absolute of the differences between cross validation llpd and the approximation. This is shown in the following figure:
 
 ![](criteria_sim_error.PNG)
 
 Bottom line: **PSIS-LOO** and **WAIC** are relatively close to full cross validation and can be computed relatively cheaply. In practice, it is good to use both and take discrepant results are a warning signal.
 
 
+# Model comparison
+
+Information criteria are often used for model selection, but this is not the only way and should not even be the most important way to use the them.
+
+More generally, we can think of two goals of model selection:
+
+- Improving predictions: Here information criteria are most useful to determine weights for different models
+- Testing scientific hypotheses: Here, we have specific qualitatively different scientific hypotheses that we express and statistical models so that we can select which model describes the data best (often done in cognitive psychology)
+
+**Model comparison should not be used for covariate selection when we want to estimate causal effects**. When our interest is in causal effects, covariate selection should be determined based on the DAG^[Admittedly, things can get more complicated if we are uncertain about which DAG is correct. Model selection criteria can help to select or weight DAGs].
+
+
+## When model selection leads astray
+
+To illustrate why model comparison is not useful for covariate selection, we can go back to the example about the effect of treatment on well being: 
+
+```{r fig.height=2.5, fig.width=6, fig.align = 'center'}
+source("../Chapter6/dag_utils.R")
+par(mfrow = c(1,2))
+M_dag = dagitty(
+  "dag{
+  M->W;
+  T->M;
+  T->W
+  }")
+coord.list = 
+  list(
+    x=c(T=0,W=2,M=1),
+    y=c(T=0,W=0,M=-1))
+coordinates(M_dag) = coord.list
+drawmydag(M_dag,cex = 2)
+
+N = 150
+set.seed(1)
+T = rnorm(N)
+M = T + rnorm(N)
+W = 0.1*T + 0.5*M + rnorm(N)
+grayblue = colorRampPalette(c("grey","blue"))
+par(mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
+plot(W~T, col = grayblue(N)[rank(M)], pch = 16)
+legend("topleft",pch = 16, col = c("gray","blue"), 
+       legend = c("low M", "high M"), bty = "n")
+```
+
+Now we can estimate different models:
+
+```{r  class.source = "fold-show"}
+dt = list(T = T, M = M, W = W)
+
+# adjustment for treatment (incorrect model)
+W.TM = quap(
+  alist(
+    W ~ dnorm(mu, sigma),
+    mu <- a + bT*T + bM*M,
+    a ~ dnorm(0,1),
+    bT ~ dnorm(0,1),
+    bM ~ dnorm(0,1),
+    sigma ~ dexp(1)), 
+  data = dt)
+
+# no adjustment for treatment (correct model)
+W.T = quap(
+  alist(
+    W ~ dnorm(mu, sigma),
+    mu <- a + bT*T,
+    a ~ dnorm(0,1),
+    bT ~ dnorm(0,1),
+    sigma ~ dexp(1)), 
+  data = dt)
+
+# effect of mediator (incorrect model)
+W.M = quap(
+  alist(
+    W ~ dnorm(mu, sigma),
+    mu <- a + bM*M,
+    a ~ dnorm(0,1),
+    bM ~ dnorm(0,1),
+    sigma ~ dexp(1)), 
+  data = dt)
+
+# no effect (incorrect model)
+W.a = quap(
+  alist(
+    W ~ dnorm(mu, sigma),
+    mu <- a,
+    a ~ dnorm(0,1),
+    sigma ~ dexp(1)), 
+  data = dt)
+```
+
+To see the WAIC for the model `W.TM` we use the `WAIC` function from the rethinking package. 
+
+```{r class.source = "fold-show"}
+WAIC(W.TM) %>% round(1)
+```
+
+
+To compare the models, we use the `compare` function:
+```{r class.source = "fold-show", eval = F}
+compare(W.TM, W.T, W.M, W.a) %>%  round(1)
+```
+
+
+```{r}
+compare(W.TM, W.T, W.M, W.a) %>% 
+  data.frame() %>% 
+  kable(digits = 2) %>% 
+  kable_styling(full_width = F)
+```
+Here is an explanation of the columns:
+
+- WAIC: WAIC value for each model
+- SE: standard error of the information criterion value to the left
+- dWAIC: WAIC difference between the best model and the row model 
+- dSE: standard error of the WAIC difference
+- pWAIC: penalty term (approximate number of effective parameters)
+- weight: model weight for an ensemble prediction.
+
+We see that in a scenario where a good part of the treatment effect was mediated by motivation (the DPG is `M = T + rnorm(N)`, `W = 0.125*T + 0.5*M + rnorm(N)` ) the model we should use to estimate the treatment effect is not the best model, and even worse than a model that only uses the mediator.
+
+One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around 2.4 WIC better than `W.TM` and that the standard error of this difference is 1.86. Given that WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of 33.1 and a standard error of 12.21. 
+
+This more easily seen in a plot:
+
+```{r class.source = "fold-show"}
+plot(compare(W.TM, W.T, W.M, W.a))
+legend("topright",
+       pch = c(16,1,2),
+       legend = c("sample deviance",
+                  "WAIC +/- 2*SE",
+                  "WAIC +/- 2*dSE"),
+       bty = "n")
+```
+
+What this plot also shows is that if we wanted to compared models `W.T` and `W.a` to decide if treatment was effective, the standard errors of the difference show us that we would not be very certain that the true model is better, even though the treatment effect is clearly different from zero:
+
+```{r}
+precis(W.T) %>% round(2)
+```
+
+One intuition for this is that if the data are relatively noisy, model comparison techniques will have difficulties to be sure if one model is clearly better then others, even if within one model the effect of treatment is clear. Model comparison techniques only care about out of sample predictions and penalize for additonal parameters. If due to noisy data adding a causal variable does not improve prediction by much, this model will not clearly outperform simpler models.

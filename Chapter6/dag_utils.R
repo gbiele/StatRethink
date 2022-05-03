@@ -1,4 +1,4 @@
-
+library(dagitty)
 drawmydag = function(dag, cex = .75, lwd = 1, radius = 3.5) {
   
   label_clr = rep("black",length(names(dag)))

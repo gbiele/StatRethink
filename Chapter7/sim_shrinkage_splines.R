@@ -16,7 +16,7 @@ quap.spline.model =
     sigma ~ dnorm(.25,.1)
   )
 
-N.sim = 500
+N.sim = 25
 b.sds = exp(seq(log(1),log(15) , length.out = 8))
 b.sds = c(1,2,3,5,10,20)
 elpd.test = elpd.train = matrix(NA,nrow = N.sim, ncol = length(b.sds))
@@ -59,7 +59,7 @@ for (my.seed in 1:N.sim) {
   }
   if (my.seed <= 25) dev.off()
 }
-save(elpd.test,elpd.train, b.sds, yhats, file = "sim_lppd.Rdata")
+save(elpd.test,elpd.train, b.sds, yhats,x,y, file = "sim_lppd.Rdata")
 for (b.sd in b.sds) {
   plot(x,y, col = adjustcolor("black", alpha = .025))
   matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, 
