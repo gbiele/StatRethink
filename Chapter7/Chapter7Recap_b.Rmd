@@ -107,7 +107,27 @@ axis(1, at = 1:6, labels = b.sds)
 #text(xs,m.test, labels = round(m.test,2), pos = 2, cex = .5, col = "blue")
 ```
 
-Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data.
+Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. This becomes also clear, if we plot many estimated DGPs together:
+
+```{r, fig.width=15, fig.height=10, echo = FALSE}
+library(splines)
+set.seed(11)
+x = seq(-3,3,length.out = 250)
+knot.locations = seq(-3,3, length.out = 10)
+B = bs(x, knots = knot.locations)
+b = rnorm(ncol(B))
+pre.y = B %*% b
+y = pre.y + rnorm(length(x),0,.5)
+par(mfrow = c(2,3), mar=c(2.5,2.5,0,.5), mgp=c(1,.1,0), tck=-.01)
+for (b.sd in b.sds) {
+  plot(x,y, col = adjustcolor("black", alpha = .025))
+  matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, 
+           col = adjustcolor("blue",alpha = .05))
+  text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
+  lines(x,pre.y, col = "red", lwd = 2)
+}
+```
+
 
 <!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
 
@@ -135,8 +155,53 @@ This is different for alternative schemes. For instance, at a samples size of 20
 
 The key thing to keep in mind when doing cross validation is that dependent observations (more specificall, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets.
 
-## LOOCV and PSIS
+## LOO-CV and PSIS-LOO
 
-The computationally challenging part of LOOCV is that one needs to estimate the model $N-1$ times.
+The computationally challenging part of LOO-CV is that one needs to estimate the model $N-1$ times.
 
-Fortunately, one can approximate LOOCV with a method called _importance sampling_. Here, not all $lppd$ receive the same weight when calculating the deviance, but $lppd$ values of observations that have a strong influence  
+Fortunately, one can approximate LOO-CV with a method called pareto smoothed importance sampling **PSIS-LOO**. Here, not all $lppd$ receive the same weight when calculating the deviance, but 
+
+- $lppd$ values of observations that have a strong influence receive a higher weight and 
+- pareto-smoothing (of the tails of the $lppd$ distribution) is used to get better weights.
+
+# Information criteria
+
+The goal of information criteria is to give us the information out of sample prediction (cross validation) gives us, without that we need to split the data into test and training set.
+
+Information criteria are calculated from two quantities
+
+- the deviance 
+- a penalty term
+
+All well known information criteria, like **AIC**, **DIC**, **WAIC** use the same deviance term, but they differ in their penalty:
+
+- AIC: number of parameters
+- BIC: number of parameters and sample size
+- DIC: variance of deviances (effective # parameters)
+- WAIC: variance of posterior predictions (effective # parameters)
+
+
+Never heard of WAIC, why should you used it?
+
+- fewer requirements (about posterior distribution, relative weight of prior and likelihood, number parameters vs sample size)
+- can provide warning signals if they are unreliable
+- allow calculation of standard errors, which puts differences between models in perspective
+
+
+## Are model comparison criteria any good?
+
+Benchmark is out of sample prediction or cross validation, where we draw first a training sample from the DGP, estimate model parameters, draw a test sample (of same size) and estimate the out of sample deviance as our parameter of interest.
+
+In the following figure, these **cross validation* values are represented by dots (empty for flat priors black for shrinkage priors).
+
+Lines in the figures are _average values_ over 1000 simulations and show that on average information criteria, **(LOO)-CV**, **PSIS-LOO** and **WAIC** do a good job of approximating full cross validation. 
+
+![](criteria_sim.PNG)
+
+When looking at averages, positive and negative differences to full corss validation can cancel. Therefore, it is good to also look at the average absolute, i.e. for each simulated data set we calculate the absolute of the differences between cross validation llpd and the approximation. This is shown in the following figure:
+
+![](criteria_sim_error.PNG)
+
+Bottom line: **PSIS-LOO** and **WAIC** are relatively close to full cross validation and can be computed relatively cheaply. In practice, it is good to use both and take discrepant results are a warning signal.
+
+

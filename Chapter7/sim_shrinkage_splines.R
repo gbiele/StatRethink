@@ -62,9 +62,10 @@ for (my.seed in 1:N.sim) {
 save(elpd.test,elpd.train, b.sds, yhats, file = "sim_lppd.Rdata")
 for (b.sd in b.sds) {
   plot(x,y, col = adjustcolor("black", alpha = .025))
-  lines(x,mu, col = "red")
-  matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, col = adjustcolor("blue",alpha = .2))
+  matlines(x,t(yhats[[which(b.sd == b.sds)]]), lty = 1, 
+           col = adjustcolor("blue",alpha = .05))
   text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
+  lines(x,mu, col = "red", lwd = 2)
 }
 
 
