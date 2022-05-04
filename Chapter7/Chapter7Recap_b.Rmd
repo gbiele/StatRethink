@@ -53,6 +53,7 @@ par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 
 Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that **overfit**. This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
 
+# A visualization
 A complementary approach to work against _overfitting_ is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically 
 
 - normally distributed, 
@@ -144,7 +145,10 @@ legend("topright",
        bty = "n")
 mtext("Posterior", line = -2, adj = .05)
 ```
-We zoom in to see more clearly how the narrow prior shrinks the estimated mu towards zero
+
+The important thing to keep in mind here is that the posterior is the product of prior and likelihood (or the sum of log(prior) and log(likelihood)).
+
+We zoom in to see more clearly how the narrow prior shrinks the estimated mu towards zero.
 
 ```{r}
 par(mar = c(5,3,.5,.1))
@@ -217,7 +221,7 @@ upper.test = m.test +  within_sd(elpd.test)
 lower.train = m.train - within_sd(elpd.train)
 upper.train = m.train + within_sd(elpd.train)
 
-par(mfrow = c(2,1), mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
+par(mfrow = c(2,1), mar=c(2.5,2.5,1,.5), mgp=c(1,.1,0), tck=-.01)
 ylim = range(c(lower.train, upper.train))
 xs = 1:ncol(elpd.test)
 plot(xs,m.train, ylim = ylim, main = "Training data",
@@ -298,7 +302,7 @@ $$
 - the log pointwise predictive density ($\small lppd$) measures "how much information about the data" a model has, where $p(y|theta)$ is the likelihood
 
 $$
-lppd = \sum_{i=1}^{n} log(p(y|theta))
+\textrm{lppd}(y,\Theta) = \sum_i log \frac{1}{S}\sum_s p(y_i|\Theta_s)
 $$
 
 - To find a model that captures the DGP, we should employ **cross validation**, i.e. estimate a models lppd on a test--data set.
@@ -306,9 +310,9 @@ $$
 
 # Cross validation
 
-Cross validation is a general term that refers to a situation where model performance is used on a different data set than used for parameter estimation.
+**Cross validation is a general term that refers to a situation where model performance is estimated on a different data set than used for parameter estimation.**
 
-So far we have implemented some simple cross validation manually, by simply simply splitting our total sample in half. However, data can also be split differently, e.g. 20% training data 80% test data or the other way around.
+So far, we have implemented some simple cross validation manually, by simply simply splitting our total sample in half. However, data can also be split differently, e.g. 20% training data 80% test data or the other way around.
 
 One popular way to split data to fit the data on $\small N-1$ data points and to use the $\small N$th data point as test data. This is referred to as _Leave one out cross validation_ or LOO-CV.
 
@@ -322,10 +326,10 @@ The key thing to keep in mind when doing cross validation is that dependent obse
 
 The computationally challenging part of LOO-CV is that one needs to estimate the model $\small N-1$ times.
 
-Fortunately, one can **approximate LOO-CV** with a method called Pareto smoothed importance sampling (PSIS-LOO). Here, not all $\small lppd$ receive the same weight when calculating the deviance, but 
+Fortunately, one can **approximate LOO-CV** with a method called Pareto smoothed importance sampling (PSIS-LOO). Here, not all $\small \textrm{lppd}$ receive the same weight when calculating the deviance, but 
 
-- $\small lppd$ values of observations that have a strong influence receive a higher weight and 
-- Pareto-smoothing (of the tails of the $\small lppd$ distribution) is used to get better weights.
+- $\small \textrm{lppd}$ values of observations that have a strong influence receive a higher weight and 
+- Pareto-smoothing (of the tails of the $\small \textrm{lppd}$ distribution) is used to get better weights.
 
 # Information criteria
 
@@ -333,15 +337,15 @@ The goal of information criteria is to give us the information out of sample pre
 
 Information criteria are calculated from two quantities
 
-- the deviance, which is just $D = -2 \cdot lppd$
+- the deviance, which is just $\small D = -2 \cdot \textrm{lppd}$
 - a penalty term
 
-All well known information criteria, like **AIC**, and **BIC** and maybe less well know  like **DIC**, **WAIC** use the same deviance term, but they differ in their penalty:
+Well known information criteria, like **AIC**, and **BIC** and maybe less well know  like **DIC**, **WAIC** use the same deviance term, but they differ in their penalty:
 
 - AIC: number of parameters
 - BIC: number of parameters and sample size
-- DIC: variance of deviances (-> "effective # parameters")
-- WAIC: variance of posterior predictions (-> "effective # parameters")
+- DIC: average deviance  deviance at average $\small \theta$ (-> "effective # parameters")
+- WAIC: variance of log likelihood over $\small \theta$ (-> "effective # parameters")
 
 
 Never heard of WAIC, why should you used it?
@@ -487,7 +491,7 @@ Here is an explanation of the columns:
 - pWAIC: Penalty term (approximate number of effective parameters)
 - weight: Model weight for an ensemble prediction.
 
-We see that in a scenario where a good part of the treatment effect was mediated by motivation (the DPG is `M = T + rnorm(N)`, `W = 0.125*T + 0.5*M + rnorm(N)` ) the model we should use to estimate the treatment effect is not the best model, and even worse than a model that only uses the mediator.
+We see that in a scenario where a good part of the treatment effect was mediated by motivation (the DPG is `M = T + rnorm(N)`, `W = 0.1*T + 0.5*M + rnorm(N)` ) the model we should use to estimate the treatment effect is not the best model, and even worse than a model that only uses the mediator.
 
 One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around `r round(cm["W.TM","dWAIC"],1)` WIC better than `W.TM` and that the standard error of this difference is `r round(cm["W.TM","dSE"],1)`. Given that WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of `r round(cm["W.T","dWAIC"],1)` and a standard error of `r round(cm["W.WT","dSE"],1)`. 
 
@@ -689,6 +693,7 @@ Because the density of the student t distribution is lower close to zero and hig
 The next figure shows that by using a student t error distribution, we can increase the likelihood of values far away from `mu`, decrease the likelihood of values close to `mu` and thus reduce the relative importance of the outlier values.
 
 ```{r warning = F}
+par(mfrow = c(1,1), mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
 plot_influencial(q.B6, xlim = c(min(q.B6@data$x),2.5), ylim = c(-.2,1.5))
 yhat = colMeans(link(q.B6,n = 1e4))
 sigma = coef(q.B6)["sigma"]
@@ -703,6 +708,10 @@ for (j in which(PSISLOO$k > .5)) {
   lines(x = rep(x[j],2), y = c(min(xs), max(xs))+yhat[j], col = "grey")
 }
 ```
+
+The bottom left point can be influential because the mu values there are more variable (see the wider CI).
+
+Under the student-t error distribution influential data points have (typically) a higher density compared to under the Gaussian model.
 
 Now lets re-estimate the data with a student-t error distribution. Here is the basic model.
 
@@ -778,10 +787,10 @@ $$
 \textrm{lppd}(y,\Theta) = \sum_i log \frac{1}{S}\sum_s p(y_i|\Theta_s)
 $$
 $$
-\textrm{WAIC}(y,\Theta) = -2 (lppd -\sum_i var_\theta \;log \;p(y_i|\theta)
+\textrm{WAIC}(y,\Theta) = -2 \left(lppd -\sum_i var_\theta \;log \;p(y_i|\theta) \right)
 $$
 
-```{r}
+```{r class.source = "fold-show", eval = F}
 logprob <- sapply(
   1:n_samples ,
   function(s) {
@@ -803,13 +812,13 @@ my.WAIC = -2*( sum(lppd) - sum(pWAIC))
 
 ## M6
 
-```{r}
+```{r, echo = F}
 set.seed(5)
 y = (rnorm(15) %>% scale()) + 1
 hist(y)
 ```
 
-```{r, fig.height=6, fig.width=4}
+```{r, fig.height=6, fig.width=4, echo = F}
 mus = seq(-3,3,.01)
 P = 
   apply(
