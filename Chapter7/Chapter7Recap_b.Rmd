@@ -768,3 +768,94 @@ legend("topleft",
 ```
 
 
+# Questions:
+
+## M1
+
+see Page 222.
+
+$$
+\textrm{lppd}(y,\Theta) = \sum_i log \frac{1}{S}\sum_s p(y_i|\Theta_s)
+$$
+$$
+\textrm{WAIC}(y,\Theta) = -2 (lppd -\sum_i var_\theta \;log \;p(y_i|\theta)
+$$
+
+```{r}
+logprob <- sapply(
+  1:n_samples ,
+  function(s) {
+    mu <- post$a[s] + post$b[s]*cars$speed
+    dnorm( cars$dist , mu , post$sigma[s] , log=TRUE )
+  })
+
+lppd <- sapply(
+  1:n_cases ,
+  function(i) log_sum_exp(logprob[i,]) - log(n_samples))
+
+# sum of probabilities on log scale: log_sum_exp(logprob[i,])
+# divide by n on log scale:  - log(n_samples))
+
+pWAIC <- sapply( 1:n_cases , function(i) var(logprob[i,]) )
+
+my.WAIC = -2*( sum(lppd) - sum(pWAIC))
+```
+
+## M6
+
+```{r}
+set.seed(5)
+y = (rnorm(15) %>% scale()) + 1
+hist(y)
+```
+
+```{r, fig.height=6, fig.width=4}
+mus = seq(-3,3,.01)
+P = 
+  apply(
+    data.frame(mu = mus), 1, 
+    function(mu)  {
+      c(
+        mu = mu,
+        # P(data| mu)
+        llikelihood = sum(dnorm(y,mean = mu, log = T)), 
+        # P(mu), mu ~ normal(0,1)
+        Psd1 = dnorm(mu,0, sd = 1, log = T),
+         # P(mu), mu ~ normal(0,3)
+        Psd0.1 = dnorm(mu,0, sd = .2, log = T)
+      )
+    }
+  )
+
+post1 = exp(P["llikelihood",] + P["Psd1.mu",])
+post0.1 = exp(P["llikelihood",] + P["Psd0.1.mu",])
+
+par(mfrow = c(3,1), mar=c(2.75,2.75,0,.25), mgp=c(1.25,.1,0), tck=-.01)
+
+curve(dnorm(x,0,.2), min(mus), max(mus), n = 500,
+      ylab = "P(mu)", xlab = "", col = adjustcolor("blue",alpha = .5), lwd = 3)
+curve(dnorm(x,0,1), n = 500, add = T,
+      ylab = "density", xlab = "", col = "blue", lwd = 3)
+legend("topright",
+       lty = 1, lwd = 3,
+       col = c("blue",adjustcolor("blue",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,.01)"),
+       bty = "n")
+mtext("Prior", line = -2, adj = .05)
+
+plot(mus,exp(P["llikelihood",]),'l', xlab = "", ylab = "P(y|mu)", col = "red", lwd = 2)
+mtext("Likelihood", line = -2, adj = .05)
+
+plot(mus,post1,'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
+lines(mus,post0.1,'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
+abline(v = c(mus[which.max(post1)],mus[which.max(post0.1)]), lty = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)))
+legend("topright",
+       lty = 1, lwd = 3,
+       col = c("purple",adjustcolor("purple",alpha = .5)),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,0.5)"),
+       bty = "n")
+mtext("Posterior", line = -2, adj = .05)
+```
+
+
