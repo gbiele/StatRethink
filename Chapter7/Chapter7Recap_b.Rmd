@@ -1,7 +1,7 @@
 ---
-title: "Chapter 7: Recap"
+title: "Chapter 7(b): Recap"
 author: "Guido Biele"
-date: "27.04.2022"
+date: "04.05.2022"
 output:
   html_document: 
     mathjax: default
@@ -49,12 +49,17 @@ source("../utils.R")
 par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 ```
 
-
 # Shrinkage
 
-Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that "overfit". This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
+Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that **overfit**. This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
 
-A complementary approach to work against "overfitting" is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically normally distributed, have a mean of zero and a _relatively_ small standard deviation. Here _relative_ refers to the scale on which a predictor is measured.
+A complementary approach to work against _overfitting_ is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically 
+
+- normally distributed, 
+- have a mean of zero and a 
+- _relatively_ small standard deviation. 
+
+Here _relative_ refers to the scale on which a predictor is measured.
 
 
 To visualize how shrinkage works, we generate a small data set for which we want to estimate the mean:
@@ -65,7 +70,7 @@ y = (rnorm(15) %>% scale()) + 1
 hist(y)
 ```
 
-We want a Bayesian estimate of the mean of `y` $\small y \sim normal(mu, 1)$ with two different priors $\small mu \sim normal(0,\sigma)$ for mu:
+We want a Bayesian estimate of the mean of `y`: $\small y \sim normal(mu, 1)$ with two different priors $\small mu \sim normal(0,\sigma_{wide})$ and $\small mu \sim normal(0,\sigma_{shrink})$ for mu:
 
 ```{r}
 par(mar = c(5,3,.5,.1))
@@ -80,7 +85,7 @@ legend("topleft",
        bty = "n")
 ```
 
-Here, we calculate the likelihood and the prior probability of different estimates for the mean of `y`
+Here, we calculate the log-likelihood and the prior probability of different estimates for the mean of `y`
 
 ```{r class.source = "fold-show"}
 mus = seq(-1,3,.01)
@@ -111,9 +116,8 @@ post3 = exp(P["llikelihood",] + P["Psd3.mu",])
 
 Now we can show likelihood, prior and posterior together:
 
-```{r, fig.height=7, width = 4}
+```{r, fig.height=4, fig.height = 5}
 par(mfrow = c(3,1), mar=c(2.75,2.75,0,.25), mgp=c(1.25,.1,0), tck=-.01)
-plot(mus,exp(P["llikelihood",]),'l', xlab = "", ylab = "P(y|mu)", col = "red", lwd = 2)
 
 curve(dnorm(x,0,1), min(mus), max(mus), n = 500,
       ylab = "P(mu)", xlab = "", col = "blue", lwd = 3)
@@ -124,6 +128,10 @@ legend("topright",
        col = c("blue",adjustcolor("blue",alpha = .5)),
        legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
        bty = "n")
+mtext("Prior", line = -2, adj = .05)
+
+plot(mus,exp(P["llikelihood",]),'l', xlab = "", ylab = "P(y|mu)", col = "red", lwd = 2)
+mtext("Likelihood", line = -2, adj = .05)
 
 plot(mus,post1,'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
 lines(mus,post3,'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
@@ -134,6 +142,7 @@ legend("topright",
        col = c("purple",adjustcolor("purple",alpha = .5)),
        legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
        bty = "n")
+mtext("Posterior", line = -2, adj = .05)
 ```
 We zoom in to see more clearly how the narrow prior shrinks the estimated mu towards zero
 
@@ -160,6 +169,20 @@ legend("topright",
 
 To show that shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
 
+```{r}
+N = 1000
+set.seed(123456)
+x = sort(rnorm(N,mean = 0))
+bf.s = splines::bs(x,df = 3)
+bf.b = matrix(c(1,1,1),ncol = 1)
+mu = bf.s %*% bf.b
+y = rnorm(N, mu , sd = .1)
+par(mfrow = c(1,1))
+plot(x,y)
+lines(x,mu, col = "red", lwd = 2)
+```
+
+
 The following figure shows the estimated relationships for different samples drawn from the population.
 
 ![](shrinkage.gif)
@@ -169,7 +192,8 @@ Hopefully you can see that large deviations between the true DGP in red and the 
 
 
 To confirm this, the following plot shows deviances from a simulation that 
-- samples 1000 times training and test data, 
+
+- samples 1000 times 75 training and 75 test data points
 - estimates model parameters on the training set
 - calculates deviances for the training and test data sets.
 
@@ -196,15 +220,15 @@ upper.train = m.train + within_sd(elpd.train)
 par(mfrow = c(2,1), mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
 ylim = range(c(lower.train, upper.train))
 xs = 1:ncol(elpd.test)
-plot(xs,m.train, ylim = ylim, 
-     ylab = "Deviance train", xlab = "", xaxt = "n")
+plot(xs,m.train, ylim = ylim, main = "Training data",
+     ylab = "Deviance", xlab = "", xaxt = "n")
 axis(1, at = 1:5, labels = c(1,2,5,10,20))
 arrows(xs,y0 = lower.train, y1 = upper.train, length = 0)
 
 
 ylim = range(c(lower.test, upper.test))
-plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim,
-      ylab = "Deviance test", xlab = "sd(b)", xaxt = "n")
+plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim, main = "Test data",
+      ylab = "Deviance", xlab = "sd(b)", xaxt = "n")
 arrows(xs+.2,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
 axis(1, at = 1:6, labels = b.sds)
 }
@@ -213,7 +237,9 @@ plot_deviances()
 
 ```
 
-Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. This becomes also clear, if we plot many estimated DGPs together. In the following figure, each blue lines show the expected `y` values inferred from 100 random samples and the red lines the true relationship between x an y.
+Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. 
+
+This becomes also clear, if we plot many estimated DGPs together. In the following figure, each blue lines show the expected `y` values inferred from 100 random samples and the red lines the true relationship between x an y.
 
 ```{r, echo = FALSE, results='hide'}
 if(!file.exists("sim_shrinkage_spaghetti.png")) {
@@ -221,10 +247,11 @@ if(!file.exists("sim_shrinkage_spaghetti.png")) {
   N = 1000
   set.seed(123456)
   x = sort(rnorm(N,mean = 0))
-  bf.s = splines::bs(x,knots = 3)
-  bf.b = matrix(c(1,1,1,0),ncol = 1)
+  bf.s = splines::bs(x,df = 3)
+  bf.b = matrix(c(1,1,1),ncol = 1)
   mu = bf.s %*% bf.b
   y = rnorm(N, mu , sd = .1)
+  load("sim_lppd.Rdata")
   png("sim_shrinkage_spaghetti.png", width = 15, height = 8, units = "cm", res = 450)
   par(mfrow = c(2,3), mar=c(2.5,2,0,.25), mgp=c(1,.1,0), tck=-.01)
   for (b.sd in b.sds) {
@@ -254,7 +281,32 @@ dt$y = dt$y + rnorm(nrow(dt),0,.1)
 plot(dt$edu,dt$y)
 ```
 
+# Recap last week: From entropy to lppd
+
+- Entropy ($\small  H(p)$) is a good measure of information:
+
+$$
+H(p) = \sum_{i=1}^{n} p_i log(p_i)
+$$
+
+- KL divergence ($\small D_{KL}$) measures the distance between two distributions $p$ and $q$
+
+$$
+D_{KL}(p,q) = \sum_i p_i \,log(p_i) - p_i \, log(q_i)
+$$
+
+- the log pointwise predictive density ($\small lppd$) measures "how much information about the data" a model has, where $p(y|theta)$ is the likelihood
+
+$$
+lppd = \sum_{i=1}^{n} log(p(y|theta))
+$$
+
+- To find a model that captures the DGP, we should employ **cross validation**, i.e. estimate a models lppd on a test--data set.
+
+
 # Cross validation
+
+Cross validation is a general term that refers to a situation where model performance is used on a different data set than used for parameter estimation.
 
 So far we have implemented some simple cross validation manually, by simply simply splitting our total sample in half. However, data can also be split differently, e.g. 20% training data 80% test data or the other way around.
 
@@ -270,10 +322,10 @@ The key thing to keep in mind when doing cross validation is that dependent obse
 
 The computationally challenging part of LOO-CV is that one needs to estimate the model $\small N-1$ times.
 
-Fortunately, one can approximate LOO-CV with a method called pareto smoothed importance sampling (PSIS-LOO). Here, not all $\small lppd$ receive the same weight when calculating the deviance, but 
+Fortunately, one can **approximate LOO-CV** with a method called Pareto smoothed importance sampling (PSIS-LOO). Here, not all $\small lppd$ receive the same weight when calculating the deviance, but 
 
 - $\small lppd$ values of observations that have a strong influence receive a higher weight and 
-- pareto-smoothing (of the tails of the $\small lppd$ distribution) is used to get better weights.
+- Pareto-smoothing (of the tails of the $\small lppd$ distribution) is used to get better weights.
 
 # Information criteria
 
@@ -281,10 +333,10 @@ The goal of information criteria is to give us the information out of sample pre
 
 Information criteria are calculated from two quantities
 
-- the deviance 
+- the deviance, which is just $D = -2 \cdot lppd$
 - a penalty term
 
-All well known information criteria, like **AIC**, **DIC**, **WAIC** use the same deviance term, but they differ in their penalty:
+All well known information criteria, like **AIC**, and **BIC** and maybe less well know  like **DIC**, **WAIC** use the same deviance term, but they differ in their penalty:
 
 - AIC: number of parameters
 - BIC: number of parameters and sample size
@@ -294,10 +346,9 @@ All well known information criteria, like **AIC**, **DIC**, **WAIC** use the sam
 
 Never heard of WAIC, why should you used it?
 
-- fewer requirements (about posterior distribution, relative weight of prior and likelihood, number parameters vs sample size)
-- can provide warning signals if are unreliable
-- allow calculation of standard errors, which puts differences between models in perspective
-
+- has fewer requirements (about posterior distribution, relative weight of prior and likelihood, number parameters vs sample size)
+- can provide warning signals if unreliable
+- allows calculation of standard errors, which puts differences between models in perspective
 
 ## Are model comparison criteria any good?
 
@@ -308,7 +359,7 @@ The **benchmark is out of sample prediction or cross validation**, where we
 - draw a test sample (of same size) and 
 - estimate the out of sample deviance as our parameter of interest.
 
-In the following figure from he book, these **cross validation** values are represented by dots (empty for flat priors black for shrinkage priors).
+In the following figure from the book, these **cross validation** values are represented by dots (empty for flat priors black for shrinkage priors).
 
 Lines in the figures are _average values_ over 1000 simulations and show that on average information criteria, **(LOO)-CV**, **PSIS-LOO** and **WAIC** do a good job of approximating full cross validation. 
 
@@ -325,10 +376,10 @@ Bottom line: **PSIS-LOO** and **WAIC** are relatively close to full cross valida
 
 Information criteria are often used for model selection, but this is not the only way and should not even be the most important way to use the them.
 
-More generally, we can think of two goals of model selection:
+More generally, we can think of two goals of model comparison:
 
-- Improving predictions: Here information criteria are most useful to determine weights for different models
-- Testing scientific hypotheses: Here, we have specific qualitatively different scientific hypotheses that we express and statistical models so that we can select which model describes the data best (often done in cognitive psychology)
+- **Improving predictions**: Here, information criteria are most useful to determine weights for different models
+- **Testing scientific hypotheses**: Here, we have specific qualitatively different scientific hypotheses that we express and statistical models so that we can select which model describes the data best (often done in cognitive psychology)
 
 **Model comparison should not be used for covariate selection when we want to estimate causal effects**. When our interest is in causal effects, covariate selection should be determined based on the DAG^[Admittedly, things can get more complicated if we are uncertain about which DAG is correct. Model selection criteria can help to select or weight DAGs].
 
@@ -365,7 +416,7 @@ legend("topleft",pch = 16, col = c("gray","blue"),
        legend = c("low M", "high M"), bty = "n")
 ```
 
-Now we can estimate different models:
+Now we can estimate different models that use combinations of T and M to predict W.
 
 ```{r  class.source = "fold-show"}
 dt = list(T = T, M = M, W = W)
@@ -419,29 +470,26 @@ WAIC(W.TM) %>% round(1)
 
 
 To compare the models, we use the `compare` function:
-```{r class.source = "fold-show", eval = F}
+```{r class.source = "fold-show"}
 compare(W.TM, W.T, W.M, W.a) %>%  round(1)
 ```
 
 
-```{r}
-compare(W.TM, W.T, W.M, W.a) %>% 
-  data.frame() %>% 
-  kable(digits = 2) %>% 
-  kable_styling(full_width = F)
+```{r, echo = F}
+cm = compare(W.TM, W.T, W.M, W.a)
 ```
 Here is an explanation of the columns:
 
 - WAIC: WAIC value for each model
-- SE: standard error of the information criterion value to the left
+- SE: Standard error of the WAIC (information criterion value to the left)
 - dWAIC: WAIC difference between the best model and the row model 
-- dSE: standard error of the WAIC difference
-- pWAIC: penalty term (approximate number of effective parameters)
-- weight: model weight for an ensemble prediction.
+- dSE: Standard error of the WAIC difference
+- pWAIC: Penalty term (approximate number of effective parameters)
+- weight: Model weight for an ensemble prediction.
 
 We see that in a scenario where a good part of the treatment effect was mediated by motivation (the DPG is `M = T + rnorm(N)`, `W = 0.125*T + 0.5*M + rnorm(N)` ) the model we should use to estimate the treatment effect is not the best model, and even worse than a model that only uses the mediator.
 
-One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around 2.4 WIC better than `W.TM` and that the standard error of this difference is 1.86. Given that WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of 33.1 and a standard error of 12.21. 
+One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around `r round(cm["W.TM","dWAIC"],1)` WIC better than `W.TM` and that the standard error of this difference is `r round(cm["W.TM","dSE"],1)`. Given that WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of `r round(cm["W.T","dWAIC"],1)` and a standard error of `r round(cm["W.WT","dSE"],1)`. 
 
 This more easily seen in a plot:
 
@@ -468,16 +516,16 @@ One intuition for this is that if the data are relatively noisy, model compariso
 
 To correctly estimate effects it is not sufficient to choose the correct adjustment variables, but the functional form should also be (approximately?) correct.
 
-Functional form refers to the for of the function that describes a relationship. The default for linear regression is a linear relationship, but we have seen that relation ships can be non-linear.
+Functional form refers to the form of the function that describes a relationship. The default for gaussian regression models is a linear relationship, but we have seen that relation ships can be non-linear.
 
-We have collected the data in the following plot.
+Assume that we have collected the data in the following plot.
 
 ```{r}
 N = 500
-set.seed(1)
+set.seed(2)
 x = sort(rnorm(N,mean = 0))
 bf.s = splines::bs(x,df = 3)
-bf.b = matrix(c(1,1,1),ncol = 1)
+bf.b = matrix(c(1,1,.8),ncol = 1)
 mu = bf.s %*% bf.b
 nn = 75
 sidx = sample(N,nn)
@@ -490,8 +538,7 @@ plot(x[sidx],y, xlab = "x", pch = 16)
 x = x[sidx]
 ```
 
-
-Now we wan to know if the relationship between x and y is linear, or non linear.
+Now we want to know if the relationship between x and y is linear or non linear.
 
 To do this, we fit a series of models of increasing complexity. To simplify this, we set up a basic model and define design matrices for different models:
 
@@ -505,29 +552,30 @@ quap.spline.model =
   )
 
 library(splines)
+# linear regression
+LM = model.matrix(~ 0 + x) %>% cbind(1)
+# splines with different numbers of knots
 B3 = bs(x, df = 3) %>% cbind(1)
 B6 = bs(x, df = 6) %>% cbind(1)
 B18 = bs(x, df = 18) %>% cbind(1)
-LM = model.matrix(~ 0 + x) %>% cbind(1)
 ```
 
 
 Before we fit the models, lets look at prior predictions for `mu`:
 
 ```{r}
-par(mfrow = c(2,2), mar=c(2.5,2.5,.5,.5), mgp=c(1,.1,0), tck=-.01)
-o = order(x)
-
 pp = function(X) {
-  b = matrix(rnorm(ncol(X)*55),ncol = 55)
+  o = order(x)
+  b = matrix(rnorm(ncol(X)*55, sd = 1),ncol = 55)
   yhat = X %*% b
   matplot(x[o],yhat[o,],type = 'l', col = "blue", lty = 1, xlab = "x", ylab = "x")
 }
 
-pp(LM)
-pp(B3)
-pp(B6)
-pp(B18)
+par(mfrow = c(2,2), mar=c(2.5,2.5,1,.5), mgp=c(1,.1,0), tck=-.01)
+pp(LM); title("linear model")
+pp(B3); title("splines with 3 knots")
+pp(B6); title("splines with 6 knots")
+pp(B18); title("splines with 18 knots")
 ```
 
 With the basic model with have set up, we can now easily fit the linear regression and the spline models.
@@ -580,40 +628,51 @@ plot_preds(q.LM, add = TRUE, "orange")
 plot_preds(q.B3, add = TRUE, "blue")
 plot_preds(q.B6, add = TRUE, "purple")
 plot_preds(q.B18, add = TRUE, "violet")
+
+legend("topleft",
+       fill = c("orange","blue","purple","violet"),
+       legend = c("linear model", paste(c(3,6,18),"knots")),
+       bty = "n")
 ```
 
-Unsurprisingly, more flexible models fit the data better. But which model has the best estimated out of sample predictions? This time we use `PSIS-LOO` to compare the models:
-
+Unsurprisingly, more flexible models fit the data better. This can be seen if we use `compare` with `WAIC`:
 ```{r}
-compare(q.B3,q.B6,q.B18,q.LM, func = "PSIS", n = 1e4) %>% round(2)
+compare(q.B3,q.B6,q.B18,q.LM, func = "WAIC") %>% round(2)
 ```
 
-OK this warning tells us that there are some very influential data points that determine to a large degree the PSIS-LOO values. Even if we are tempted to compare models now, there is really no point because we can't trust the PSIS-LOO values.
-
-TO improve the situation. lets look which points influential. To do this, we can use `PSIS` with the flag `pointwise == TRUE` to get the parameter `k` for each data point. 
-"k" is 
+Now we use `PSIS-LOO` to compare the models:
 
 ```{r}
-par(mfrow = c(2,2),  mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
+compare(q.B3,q.B6,q.B18,q.LM, func = "PSIS", n = 1e5) %>% round(2)
+```
 
-plot_influencial = function(q.fit) {
-  plot(x,y, pch = 16)
+This warning tells us that there are some very influential data points that determine to a large degree the PSIS-LOO values. Even if we are tempted to compare models now, there is really no point because we can't trust the PSIS-LOO values.
+
+To improve the situation, we investigate which points are influential. To do this, we can use `PSIS` with the flag `pointwise == TRUE` to get the parameter `k` for each data point. "k" is the shape parameter of the Pareto distribution, and values larger .7 / 1 indicate problems.
+
+```{r}
+plot_influencial = function(q.fit, ylim = NULL, xlim = NULL) {
+  plot(x,y, pch = 16, ylim = ylim, xlim = xlim)
   plot_preds(q.fit, add = TRUE, "blue")
   PSISLOO = PSIS(q.fit, pointwise = TRUE,n = 5e4)
-  points(x[which(PSISLOO$k > .7)],y[which(PSISLOO$k > .7)], pch = 16, col = "orange")
+  points(x[which(PSISLOO$k > .5)],y[which(PSISLOO$k > .5)], pch = 16, col = "orange")
   points(x[which(PSISLOO$k > 1)],y[which(PSISLOO$k > 1)], pch = 16, col = "red")
   text(2,.2, paste("sigma = ",round(coef(q.fit)["sigma"],3)), pos = 2)
+  legend("topleft", pch = 16,
+         col = c("orange","red"),
+         legend = c("k > .5", "k > 1"), bty = "n")
 }
 
-plot_influencial(q.LM)
-plot_influencial(q.B3)
-plot_influencial(q.B6)
-plot_influencial(q.B18)
+par(mfrow = c(2,2),  mar=c(3,3,1,.5), mgp=c(1.25,.1,0), tck=-.01)
+plot_influencial(q.LM); title("linear model")
+plot_influencial(q.B3); title("splines, 3 nodes")
+plot_influencial(q.B6); title("splines, 6 nodes")
+plot_influencial(q.B18); title("splines, 18 nodes")
 ```
 
 Note that more complex models have a higher number of influential data points. The intuition here is that the flexibility of `mu`allows the error variance to be smaller. The price one pays is that data points there are far away from `mu` become very influential because the density fall off quickly.
 
-The PSIS warnings are another instance of the _fold theorem of statistical modelling_ which states that modeling and estimation problems are often a result of mis-specified statistical models.
+The PSIS warnings are another instance of the _folk theorem of statistical modelling_ which states that modeling and estimation problems are often a result of mis-specified statistical models.
 
 The figure makes clear that the model does a bad job dealing with outliers. One method to deal with outliers and that comes under the name "robust regression" uses the student t distribution as an error model (instead of the normal distribution.):
 
@@ -627,18 +686,18 @@ legend("topleft", lty = c(1,3),
 
 Because the density of the student t distribution is lower close to zero and higher longer away from zero, observed values that are far away from `mu` will have a larger likelihood and will this be less influential.
 
-The next figure shows that by using a student t error distribution, we can increase the likelihood of values far away from `mu`, decrease the likelihod of values close to `mu` and thus reduce the relative importance of the outlier values.
+The next figure shows that by using a student t error distribution, we can increase the likelihood of values far away from `mu`, decrease the likelihood of values close to `mu` and thus reduce the relative importance of the outlier values.
 
 ```{r warning = F}
-plot_influencial(q.B18)
-yhat = colMeans(link(q.B18,n = 1e4))
-sigma = coef(q.B18)["sigma"]
-PSISLOO = PSIS(q.B18, pointwise = TRUE, n = 5e4)
+plot_influencial(q.B6, xlim = c(min(q.B6@data$x),2.5), ylim = c(-.2,1.5))
+yhat = colMeans(link(q.B6,n = 1e4))
+sigma = coef(q.B6)["sigma"]
+PSISLOO = PSIS(q.B6, pointwise = TRUE, n = 5e4)
 xs = seq(-1,1,.01)
 d = dnorm(xs,0,sigma)/4
 ds = dstudent(xs,0,nu = 2, sigma)/4
 
-for (j in which(PSISLOO$k > .7)) {
+for (j in which(PSISLOO$k > .5)) {
   lines(d+x[j],xs+yhat[j], lty = 3)
   lines(ds+x[j],xs+yhat[j])
   lines(x = rep(x[j],2), y = c(min(xs), max(xs))+yhat[j], col = "grey")
@@ -650,37 +709,36 @@ Now lets re-estimate the data with a student-t error distribution. Here is the b
 ```{r class.source = "fold-show"}
 quap.spline.model = 
   alist(
-    y ~ dstudent(nu, mu, sigma),
+    y ~ dstudent(3, mu, sigma), # student-t errors
     mu <- X %*% b ,
-    nu <- 1 + dexp(1),
     b ~ dnorm(0,1),
     sigma ~ dnorm(.25,.1)
   )
 ```
 
 ```{r}
-q.B3 = 
+q.B3r = 
   quap(quap.spline.model,
        data = list(X = B3, y = y, x = x),
        start = list(b=rep(0, ncol(B3)), sigma = .1))
-q.B6 = 
+q.B6r = 
   quap(quap.spline.model,
        data = list(X = B6, y = y, x = x),
        start = list(b=rep(0, ncol(B6)), sigma = .1))
-q.B18 = 
+q.B18r = 
   quap(quap.spline.model,
        data = list(X = B18, y = y, x = x),
        start = list(b=rep(0, ncol(B18)), sigma = .1))
-q.LM = 
+q.LMr = 
   quap(quap.spline.model,
        data = list(X = LM, y = y, x = x),
        start = list(b=rep(0, ncol(LM)), sigma = .1))
 
 # work around a bug
-attr(q.B3,"nobs") = 50
-attr(q.B6,"nobs") = 50
-attr(q.B18,"nobs") = 50
-attr(q.LM,"nobs") = 50
+attr(q.B3r,"nobs") = 50
+attr(q.B6r,"nobs") = 50
+attr(q.B18r,"nobs") = 50
+attr(q.LMr,"nobs") = 50
 ```
 
 
@@ -688,19 +746,25 @@ attr(q.LM,"nobs") = 50
 And we compare the models again.
 
 ```{r}
-compare(q.B3,q.B6,q.B18,q.LM, func = "PSIS", n = 1e4) %>% round(2)
+compare(q.B3r,q.B6r,q.B18r,q.LMr, func = "PSIS", n = 25e3) %>% round(2)
 ```
 
-This time there are no warnings!
+This time there are no warnings and we can relatively safely conclude that the spline model with 3 or 6 knots, describes a non-linear relationship between y and x best.
 
 Here are the new models predictions:
 
 ```{r}
+par(mfrow = c(1,1), mar=c(3,3,.5,.5), mgp=c(1.25,.1,0), tck=-.01)
 plot(x,y, ylim = c(0,1.35), pch = 16)
-plot_preds(q.LM, add = TRUE, "orange")
-plot_preds(q.B3, add = TRUE, "blue")
-plot_preds(q.B6, add = TRUE, "purple")
-plot_preds(q.B18, add = TRUE, "violet")
+plot_preds(q.LMr, add = TRUE, "orange")
+plot_preds(q.B3r, add = TRUE, "blue")
+plot_preds(q.B6r, add = TRUE, "purple")
+plot_preds(q.B18r, add = TRUE, "violet")
+
+legend("topleft",
+       fill = c("orange","blue","purple","violet"),
+       legend = c("linear model", paste(c(3,6,18),"knots")),
+       bty = "n")
 ```
 
 
