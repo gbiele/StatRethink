@@ -97,11 +97,11 @@ Not that DAGs do not encode interaction effects by drawing an arrow from the mod
 Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
 
 ```{r class.source = 'fold-show'}
-set.seed(2)
+set.seed(3)
 N = 250
 SES = rnorm(N,mean = 5,1)
-A = rnorm(N,mean = 5,1)
-C = rnorm(N,mean = 5,1)
+A = rnorm(N,mean = 10,2)
+C = rnorm(N,mean = 10,2)
 E = rnorm(N, sd = 7)
 ```
 
@@ -137,7 +137,7 @@ And now we can simulate IQ values from using exogenous variables and derived wei
 
 ```{r class.source = 'fold-show'}
 IQ = b_C(SES)*C + b_A(SES)*A + 0*SES
-IQ = 65 + IQ*2 + E
+IQ = 65 + IQ + E
 ```
 
 If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plot:
@@ -198,9 +198,9 @@ IQ.A =
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a + b*(A - 5),
+      mu <- a + b*(A - 10),
       a ~ dnorm(100,5),
-      b ~ dnorm(0,8),
+      b ~ dnorm(0,2),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -210,10 +210,10 @@ Lets quickly look at the prior predictions to make sure the piors are OK.
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 prior <- extract.prior(IQ.A)
-A.seq <- seq(from=2,to=8,length.out=30)
+A.seq <- seq(from=floor(min(A)),to=ceiling(max(A)),length.out=30)
 mu <- link(IQ.A,post=prior,data=data.frame(A=A.seq))
 par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(0,type = "n", xlim = c(2,8), ylim = c(70,130), ylab = "IQ", xlab = "A")
+plot(0,type = "n", xlim = c(min(A),max(A)), ylim = c(70,130), ylab = "IQ", xlab = "A")
 matlines(A.seq,t(mu[1:100,]),type = "l", col = adjustcolor("blue", alpha = .5), lty = 1)
 ```
 
@@ -242,13 +242,14 @@ plot_mu.CIs(IQ.A, data.frame(A=A.seq), "blue", spaghetti = TRUE)
 To fit a model with a main effect of education, we use the indexing approach:
 
 ```{r class.source = 'fold-show'}
+set.seed(1)
 IQ.A_SES = 
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a[SES.c] + b*(A - 5),
+      mu <- a[SES.c] + b*(A - 10),
       a[SES.c] ~ dnorm(100,5),
-      b ~ dnorm(0,8),
+      b ~ dnorm(0,4),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -279,9 +280,9 @@ IQ.AxSES =
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a[SES.c] + b[SES.c]*(A - 5),
+      mu <- a[SES.c] + b[SES.c]*(A - 10),
       a[SES.c] ~ dnorm(100,5),
-      b[SES.c] ~ dnorm(0,8),
+      b[SES.c] ~ dnorm(0,2),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -334,4 +335,16 @@ hist(delta.b, xlim = range(c(0,delta.b)))
 abline(v = 0, lty = 2)
 abline(v = PI(delta.b,prob = c(.95)), col = "red")
 ```
+
+
+```{r class.source = 'fold-show'}
+precis(IQ.AxSES, depth = 2) %>% round(2)
+low.SES = which(SES < quantile(SES,.30))
+high.SES = which(SES > quantile(SES,.70))
+
+rbind(
+  b.low.SES = b_A(SES[low.SES]) %>% mean(), 
+  b.high.SES = b_A(SES[high.SES]) %>% mean())
+```
+
 
