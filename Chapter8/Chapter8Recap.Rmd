@@ -169,13 +169,17 @@ Lets plot the association between  $\small A$ and $\small IQ$ again, this time s
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 low.SES = dt$SES.c == 1
 high.SES = dt$SES.c == 2
-par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(IQ ~ A, data = dt, col = dt$SES.c, pch = 16, cex = .5,
-     ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
-legend("topleft", pch = 16, col = c("black","red"),
-       legend = c("low SES","high SES"), bty = "n")
-abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
-abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
+plot_data = function() {
+  par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+  plot(IQ ~ A, data = dt, col = dt$SES.c, pch = 16, cex = .5,
+       ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
+  legend("topleft", pch = 16, col = c("black","red"),
+         legend = c("low SES","high SES"), bty = "n")
+  
+}
+plot_data()
+#abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
+#abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
 ```
 
 We start with a simple linear regression and build successively more complex model. But first some intuitions on priors:
@@ -200,12 +204,23 @@ IQ.A =
 Lets quickly look at the pior predictions to make sure the piors are OK.
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-prior <-extract.prior(IQ.A)
-A <-seq(from=2,to=8,length.out=30)
-mu <-link(IQ.A,post=prior,data=data.frame(A=A))
+prior <- extract.prior(IQ.A)
+A.seq <- seq(from=2,to=8,length.out=30)
+mu <- link(IQ.A,post=prior,data=data.frame(A=A.seq))
 par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot(0,type = "n", xlim = c(2,8), ylim = c(70,130), ylab = "IQ", xlab = "A")
-matlines(A,t(mu[1:100,]),type = "l", col = adjustcolor("blue", alpha = .5), lty = 1)
+matlines(A.seq,t(mu[1:100,]),type = "l", col = adjustcolor("blue", alpha = .5), lty = 1)
 ```
 
 Yes, this looks good.
+
+Here are the posterior predictions:
+
+```{r}
+mu <- link(IQ.A,data=data.frame(A=A.seq))
+plot_data()
+lines(A.seq, colMeans(mu), col = "blue")
+CIs = apply(mu, 2, PI)
+
+```
+
