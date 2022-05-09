@@ -1,0 +1,211 @@
+---
+title: "Chapter 7: Recap"
+author: "Guido Biele"
+date: "27.04.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 22pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+source("../utils.R")
+```
+
+```{r, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
+```
+
+# Modeling interactions
+
+We are going to use the Scarr-Rowe effect (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
+
+This interaction can be visualized as follows:
+
+```{r fig.height=4, fig.width=5, fig.align = 'center', out.width="50%"}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
+heritability = c(scarce = 0.5, plentiful = 0.8)
+barplot(heritability, ylab = "heritability", ylim = c(0,1), xlab = "environment")
+```
+
+
+Here is a DAG that describes such a model, where
+
+- A = additive genetic effects
+- C = common effects in a family
+- E = idiosyncratic effects and measurement error
+
+and the Scarr-Rowe effect means the the coefficient of the path $\small A \rightarrow IQ$ depends on $\small SES$.
+
+```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="50%"}
+library(dagitty) 
+dag = dagitty(
+  "dag{
+  IQ;
+  A -> IQ;
+  C -> IQ;
+  E -> IQ;
+  SES -> IQ;
+  }")
+coord.list = 
+  list(
+    x=c(A=1,C=2,E=3,SES=2,IQ=2),
+    y=c(A=-1,C=-1,E=-1,SES=1,IQ=0))
+coordinates(dag) = coord.list
+drawdag(dag, cex = 1.5)
+```
+
+
+Not that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path. Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,C,E,SES)$, but it does not tell us what the function $f()$ is. This could be $\small IQ = A + C + E + SES$, $\small IQ = A \cdot C \cdot E + SES$ or $\small IQ = A \cdot SES + C \cdot SES + E$, or $\small IQ = A \cdot SES + log(C) \cdot SES + E$ or any imaginable function that uses the variables.
+
+Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
+
+```{r class.source = 'fold-show'}
+set.seed(12)
+N = 1000
+SES = rnorm(N,mean = 5,1)
+A = rnorm(N,mean = 5,1)
+C = rnorm(N,mean = 5,1)
+E = rnorm(N, sd = 5)
+```
+
+Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. For good measure, we also let the effect of the familial environment vary by SES.
+
+```{r class.source = 'fold-show', warning=FALSE, message=FALSE}
+library(boot)
+# we use inv.logit keep
+# weights is a range 0-1
+b_A = function(SES) 1 + inv.logit(SES-5)*3
+b_C = function(SES) inv.logit(-SES+5)
+
+```
+
+
+We are literally defining the weight for A as a function of SES. This is one way to understand interactions. Here is a visualization of the weights:
+
+```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="50%"}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
+curve(b_A(x),2,8, y = expression("effect size"~beta), 
+      xlab = "SES", ylim = c(0,4), col = "red")
+curve(b_C(x),2,8, xlab = "SES", add = T, col = "blue")
+text(c(5,5),
+     c(b_A(5), b_C(5)),
+     labels = c(expression(beta[A]),
+                expression(beta[C])), pos = 3)
+
+```
+In this plot the interaction is not encoded by the fact that $\small \beta_A$ and $\small \beta_C$ have different slopes, but by the fact that both have a slope in the first place. The figure shows two interactions, because the effect size for $\small A$ and $small C$ changes with SES.
+
+
+And now we can simulate IQ values from using exogenous variables and derived weights. We assume that IQ depends on familial factors $\small C$, additive genetic effects $\small A$ and $\small SES$:
+
+```{r class.source = 'fold-show'}
+IQ = b_C(SES)*C + b_A(SES)*A + .5*SES
+IQ = 65 + IQ*2 + E
+```
+
+If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plot:
+
+```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
+par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(SES,IQ, pch = 16, cex = .5,)
+abline(lm(IQ~SES))
+plot(A,IQ, pch = 16, cex = .5,)
+abline(lm(IQ~A))
+# plot(C,IQ)
+# abline(lm(IQ~C))
+```
+
+To run a simple interaction with a categorical interaction variable we use only a subset of our sample, the top and lower 20%, and code a categorical SES variables `SES.c`:
+
+```{r class.source = 'fold-show'}
+low.SES = which(SES < quantile(SES,.30))
+high.SES = which(SES > quantile(SES,.70))
+idx = c(low.SES,high.SES)
+dt = data.frame(A = A[idx],
+                C = C[idx],
+                IQ = IQ[idx],
+                SES = SES[idx],
+                SES.c = c(rep(1,length(low.SES)),
+                          rep(2,length(high.SES))))
+```
+
+
+Lets plot the association between  $\small A$ and $\small IQ$ again, this time split by SES:
+
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+low.SES = dt$SES.c == 1
+high.SES = dt$SES.c == 2
+par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(IQ ~ A, data = dt, col = dt$SES.c, pch = 16, cex = .5,
+     ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
+legend("topleft", pch = 16, col = c("black","red"),
+       legend = c("low SES","high SES"), bty = "n")
+abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
+abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
+```
+
+We start with a simple linear regression and build successively more complex model. But first some intuitions on priors:
+
+- Eyeballing the data, we see that the IQ at an average $\small A$ of 5 is around 100, so we use a prior `a ~ dnorm(100,5)`
+- The range of $\small A$ is 8-2 = 6 and the range of IQ = 130-80 = 50. So for a one unit increase of $\small A$, IQ changes around 50/6 = 8. If we want that an effect of +/-8 is at 1 sd of the pior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,9)`. This prior allows for the possibility of a negative effect of $\small A$. Note that for this prior to work
+- Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.25)` 
+
+```{r class.source = 'fold-show'}
+IQ.A = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + b*(A - 5),
+      a ~ dnorm(100,5),
+      b ~ dnorm(0,8),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+```
+
+Lets quickly look at the pior predictions to make sure the piors are OK.
+
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+prior <-extract.prior(IQ.A)
+A <-seq(from=2,to=8,length.out=30)
+mu <-link(IQ.A,post=prior,data=data.frame(A=A))
+par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(0,type = "n", xlim = c(2,8), ylim = c(70,130), ylab = "IQ", xlab = "A")
+matlines(A,t(mu[1:100,]),type = "l", col = adjustcolor("blue", alpha = .5), lty = 1)
+```
+
+Yes, this looks good.
