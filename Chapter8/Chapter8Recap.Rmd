@@ -51,6 +51,9 @@ par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 
 # Modeling interactions
 
+
+## Scarr-Rowe
+
 We are going to use the Scarr-Rowe effect (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
 
 This interaction can be visualized as follows:
@@ -94,12 +97,12 @@ Not that DAGs do not encode interaction effects by drawing an arrow from the mod
 Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
 
 ```{r class.source = 'fold-show'}
-set.seed(12)
-N = 1000
+set.seed(2)
+N = 250
 SES = rnorm(N,mean = 5,1)
 A = rnorm(N,mean = 5,1)
 C = rnorm(N,mean = 5,1)
-E = rnorm(N, sd = 5)
+E = rnorm(N, sd = 7)
 ```
 
 Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. For good measure, we also let the effect of the familial environment vary by SES.
@@ -133,7 +136,7 @@ In this plot the interaction is not encoded by the fact that $\small \beta_A$ an
 And now we can simulate IQ values from using exogenous variables and derived weights. We assume that IQ depends on familial factors $\small C$, additive genetic effects $\small A$ and $\small SES$:
 
 ```{r class.source = 'fold-show'}
-IQ = b_C(SES)*C + b_A(SES)*A + .5*SES
+IQ = b_C(SES)*C + b_A(SES)*A + 0*SES
 IQ = 65 + IQ*2 + E
 ```
 
@@ -178,9 +181,11 @@ plot_data = function() {
   
 }
 plot_data()
-#abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
-#abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
+abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
+abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
 ```
+
+## Simple linear regression
 
 We start with a simple linear regression and build successively more complex model. But first some intuitions on priors:
 
@@ -201,7 +206,7 @@ IQ.A =
     data=dt)
 ```
 
-Lets quickly look at the pior predictions to make sure the piors are OK.
+Lets quickly look at the prior predictions to make sure the piors are OK.
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 prior <- extract.prior(IQ.A)
@@ -216,11 +221,117 @@ Yes, this looks good.
 
 Here are the posterior predictions:
 
-```{r}
-mu <- link(IQ.A,data=data.frame(A=A.seq))
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 plot_data()
-lines(A.seq, colMeans(mu), col = "blue")
-CIs = apply(mu, 2, PI)
+plot_mu.CIs = function(q.fit,data,col = "black", spaghetti = FALSE) {
+  mu = link(q.fit,data=data)
+  lines(A.seq, colMeans(mu), col =  col)
+  if (spaghetti == F) {
+    CIs = apply(mu, 2, PI)
+    shade(CIs,A.seq,col = adjustcolor(col,alpha = .25))
+  } else {
+    matlines(A.seq,t(mu[1:250,]),col = adjustcolor(col,alpha = .05),lty = 1)
+  }
+  
+}
+plot_mu.CIs(IQ.A, data.frame(A=A.seq), "blue", spaghetti = TRUE)
+```
 
+## Linear regression with category-main effect
+
+To fit a model with a main effect of education, we use the indexing approach:
+
+```{r class.source = 'fold-show'}
+IQ.A_SES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a[SES.c] + b*(A - 5),
+      a[SES.c] ~ dnorm(100,5),
+      b ~ dnorm(0,8),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+```
+
+
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+plot_data()
+plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 1), "black")
+plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 2), "red")
+```
+
+We can see already from the plot the the model with separate means for high and low SES is better. But here is the comparison with PSIS-LOO:
+
+```{r}
+compare(
+  IQ.A,IQ.A_SES,
+  func = "PSIS") %>% 
+  round(2)
+```
+
+## Linear regression with category-main effect and category-slope
+
+Lastly, we can also let the slopes vary by SES: 
+
+```{r class.source = 'fold-show'}
+IQ.AxSES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a[SES.c] + b[SES.c]*(A - 5),
+      a[SES.c] ~ dnorm(100,5),
+      b[SES.c] ~ dnorm(0,8),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+```
+
+And again the posterior predictions: 
+
+```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
+par(mfrow = c(1,2), mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(IQ ~ A, data = dt[dt$SES.c == 1,], pch = 16, cex = .5, main = "low SES",
+       ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
+plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black")
+plot(IQ ~ A, data = dt[dt$SES.c == 2,], col = "red", pch = 16, cex = .5, main = "high SES",
+       ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
+plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red")
+```
+
+```{r}
+compare(
+  IQ.A, IQ.A_SES, IQ.AxSES,
+  func = "PSIS") %>% 
+  round(2)
+```
+
+We get a warning about Pareto k values being higher than 0.5, but it is (more or less) OK if k is not larger than 0.7 or 1.
+
+So how can we figure out if the difference in slopes is reliably larger than 0? We simply extract posteriors and make some calculations with them:
+
+```{r}
+post = extract.samples(IQ.AxSES)
+names(post)
+head(post$b)
+```
+We simply calculate the differences of the two b parameters:
+
+```{r}
+delta.b = post$b[,2]-post$b[,1]
+```
+
+And now we can show e.g. mean and PIs:
+
+```{r}
+c(mean = mean(delta.b),
+  PI(delta.b,prob = c(.9)))
+```
+And we can plot a histogram of the contrast:
+
+```{r}
+hist(delta.b, xlim = range(c(0,delta.b)))
+abline(v = 0, lty = 2)
+abline(v = PI(delta.b,prob = c(.95)), col = "red")
 ```
 
