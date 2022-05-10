@@ -1,7 +1,7 @@
 ---
 title: "Chapter 7: Recap"
 author: "Guido Biele"
-date: "27.04.2022"
+date: "11.05.2022"
 output:
   html_document: 
     mathjax: default
@@ -49,7 +49,7 @@ source("../utils.R")
 par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 ```
 
-# Modeling interactions
+# Categorial interactions
 
 
 ## Scarr-Rowe
@@ -58,10 +58,13 @@ We are going to use the Scarr-Rowe effect (or hypothesis) to look more closely o
 
 This interaction can be visualized as follows:
 
-```{r fig.height=4, fig.width=5, fig.align = 'center', out.width="50%"}
+```{r fig.height=5, fig.width=5, fig.align = 'center', out.width="50%"}
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 heritability = c(scarce = 0.5, plentiful = 0.8)
-barplot(heritability, ylab = "heritability", ylim = c(0,1), xlab = "environment")
+barplot(heritability,
+        ylim = c(0,1),
+        xlab = "environment",
+        ylab = "heritability (effect of genes)")
 ```
 
 
@@ -92,7 +95,21 @@ drawdag(dag, cex = 1.5)
 ```
 
 
-Not that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path. Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,C,E,SES)$, but it does not tell us what the function $f()$ is. This could be $\small IQ = A + C + E + SES$, $\small IQ = A \cdot C \cdot E + SES$ or $\small IQ = A \cdot SES + C \cdot SES + E$, or $\small IQ = A \cdot SES + log(C) \cdot SES + E$ or any imaginable function that uses the variables.
+**Note that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path.** Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,C,E,SES)$, but it does not tell us what the function $f()$ is. 
+
+This could be 
+
+- $\small IQ = A + C + E + SES$, 
+- $\small IQ = A\,C\,E + SES$ or 
+- $\small IQ = A \, SES + C \, SES + E$,
+- $\small IQ = A \, SES + log(C) \, SES + E$ 
+- ...
+
+or any other imaginable function that uses the variables. The model we have in mind now is:
+
+$$
+IQ =  f_1(SES) A + f_2(SES) C + E
+$$
 
 Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
 
@@ -109,8 +126,7 @@ Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of 
 
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE}
 library(boot)
-# we use inv.logit keep
-# weights is a range 0-1
+# we use inv.logit keep to give weights a lower and upper bound
 b_A = function(SES) 1 + inv.logit(SES-5)*3
 b_C = function(SES) inv.logit(-SES+5)
 
@@ -130,14 +146,15 @@ text(c(5,5),
                 expression(beta[C])), pos = 3)
 
 ```
-In this plot the interaction is not encoded by the fact that $\small \beta_A$ and $\small \beta_C$ have different slopes, but by the fact that both have a slope in the first place. The figure shows two interactions, because the effect size for $\small A$ and $small C$ changes with SES.
+In this plot, the interaction is not encoded by the fact that $\small \beta_A$ and $\small \beta_C$ have different slopes, but by the fact that both have a slope in the first place. The figure shows two interactions, because the effect size for $\small A$ and $\small C$ changes with SES.
 
 
-And now we can simulate IQ values from using exogenous variables and derived weights. We assume that IQ depends on familial factors $\small C$, additive genetic effects $\small A$ and $\small SES$:
+And now we can simulate IQ values using exogenous variables and derived weights. We assume that IQ depends on familial factors $\small C$, additive genetic effects $\small A$: $\small IQ =  f_1(SES) A + f_2(SES) C + E$. Lets simulate data from this model:
 
 ```{r class.source = 'fold-show'}
-IQ = b_C(SES)*C + b_A(SES)*A + 0*SES
-IQ = 65 + IQ + E
+# Adding 70 to get an IQ around 100
+IQ = 70 + b_C(SES)*C + b_A(SES)*A + E
+hist(IQ)
 ```
 
 If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plot:
@@ -145,25 +162,26 @@ If we just look at the bivariate associations between  $\small A$ or $\small SES
 ```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
 par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot(SES,IQ, pch = 16, cex = .5,)
-abline(lm(IQ~SES))
+#abline(lm(IQ~SES))
 plot(A,IQ, pch = 16, cex = .5,)
-abline(lm(IQ~A))
+#abline(lm(IQ~A))
 # plot(C,IQ)
 # abline(lm(IQ~C))
 ```
 
-To run a simple interaction with a categorical interaction variable we use only a subset of our sample, the top and lower 20%, and code a categorical SES variables `SES.c`:
+To run a simple interaction with a categorical interaction variable we use only a subset of our sample, the top and lower 30%, and code a categorical SES variables `SES.c`:
 
 ```{r class.source = 'fold-show'}
 low.SES = which(SES < quantile(SES,.30))
 high.SES = which(SES > quantile(SES,.70))
 idx = c(low.SES,high.SES)
-dt = data.frame(A = A[idx],
-                C = C[idx],
-                IQ = IQ[idx],
-                SES = SES[idx],
-                SES.c = c(rep(1,length(low.SES)),
-                          rep(2,length(high.SES))))
+dt = data.frame(
+  A = A[idx],
+  C = C[idx],
+  IQ = IQ[idx],
+  SES = SES[idx],
+  SES.c = c(rep(1,length(low.SES)),
+            rep(2,length(high.SES))))
 ```
 
 
@@ -172,7 +190,7 @@ Lets plot the association between  $\small A$ and $\small IQ$ again, this time s
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 low.SES = dt$SES.c == 1
 high.SES = dt$SES.c == 2
-plot_data = function() {
+plot_data = function(dt) {
   par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
   plot(IQ ~ A, data = dt, col = dt$SES.c, pch = 16, cex = .5,
        ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
@@ -180,17 +198,19 @@ plot_data = function() {
          legend = c("low SES","high SES"), bty = "n")
   
 }
-plot_data()
-abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
-abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
+plot_data(dt)
+#abline(lm(IQ ~ A, data = dt[low.SES,]), col = "black")
+#abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
 ```
+
+Next, we estimate some linear regression models with increasing complexity, our goal being to have a model that accurately depicts the effect of A, C, E, and SES on the IQ.
 
 ## Simple linear regression
 
-We start with a simple linear regression and build successively more complex model. But first some intuitions on priors:
+We start with a simple linear regression. But first some intuitions on priors:
 
-- Eyeballing the data, we see that the IQ at an average $\small A$ of 5 is around 100, so we use a prior `a ~ dnorm(100,5)`
-- The range of $\small A$ is 8-2 = 6 and the range of IQ = 130-80 = 50. So for a one unit increase of $\small A$, IQ changes around 50/6 = 8. If we want that an effect of +/-8 is at 1 sd of the pior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,9)`. This prior allows for the possibility of a negative effect of $\small A$. Note that for this prior to work
+- Eyeballing the data, we see that the IQ at an average $\small A$ of 10 is around 100, so we use a prior `a ~ dnorm(100,5)`
+- The range of $\small A$ is 16-6 = 10 and the range of IQ = 120-80 = 40. So for a one unit increase of $\small A$, IQ changes around 40/10 = 4. If we want that an effect of +/-4 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,4)`. This prior allows for the possibility of a negative effect of $\small A$. Note that for this prior to work
 - Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.25)` 
 
 ```{r class.source = 'fold-show'}
@@ -200,7 +220,7 @@ IQ.A =
       IQ ~ dnorm(mu,sigma),
       mu <- a + b*(A - 10),
       a ~ dnorm(100,5),
-      b ~ dnorm(0,2),
+      b ~ dnorm(0,4),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -208,13 +228,22 @@ IQ.A =
 
 Lets quickly look at the prior predictions to make sure the piors are OK.
 
-```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-prior <- extract.prior(IQ.A)
-A.seq <- seq(from=floor(min(A)),to=ceiling(max(A)),length.out=30)
-mu <- link(IQ.A,post=prior,data=data.frame(A=A.seq))
+```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+prior = extract.prior(IQ.A)
+A.seq = seq(from=0,to=20,length.out=50)
+mu = link(
+  IQ.A,
+  post=prior,
+  data=data.frame(A=A.seq))
+
 par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(0,type = "n", xlim = c(min(A),max(A)), ylim = c(70,130), ylab = "IQ", xlab = "A")
-matlines(A.seq,t(mu[1:100,]),type = "l", col = adjustcolor("blue", alpha = .5), lty = 1)
+plot(
+  0,type = "n", ylab = "IQ", xlab = "A", 
+  xlim = c(min(A),max(A)),
+  ylim = c(70,130))
+matlines(
+  A.seq,t(mu[1:100,]),type = "l", lty = 1,
+  col = adjustcolor("blue", alpha = .5))
 ```
 
 Yes, this looks good.
@@ -222,18 +251,7 @@ Yes, this looks good.
 Here are the posterior predictions:
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-plot_data()
-plot_mu.CIs = function(q.fit,data,col = "black", spaghetti = FALSE) {
-  mu = link(q.fit,data=data)
-  lines(A.seq, colMeans(mu), col =  col)
-  if (spaghetti == F) {
-    CIs = apply(mu, 2, PI)
-    shade(CIs,A.seq,col = adjustcolor(col,alpha = .25))
-  } else {
-    matlines(A.seq,t(mu[1:250,]),col = adjustcolor(col,alpha = .05),lty = 1)
-  }
-  
-}
+plot_data(dt)
 plot_mu.CIs(IQ.A, data.frame(A=A.seq), "blue", spaghetti = TRUE)
 ```
 
@@ -257,7 +275,7 @@ IQ.A_SES =
 
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-plot_data()
+plot_data(dt)
 plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 1), "black")
 plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 2), "red")
 ```
@@ -290,15 +308,16 @@ IQ.AxSES =
 
 And again the posterior predictions: 
 
-```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
-par(mfrow = c(1,2), mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(IQ ~ A, data = dt[dt$SES.c == 1,], pch = 16, cex = .5, main = "low SES",
-       ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot_data(dt)
 plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black")
-plot(IQ ~ A, data = dt[dt$SES.c == 2,], col = "red", pch = 16, cex = .5, main = "high SES",
-       ylim = range(dt$IQ), ylab = "IQ", xlab = "A")
 plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red")
 ```
+
+Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because our model puts the intercept at A = 10, whereas it was A = 0 in the DGP.
+
+Here is a comparison of all the models we have fit:
 
 ```{r}
 compare(
@@ -328,6 +347,7 @@ And now we can show e.g. mean and PIs:
 c(mean = mean(delta.b),
   PI(delta.b,prob = c(.9)))
 ```
+
 And we can plot a histogram of the contrast:
 
 ```{r}
@@ -336,15 +356,228 @@ abline(v = 0, lty = 2)
 abline(v = PI(delta.b,prob = c(.95)), col = "red")
 ```
 
+To see if our results are reasonable, lets compare our estimated parameters with the parameters governing the DGP. First the model parameters: 
 
 ```{r class.source = 'fold-show'}
 precis(IQ.AxSES, depth = 2) %>% round(2)
+```
+
+Now the parameters from the DGP:
+
+```{r class.source = 'fold-show'}
 low.SES = which(SES < quantile(SES,.30))
 high.SES = which(SES > quantile(SES,.70))
-
 rbind(
   b.low.SES = b_A(SES[low.SES]) %>% mean(), 
   b.high.SES = b_A(SES[high.SES]) %>% mean())
 ```
 
+We are not recovering the exact parameters, after all we used a _golem_ instead of a model that depicts the DGP, but qualitatively the results are consistent with the DGP.
+
+## Symetric interactions
+
+Earlier, we described this function.
+
+$$
+IQ =  f_1(SES) A + ...
+$$
+
+By saying that the effect $\small A$ is a function of $\small SES$. However, we really just have to variables: $\small A$ and $\small f_1(SES)$ which are multiplied with each other. Therefore, these statements are equivalent:
+
+- The effect of $\small A$ depends on $\small f_1(SES)$
+- The effect of $\small f_1(SES)$ depends on $\small A$
+
+Accordingly, we can also plot the difference between high and low $\small SES$ as a function of $\small A$:
+
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+A.seq = seq(from=5,to=16,length.out=30)
+mu.low = link(IQ.AxSES,data=data.frame(SES.c=1,A=A.seq))
+mu.high = link(IQ.AxSES,data=data.frame(SES.c=2,A=A.seq))
+delta = mu.high-mu.low
+CIs = apply(delta,2,PI)
+par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(A.seq, colMeans(delta),'l',
+     ylim = range(CIs),
+     col = "blue",
+     xlab = "A",
+     ylab = expression(IQ[high~SES]~-~IQ[low~SES]))
+shade(CIs,A.seq, col = adjustcolor("blue", alpha = .25))
+abline(h = 0, lty = 2)
+text(12,0,"higher IQ with lower SES", pos = 1, adj = 0)
+text(12,0,"higher IQ with higher SES", pos = 3, adj = 0)
+```
+
+# Continuous interactions
+
+We are continuing with our simulated Scarr-Rowe data set, but this time we use the full data and formulate a continuous interaction.
+
+```{r}
+dt = data.frame(
+  A = A,
+  C = C,
+  IQ = IQ,
+  SES = SES)
+```
+
+## Plotting the data
+
+You can try it the fancy way and make a 3d plot, but in this instance its a lot of effort for meager results:
+
+```{r fig.height=6, fig.width=6, fig.align = 'center', out.width="100%"}
+library(plot3D)
+points3D(A,SES,IQ, type = "h",
+         col = "black",
+         cex = .75,
+         lty = 3,
+         pch = 16,
+         phi = 20,
+         theta = 45,
+         xlab = "A",
+         ylab = "SES",
+         zlab = "IQ")
+```
+
+A panel of 2d plots does the job better, and will later allow to display uncertainty.
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+qs = quantile(SES, probs = seq(0,1,.25))
+par(mfrow = c(1,4), mar=c(2.5,2.5,2,.5), mgp=c(1.5,.5,0), tck=-.01)
+for (k in 2:length(qs)) {
+  idx = which(dt$SES > qs[k-1] & dt$SES < qs[k])
+  tmp.dt = dt[idx,]
+  with(tmp.dt,
+       plot(IQ~A, pch = 16, main = paste0(k-1,". quantile SES"),
+       ylim = range(dt$IQ), xlim = range(dt$A)))
+}
+  
+```
+
+
+## Simple linear regression
+
+Following the specification of our DGP, we can now describe interaction in the `quap` model as a simple multiplication:
+
+```{r class.source = 'fold-show'}
+IQc.A_SES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + ba*(A - 10) + bs*(SES - 2.5),
+      a ~ dnorm(100,10),
+      ba ~ dnorm(0,4),
+      bs ~ dnorm(0,4),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+```
+
+We are using prior predictions to check if the model does a good job:
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+plot.pred(IQc.A_SES,dt, type = "prior")
+```
+This is pretty wild. Lets try a bit narrowers priors:
+
+```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+set.seed(1)
+IQc.A_SES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + ba*(A - 10) + bs*(SES - 2.5),
+      a ~ dnorm(100,7.5),
+      ba ~ dnorm(0,2),
+      bs ~ dnorm(0,2),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+plot.pred(IQc.A_SES,dt, type = "prior")
+```
+
+These priors are reasonable, so we look at the predictions:
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+plot.pred(IQc.A_SES,dt)
+```
+
+As expected from the model we specified, all slopes are the same. Note that the different "intercepts" we seem to come from this part of the model: `mu <- ... + bs*(SES - 2.5),`.
+
+## Linear regression with main effects and interaction
+
+The model is similar to the previous, but adds this interaction term: `bsa*(A - 10)*(SES - 2.5)`.
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
+IQc.AxSES.m = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + ba*(A - 10) + bs*(SES - 2.5) + bsa*(A - 10)*(SES - 2.5),
+      a ~ dnorm(100,7.5),
+      ba ~ dnorm(0,2),
+      bs ~ dnorm(0,2),
+      bsa ~ dnorm(0,1),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+plot.pred(IQc.AxSES.m,dt, type = "prior")
+```
+This priors look OK (even though slopes become extreme at high SES values), so we plot the model predictions:
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+plot.pred(IQc.AxSES.m,dt)
+```
+
+## Linear regression with only interaction
+
+Here we have removed the main effects `ba*(A - 10) + bs*(SES - 2.5)` from the previous model.
+
+```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
+IQc.AxSES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + bsa*(A - 10)*(SES - 2.5),
+      a ~ dnorm(100,7.5),
+      bsa ~ dnorm(0,2),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+plot.pred(IQc.AxSES,dt, type = "prior")
+```
+
+Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions:
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+plot.pred(IQc.AxSES,dt)
+```
+This model cannot capture that the average IQ is higher at higher SES values. The next model adresses this:
+
+## Linear regression with SES main effect and interaction
+
+```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+IQc.AxSES.mSES = 
+  quap(
+    alist(
+      IQ ~ dnorm(mu,sigma),
+      mu <- a + bs*(SES - 2.5) + bsa*(A - 10)*(SES - 2.5),
+      a ~ dnorm(100,7.5),
+      bsa ~ dnorm(0,2),
+      bs ~ dnorm(0,2),
+      sigma ~ dexp(.5)
+    ),
+    data=dt)
+plot.pred(IQc.AxSES.mSES,dt, type = "prior")
+```
+
+Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions:
+
+```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
+plot.pred(IQc.AxSES.mSES,dt)
+```
+
+## Model comparison
+
+```{r}
+compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES,IQc.AxSES.mSES)
+```
 

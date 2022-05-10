@@ -45,3 +45,40 @@ R2.qf = function(quap_fit,dt,out.var = as.character(quap_fit@formula[[1]])[2]){
   r = apply(s,2,mean)-dt[,out.var]
   1 -var2(r)/var2(dt[,out.var])
 }
+
+plot_mu.CIs = function(q.fit,data,col = "black", spaghetti = FALSE, type = "posterior") {
+  if (type == "posterior") {
+    mu = link(q.fit,data=data)
+    lines(data$A, colMeans(mu), col =  col)
+  } else {
+    mu = link(q.fit,data=data, post = extract.prior(q.fit))
+    spaghetti = TRUE
+  }
+  if (spaghetti == F) {
+    CIs = apply(mu, 2, PI)
+    shade(CIs,data$A,col = adjustcolor(col,alpha = .25))
+  } else {
+    alpha = ifelse(type == "posterior",.05,.75)
+    N.s = ifelse(type == "posterior",250,50)
+    matlines(data$A,t(mu[1:N.s,]),col = adjustcolor(col,alpha = alpha),lty = 1)
+  }
+}
+
+plot.pred = function(q.fit, dt, type = "posterior") {
+  qs = quantile(SES, probs = seq(0,1,.25))
+  par(mfrow = c(1,4), mar=c(2.5,2.5,2,.5), mgp=c(1.5,.5,0), tck=-.01)
+  for (k in 2:length(qs)) {
+    idx = which(dt$SES > qs[k-1] & dt$SES < qs[k])
+    tmp.dt = dt[idx,]
+    with(tmp.dt,
+         plot(IQ~A, pch = 16, main = paste0(k-1,". quantile SES"),
+              ylim = range(dt$IQ), xlim = range(dt$A)))
+    plot_mu.CIs(q.fit,
+                data = 
+                  data.frame(A = seq(2,20,.5),
+                             C = seq(2,20,.5),
+                             SES = mean(dt[idx,"SES"])),
+                col = "blue",
+                type = type)
+  }
+}
