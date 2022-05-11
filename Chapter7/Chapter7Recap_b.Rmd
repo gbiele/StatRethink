@@ -53,7 +53,7 @@ par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 
 Model comparison (done correctly) helps to choose the model that provides a good representation of the true DGP by penalizing models that **overfit**. This penalization is achieved mainly by assessing "fit" not on a training data set, but on a hold out test data set.
 
-# A visualization
+## A visualization
 A complementary approach to work against _overfitting_ is to specify priors that shrink model coefficients towards zero. Such shrinkage priors are typically 
 
 - normally distributed, 
@@ -812,6 +812,8 @@ my.WAIC = -2*( sum(lppd) - sum(pWAIC))
 
 ## M6
 
+To illustrate, lets fit these data with a narrow prior and a wider prior.
+
 ```{r, echo = F}
 set.seed(5)
 y = (rnorm(15) %>% scale()) + 1
@@ -867,4 +869,9 @@ legend("topright",
 mtext("Posterior", line = -2, adj = .05)
 ```
 
+At mu values with a higher density the prior with the small standard deviation is close to zero, and the posterior is dominated by the prior (multiplying the prior with a number close to zero results in posterior close to zero.)
+
+Conversely, the prior density of the narrow prior is so large, that we are still see a (weak) signal of the prior at mu values that are close to zero.
+
+In sum, a very narrow prior overwhelms information in a small data set.
 
