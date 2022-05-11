@@ -310,13 +310,13 @@ Even though the DGP does not have different "intercepts" for high and log SES, w
 
 Here is a comparison of all the models we have fit:
 
-```{r}
+```{r class.source = 'fold-show'}
 compare(
   IQ.A, IQ.A_SES, IQ.AxSES,
   func = "PSIS") %>% 
   round(2)
 ```
-```{r}
+```{r class.source = 'fold-show'}
 compare(
   IQ.A, IQ.A_SES, IQ.AxSES,
   func = "WAIC") %>% 
@@ -330,22 +330,22 @@ While the correct model has the best PSIS and WAIC value, for the top two models
 How can we figure out if the difference in slopes is reliably larger than 0? We simply extract posteriors and calculate the difference in slopes from them:
 
 
-```{r}
+```{r class.source = 'fold-show'}
 # extract posterior
 post = extract.samples(IQ.AxSES)
 names(post)
 head(post$b)
 ```
+
 We simply calculate the differences of the two b parameters:
 
-```{r}
-# calculate difference
+```{r class.source = 'fold-show'}
 delta.b = post$b[,2]-post$b[,1]
 ```
 
 And now we can show e.g. mean and PIs:
 
-```{r}
+```{r class.source = 'fold-show'}
 c(mean = mean(delta.b),
   PI(delta.b,prob = c(.9))) %>% 
   round(2)
@@ -465,7 +465,13 @@ plot(A,IQ, pch = 16, cex = .5,)
 ```
 
 
-In preparation of the interaction model we are not centering $\small SES$, but we are re-scaling it to have a minimum just above 0. If we would center to zero, below zero SES values would predict a negative additive genetic effect.
+In preparation for the interaction model we are not centering $\small SES$, but we are re-scaling it to have a minimum just above 0. If we would center to zero, below zero SES values would predict a negative additive genetic effect.
+
+The simple linear model can be descried as follows (omitting indicators $_i$ for individuals):
+
+$$
+\mu = \alpha + \beta_{A}A + \beta_{S}SES
+$$
 
 ```{r class.source = 'fold-show'}
 IQc.A_SES = 
@@ -515,19 +521,52 @@ As expected from the model we specified, all slopes are the same. Note that the 
 
 ## Linear regression with main effects and interaction
 
-The model is similar to the previous, but adds this interaction term: `bsa*(A - 10)*(SES - 2.5)`.
+If we want to model an interaction effect, we want to model that the effects of $\small A$ and $\small SES$ depend on each other. Broadly, we want to implement 
 
+$$
+\gamma_A = f(SES)
+$$
+
+if we assume the $\small f(SES)$ is a linear function, we are saying that
+
+$$
+\gamma_A = \beta_A + \beta_{AS}SES
+$$
+
+Here, $\small \beta_A$ is the intercept for the effect of $\small A$, i.e. the effect of $\small A$ when $\small SES = 0$. If knew that the effect of $\small A$ has to be zero when $\small SES = 0$, we could ommit the $\small \beta_A$
+
+Now lets think back to our original regression, with slightly modified notations
+
+$$
+\mu = \alpha + \gamma_{A}A + \beta_{S}SES
+$$
+
+We can just plug in $\small (\beta_A + \beta_{AS}SES)$ in place of $\small \gamma_a$:
+
+$$
+\mu = \alpha + (\beta_A + \beta_{AS}SES)A + \beta_{S}SES
+$$
+
+and if we multiply out the brackets, we get
+
+$$
+\mu = \alpha + \beta_A A + \beta_{S}SES + \beta_{AS}SES \, A
+$$
+
+which is the standard interaction model with 2 main effects.
+
+The `quap` model is then similar to the previous, but adds this interaction term: `bas*(A - 10)*(SES - 2.5)`.
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
 IQc.AxSES.m = 
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a + ba*(A - 10) + bs*(SES - 2.5) + bsa*(A - 10)*(SES - 2.5),
+      mu <- a + ba*(A - 10) + bs*(SES - 2.5) + bas*(A - 10)*(SES - 2.5),
       a ~ dnorm(100,7.5),
       ba ~ dnorm(0,2),
       bs ~ dnorm(0,2),
-      bsa ~ dnorm(0,1),
+      bas ~ dnorm(0,1),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -549,9 +588,9 @@ plot.pred(IQc.AxSES.m,dt)
 <!--   quap( -->
 <!--     alist( -->
 <!--       IQ ~ dnorm(mu,sigma), -->
-<!--       mu <- a + bsa*(A - 10)*(SES - 2.5), -->
+<!--       mu <- a + bas*(A - 10)*(SES - 2.5), -->
 <!--       a ~ dnorm(100,7.5), -->
-<!--       bsa ~ dnorm(0,2), -->
+<!--       bas ~ dnorm(0,2), -->
 <!--       sigma ~ dexp(.5) -->
 <!--     ), -->
 <!--     data=dt) -->
@@ -565,37 +604,37 @@ plot.pred(IQc.AxSES.m,dt)
 <!-- ``` -->
 <!-- This model cannot capture that the average IQ is higher at higher SES values. The next model addresses this: -->
 
-## Linear regression with SES main effect and interaction
+<!-- ## Linear regression with SES main effect and interaction -->
 
-```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
-IQc.AxSES.mSES = 
-  quap(
-    alist(
-      IQ ~ dnorm(mu,sigma),
-      mu <- a + bs*(SES - 2.5) + bsa*(A - 10)*(SES - 2.5),
-      a ~ dnorm(100,7.5),
-      bsa ~ dnorm(0,2),
-      bs ~ dnorm(0,2),
-      sigma ~ dexp(.5)
-    ),
-    data=dt)
-#plot.pred(IQc.AxSES.mSES,dt, type = "prior")
-```
+<!-- ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
+<!-- IQc.AxSES.mSES =  -->
+<!--   quap( -->
+<!--     alist( -->
+<!--       IQ ~ dnorm(mu,sigma), -->
+<!--       mu <- a + bs*(SES - 2.5) + bas*(A - 10)*(SES - 2.5), -->
+<!--       a ~ dnorm(100,7.5), -->
+<!--       bas ~ dnorm(0,2), -->
+<!--       bs ~ dnorm(0,2), -->
+<!--       sigma ~ dexp(.5) -->
+<!--     ), -->
+<!--     data=dt) -->
+<!-- #plot.pred(IQc.AxSES.mSES,dt, type = "prior") -->
+<!-- ``` -->
 
-Here are the model predictions:
+<!-- Here are the model predictions: -->
 
-```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
-plot.pred(IQc.AxSES.mSES,dt)
-```
+<!-- ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
+<!-- plot.pred(IQc.AxSES.mSES,dt) -->
+<!-- ``` -->
 
 ## Model comparison
 
 ```{r class.source = 'fold-show'}
-compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES.mSES, func = "WAIC") %>% round(1)
+compare(IQc.A_SES,IQc.AxSES.m, func = "WAIC") %>% round(1)
 ```
 
 ```{r class.source = 'fold-show'}
-compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES.mSES, func = "PSIS") %>% round(1)
+compare(IQc.A_SES,IQc.AxSES.m, func = "PSIS") %>% round(1)
 ```
 PSIS and WAIC correctly identify the interaction model, and the difference is clearer compared to the categorical interaction, which used only a subset of the data and through way information by dichotomizing.
 
@@ -603,7 +642,7 @@ PSIS and WAIC correctly identify the interaction model, and the difference is cl
 ```{r fig.align = 'center', warning=FALSE, message=FALSE}
 library(akima)
 library(plotly)
-mu = link(IQc.AxSES.mSES)
+mu = link(IQc.AxSES.m)
 s = interp(dt$A,dt$SES,colMeans(mu))
 names(s) = c("A","SES","IQ")
 fig = with(
