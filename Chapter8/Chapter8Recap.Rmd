@@ -47,7 +47,7 @@ source("../utils.R")
 
 # The Scarr-Rowe effect
 
-We are going to use the Scarr-Rowe effect (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
+We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%E2%80%93Rowe_effect) (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
 
 This interaction can be visualized as follows:
 
@@ -673,17 +673,21 @@ fig =
 fig
 ```
 
+## Scarr-Rowe effect: Latest results
+
+![Giagrande 2019: Scarr-Rowe effect](Giagrande_ScarrRoweEffect.png)
+
 # Excersices
 
-Here is a listof which group should present which exercises:
+Here is a list of which group should present which exercises:
 
-- E1: No Priors 
-- E2: Outliers / Average Joes / Aspiring Golem engineers / Statistical Owls: Question 
-- E3: Bayesic B’s / No Priors
-- M1: Statistical Owls / Average Joes / Golems posterior
-- M2: Paranormal distribution / No Prios / Average Joes
-- M3: Team Marbles / Bayesic B’s / Statistical Owls
-- M4: Golem’s Posterior / (Probably) Aspiring Golem Engineers / Team Marbles / Statistical Owls
+- E1: **No Priors**
+- E2: **Outliers** / Average Joes / Aspiring Golem engineers / Statistical Owls: Question 
+- E3: **Bayesic B’s** / No Priors
+- M1: **Statistical Owls** / Average Joes / Golems posterior
+- M2: **Paranormal distribution** / No Prios / Average Joes
+- M3: **Team Marbles** / Bayesic B’s / Statistical Owls
+- M4: **Golem’s Posterior** / (Probably) Aspiring Golem Engineers / Team Marbles / Statistical Owls
 
 ## E2
 Check if relationships are multiplicative?
