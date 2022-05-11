@@ -1,5 +1,5 @@
 ---
-title: "Chapter 7: Recap"
+title: "Chapter 8: Recap"
 author: "Guido Biele"
 date: "11.05.2022"
 output:
@@ -27,7 +27,7 @@ h1{
     font-size: 24pt;
   }
 h1,h2{
-    font-size: 22pt;
+    font-size: 20pt;
   }
 h3,h4,h5,h6{
   font-size: 18pt;
@@ -45,20 +45,13 @@ library(MASS)
 source("../utils.R")
 ```
 
-```{r, echo = F}
-par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
-```
-
-# Categorial interactions
-
-
-## Scarr-Rowe
+# The Scarr-Rowe effect
 
 We are going to use the Scarr-Rowe effect (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
 
 This interaction can be visualized as follows:
 
-```{r fig.height=5, fig.width=5, fig.align = 'center', out.width="50%"}
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="40%"}
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 heritability = c(scarce = 0.5, plentiful = 0.8)
 barplot(heritability,
@@ -70,45 +63,42 @@ barplot(heritability,
 
 Here is a DAG that describes such a model, where
 
-- A = additive genetic effects
-- C = common effects in a family
-- E = idiosyncratic effects and measurement error
+- $\small A$ = additive genetic effects on child IQ
+- $\small SES$ = parental socioeconomic status
+- $\small IQ$ = child's intelligence quotient
 
 and the Scarr-Rowe effect means the the coefficient of the path $\small A \rightarrow IQ$ depends on $\small SES$.
 
-```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r fig.height=3, fig.width=3, fig.align = 'center', out.width="40%"}
 library(dagitty) 
 dag = dagitty(
   "dag{
   IQ;
   A -> IQ;
-  C -> IQ;
-  E -> IQ;
   SES -> IQ;
   }")
 coord.list = 
   list(
-    x=c(A=1,C=2,E=3,SES=2,IQ=2),
-    y=c(A=-1,C=-1,E=-1,SES=1,IQ=0))
+    x=c(A=0,SES=0,IQ=1),
+    y=c(A=-.5,SES=.5,IQ=0))
 coordinates(dag) = coord.list
 drawdag(dag, cex = 1.5)
 ```
 
 
-**Note that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path.** Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,C,E,SES)$, but it does not tell us what the function $f()$ is. 
+**Note that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path.** Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,SES)$, but it does not tell us what the function $f()$ is. 
 
-This could be 
+This function could be 
 
-- $\small IQ = A + C + E + SES$, 
-- $\small IQ = A\,C\,E + SES$ or 
-- $\small IQ = A \, SES + C \, SES + E$,
-- $\small IQ = A \, SES + log(C) \, SES + E$ 
+- $\small IQ = A + SES$, 
+- $\small IQ = A \cdot SES$ or 
+- $\small IQ = SES + A \cdot SES$,
 - ...
 
 or any other imaginable function that uses the variables. The model we have in mind now is:
 
 $$
-IQ =  f_1(SES) A + f_2(SES) C + E
+IQ =  f(SES) A
 $$
 
 Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
@@ -118,42 +108,38 @@ set.seed(3)
 N = 250
 SES = rnorm(N,mean = 5,1)
 A = rnorm(N,mean = 10,2)
-C = rnorm(N,mean = 10,2)
-E = rnorm(N, sd = 7)
+SES = rlnorm(N,log(4.75),.3)
+A = rlnorm(N,log(10),.2)
 ```
 
 Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. For good measure, we also let the effect of the familial environment vary by SES.
 
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE}
 library(boot)
-# we use inv.logit keep to give weights a lower and upper bound
-b_A = function(SES) 1 + inv.logit(SES-5)*3
-b_C = function(SES) inv.logit(-SES+5)
-
+# use inv.logit to give weights a lower and upper bound
+# add a constant one to model that even at lowest SES 
+# there are genetic effects
+b_A = function(x) 0.5 + inv.logit(x-5) * 2.5
 ```
 
 
-We are literally defining the weight for A as a function of SES. This is one way to understand interactions. Here is a visualization of the weights:
+We are literally defining the weight for A as a function of SES. This is one way to understand interactions. Here is a visualization of the weights, with a histogram of SES values on the bottom.
 
-```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r fig.height=4, fig.width=5, fig.align = 'center', out.width="70%"}
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
-curve(b_A(x),2,8, y = expression("effect size"~beta), 
-      xlab = "SES", ylim = c(0,4), col = "red")
-curve(b_C(x),2,8, xlab = "SES", add = T, col = "blue")
-text(c(5,5),
-     c(b_A(5), b_C(5)),
-     labels = c(expression(beta[A]),
-                expression(beta[C])), pos = 3)
-
+curve(b_A(x),0,10, 
+      ylab = expression("effect size"~beta[A]), 
+      ylim = c(0,b_A(10)), xlab = "SES")
+hist(SES,add = T, probability = T)
 ```
-In this plot, the interaction is not encoded by the fact that $\small \beta_A$ and $\small \beta_C$ have different slopes, but by the fact that both have a slope in the first place. The figure shows two interactions, because the effect size for $\small A$ and $\small C$ changes with SES.
+**In this plot, the interaction is encoded by the fact that $\small \beta_A$ has a slope.**
 
+Now we can simulate IQ values using exogenous variables and derived weights. We assume that IQ depends on $\small A$, whereby this effect depends on $\small SES$: $\small IQ = f(SES)A$. Lets simulate data from this model:
 
-And now we can simulate IQ values using exogenous variables and derived weights. We assume that IQ depends on familial factors $\small C$, additive genetic effects $\small A$: $\small IQ =  f_1(SES) A + f_2(SES) C + E$. Lets simulate data from this model:
-
-```{r class.source = 'fold-show'}
+```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 # Adding 70 to get an IQ around 100
-IQ = 70 + b_C(SES)*C + b_A(SES)*A + E
+IQ = 85 + b_A(SES)*A + rnorm(N,sd = 10)
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 hist(IQ)
 ```
 
@@ -162,22 +148,19 @@ If we just look at the bivariate associations between  $\small A$ or $\small SES
 ```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
 par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot(SES,IQ, pch = 16, cex = .5,)
-#abline(lm(IQ~SES))
 plot(A,IQ, pch = 16, cex = .5,)
-#abline(lm(IQ~A))
-# plot(C,IQ)
-# abline(lm(IQ~C))
 ```
 
-To run a simple interaction with a categorical interaction variable we use only a subset of our sample, the top and lower 30%, and code a categorical SES variables `SES.c`:
+# Categorial interactions
+
+To run a simple interaction with a categorical interaction variable we dichotomise the SES variable to create the variable `SES.c`:
 
 ```{r class.source = 'fold-show'}
-low.SES = which(SES < quantile(SES,.30))
-high.SES = which(SES > quantile(SES,.70))
+low.SES = which(SES < quantile(SES,.50))
+high.SES = which(SES > quantile(SES,.50))
 idx = c(low.SES,high.SES)
 dt = data.frame(
   A = A[idx],
-  C = C[idx],
   IQ = IQ[idx],
   SES = SES[idx],
   SES.c = c(rep(1,length(low.SES)),
@@ -210,8 +193,10 @@ Next, we estimate some linear regression models with increasing complexity, our 
 We start with a simple linear regression. But first some intuitions on priors:
 
 - Eyeballing the data, we see that the IQ at an average $\small A$ of 10 is around 100, so we use a prior `a ~ dnorm(100,5)`
-- The range of $\small A$ is 16-6 = 10 and the range of IQ = 120-80 = 40. So for a one unit increase of $\small A$, IQ changes around 40/10 = 4. If we want that an effect of +/-4 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,4)`. This prior allows for the possibility of a negative effect of $\small A$. Note that for this prior to work
+- The range of $\small A$ is 16-6 = 10 and the range of IQ = 120-80 = 40. So for a one unit increase of $\small A$, IQ changes around 40/10 = 4. If we want that an effect of +/-4 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,4)`. This prior allows for the possibility of a negative effect of $\small A$. 
 - Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.25)` 
+
+Here is the regression model:
 
 ```{r class.source = 'fold-show'}
 IQ.A = 
@@ -255,6 +240,8 @@ plot_data(dt)
 plot_mu.CIs(IQ.A, data.frame(A=A.seq), "blue", spaghetti = TRUE)
 ```
 
+This looks generally fine, but we are not capturing the group effects.
+
 ## Linear regression with category-main effect
 
 To fit a model with a main effect of education, we use the indexing approach:
@@ -289,6 +276,7 @@ compare(
   round(2)
 ```
 
+
 ## Linear regression with category-main effect and category-slope
 
 Lastly, we can also let the slopes vary by SES: 
@@ -305,6 +293,9 @@ IQ.AxSES =
     ),
     data=dt)
 ```
+
+The key part of this model is that we are not specifying a main effect for A and an interaction effect with SES, but that we are **estimating 2 regression coefficients, one for high and one for low SES. This simplifies putting reasonable priors on the effect in each group, but also implies that we do not put a prior on the difference between the two groups.**
+
 
 And again the posterior predictions: 
 
@@ -325,12 +316,22 @@ compare(
   func = "PSIS") %>% 
   round(2)
 ```
+```{r}
+compare(
+  IQ.A, IQ.A_SES, IQ.AxSES,
+  func = "WAIC") %>% 
+  round(2)
+```
 
-We get a warning about Pareto k values being higher than 0.5, but it is (more or less) OK if k is not larger than 0.7 or 1.
+While the correct model has the best PSIS and WAIC value, for the top two models the differences are not large compared to the SEs of the differences.
 
-So how can we figure out if the difference in slopes is reliably larger than 0? We simply extract posteriors and make some calculations with them:
+### A simple contrast
+
+How can we figure out if the difference in slopes is reliably larger than 0? We simply extract posteriors and calculate the difference in slopes from them:
+
 
 ```{r}
+# extract posterior
 post = extract.samples(IQ.AxSES)
 names(post)
 head(post$b)
@@ -338,6 +339,7 @@ head(post$b)
 We simply calculate the differences of the two b parameters:
 
 ```{r}
+# calculate difference
 delta.b = post$b[,2]-post$b[,1]
 ```
 
@@ -345,16 +347,20 @@ And now we can show e.g. mean and PIs:
 
 ```{r}
 c(mean = mean(delta.b),
-  PI(delta.b,prob = c(.9)))
+  PI(delta.b,prob = c(.9))) %>% 
+  round(2)
 ```
 
 And we can plot a histogram of the contrast:
 
-```{r}
+```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="40%"}
+par(mar=c(3,3,2,1), mgp=c(1.25,.5,0), tck=-.01)
 hist(delta.b, xlim = range(c(0,delta.b)))
 abline(v = 0, lty = 2)
 abline(v = PI(delta.b,prob = c(.95)), col = "red")
 ```
+
+### How about the DGP?
 
 To see if our results are reasonable, lets compare our estimated parameters with the parameters governing the DGP. First the model parameters: 
 
@@ -365,32 +371,30 @@ precis(IQ.AxSES, depth = 2) %>% round(2)
 Now the parameters from the DGP:
 
 ```{r class.source = 'fold-show'}
-low.SES = which(SES < quantile(SES,.30))
-high.SES = which(SES > quantile(SES,.70))
 rbind(
-  b.low.SES = b_A(SES[low.SES]) %>% mean(), 
-  b.high.SES = b_A(SES[high.SES]) %>% mean())
+  mean(b_A(SES[SES<quantile(SES,.30)])), 
+  mean(b_A(SES[SES>quantile(SES,.70)])))
 ```
 
 We are not recovering the exact parameters, after all we used a _golem_ instead of a model that depicts the DGP, but qualitatively the results are consistent with the DGP.
 
 ## Symetric interactions
 
-Earlier, we described this function.
+Earlier, we described the function
 
 $$
-IQ =  f_1(SES) A + ...
+IQ =  f(SES) A
 $$
 
-By saying that the effect $\small A$ is a function of $\small SES$. However, we really just have to variables: $\small A$ and $\small f_1(SES)$ which are multiplied with each other. Therefore, these statements are equivalent:
+By saying that the effect $\small A$ is a function of $\small SES$. However, we really just have two variables: $\small A$ and $\small f(SES)$ which are multiplied with each other. Therefore, these statements are equivalent:
 
-- The effect of $\small A$ depends on $\small f_1(SES)$
-- The effect of $\small f_1(SES)$ depends on $\small A$
+- The effect of $\small A$ depends on $\small f(SES)$
+- The effect of $\small f(SES)$ depends on $\small A$
 
 Accordingly, we can also plot the difference between high and low $\small SES$ as a function of $\small A$:
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-A.seq = seq(from=5,to=16,length.out=30)
+A.seq = seq(from=5,to=16,length.out=50)
 mu.low = link(IQ.AxSES,data=data.frame(SES.c=1,A=A.seq))
 mu.high = link(IQ.AxSES,data=data.frame(SES.c=2,A=A.seq))
 delta = mu.high-mu.low
@@ -403,8 +407,6 @@ plot(A.seq, colMeans(delta),'l',
      ylab = expression(IQ[high~SES]~-~IQ[low~SES]))
 shade(CIs,A.seq, col = adjustcolor("blue", alpha = .25))
 abline(h = 0, lty = 2)
-text(12,0,"higher IQ with lower SES", pos = 1, adj = 0)
-text(12,0,"higher IQ with higher SES", pos = 3, adj = 0)
 ```
 
 # Continuous interactions
@@ -414,7 +416,6 @@ We are continuing with our simulated Scarr-Rowe data set, but this time we use t
 ```{r}
 dt = data.frame(
   A = A,
-  C = C,
   IQ = IQ,
   SES = SES)
 ```
@@ -451,11 +452,20 @@ for (k in 2:length(qs)) {
 }
   
 ```
+How many panels one uses depends on how one assumes the moderator influences the effect of interest.
+
+## Simple linear regression without interaction
+
+This first model assumes that there are just main effects of $\small A$ and $\small SES$. Indeed, this is not an unreasonable assumption if one remembers the raw data, which we show here again:
+
+```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="60%", out.height="50%"}
+par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(SES,IQ, pch = 16, cex = .5,)
+plot(A,IQ, pch = 16, cex = .5,)
+```
 
 
-## Simple linear regression
-
-Following the specification of our DGP, we can now describe interaction in the `quap` model as a simple multiplication:
+In preparation of the interaction model we are not centering $\small SES$, but we are re-scaling it to have a minimum just above 0. If we would center to zero, below zero SES values would predict a negative additive genetic effect.
 
 ```{r class.source = 'fold-show'}
 IQc.A_SES = 
@@ -476,7 +486,8 @@ We are using prior predictions to check if the model does a good job:
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 plot.pred(IQc.A_SES,dt, type = "prior")
 ```
-This is pretty wild. Lets try a bit narrowers priors:
+
+This is pretty wild. Lets try a bit narrower priors:
 
 ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 set.seed(1)
@@ -506,6 +517,7 @@ As expected from the model we specified, all slopes are the same. Note that the 
 
 The model is similar to the previous, but adds this interaction term: `bsa*(A - 10)*(SES - 2.5)`.
 
+
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
 IQc.AxSES.m = 
   quap(
@@ -527,30 +539,31 @@ This priors look OK (even though slopes become extreme at high SES values), so w
 plot.pred(IQc.AxSES.m,dt)
 ```
 
-## Linear regression with only interaction
+<!-- ## Linear regression with only interaction -->
 
-Here we have removed the main effects `ba*(A - 10) + bs*(SES - 2.5)` from the previous model.
+<!-- Here we have removed the main effects `ba*(A - 10) + bs*(SES - 2.5)` from the previous model. -->
 
-```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
-IQc.AxSES = 
-  quap(
-    alist(
-      IQ ~ dnorm(mu,sigma),
-      mu <- a + bsa*(A - 10)*(SES - 2.5),
-      a ~ dnorm(100,7.5),
-      bsa ~ dnorm(0,2),
-      sigma ~ dexp(.5)
-    ),
-    data=dt)
-plot.pred(IQc.AxSES,dt, type = "prior")
-```
+<!-- ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'} -->
+<!-- set.seed(1) -->
+<!-- IQc.AxSES =  -->
+<!--   quap( -->
+<!--     alist( -->
+<!--       IQ ~ dnorm(mu,sigma), -->
+<!--       mu <- a + bsa*(A - 10)*(SES - 2.5), -->
+<!--       a ~ dnorm(100,7.5), -->
+<!--       bsa ~ dnorm(0,2), -->
+<!--       sigma ~ dexp(.5) -->
+<!--     ), -->
+<!--     data=dt) -->
+<!-- plot.pred(IQc.AxSES,dt, type = "prior") -->
+<!-- ``` -->
 
-Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions:
+<!-- Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions: -->
 
-```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
-plot.pred(IQc.AxSES,dt)
-```
-This model cannot capture that the average IQ is higher at higher SES values. The next model adresses this:
+<!-- ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
+<!-- plot.pred(IQc.AxSES,dt) -->
+<!-- ``` -->
+<!-- This model cannot capture that the average IQ is higher at higher SES values. The next model addresses this: -->
 
 ## Linear regression with SES main effect and interaction
 
@@ -566,10 +579,10 @@ IQc.AxSES.mSES =
       sigma ~ dexp(.5)
     ),
     data=dt)
-plot.pred(IQc.AxSES.mSES,dt, type = "prior")
+#plot.pred(IQc.AxSES.mSES,dt, type = "prior")
 ```
 
-Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions:
+Here are the model predictions:
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 plot.pred(IQc.AxSES.mSES,dt)
@@ -577,36 +590,106 @@ plot.pred(IQc.AxSES.mSES,dt)
 
 ## Model comparison
 
-```{r}
-compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES,IQc.AxSES.mSES)
+```{r class.source = 'fold-show'}
+compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES.mSES, func = "WAIC") %>% round(1)
 ```
 
-```{r}
+```{r class.source = 'fold-show'}
+compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES.mSES, func = "PSIS") %>% round(1)
+```
+PSIS and WAIC correctly identify the interaction model, and the difference is clearer compared to the categorical interaction, which used only a subset of the data and through way information by dichotomizing.
+
+## A fancy plot
+```{r fig.align = 'center', warning=FALSE, message=FALSE}
 library(akima)
 library(plotly)
 mu = link(IQc.AxSES.mSES)
 s = interp(dt$A,dt$SES,colMeans(mu))
 names(s) = c("A","SES","IQ")
-fig = with(s,
-     plot_ly(x = ~A, y = ~SES, z = ~IQ) %>% add_surface(
-       contours = list(
-         z = list(
-           show=TRUE,
-           usecolormap=TRUE,
-           highlightcolor="#ff0000",
-           project=list(z=TRUE)
-         )
-       )
-     )
+fig = with(
+  s,
+  plot_ly(x = ~A, y = ~SES, z = ~IQ,
+          width = 900, height = 900) %>% 
+    add_surface(
+      contours = list(
+        z = list(
+          show=TRUE,
+          usecolormap=TRUE,
+          highlightcolor="#ff0000",
+          project=list(z=TRUE)
+        )
+      )
+    ) %>% 
+    add_markers(x = dt$A, y = dt$SES, z = dt$IQ, size = .5)
 )
-fig <- fig %>% layout(
-  scene = list(
-    camera=list(
-      eye = list(x=1.87, y=0.88, z=0.64)
+fig = 
+  fig %>% layout(
+    scene = list(
+      camera=list(
+        eye = list(x=1.87, y=0.88, z=0.64)
+      )
     )
   )
-)
 
 fig
+```
+
+# Excersices
+
+Here is a listof which group should present which exercises:
+
+- E1: No Priors 
+- E2: Outliers / Average Joes / Aspiring Golem engineers / Statistical Owls: Question 
+- E3: Bayesic B’s / No Priors
+- M1: Statistical Owls / Average Joes / Golems posterior
+- M2: Paranormal distribution / No Prios / Average Joes
+- M3: Team Marbles / Bayesic B’s / Statistical Owls
+- M4: Golem’s Posterior / (Probably) Aspiring Golem Engineers / Team Marbles / Statistical Owls
+
+## E2
+Check if relationships are multiplicative?
+This indeed means that both factors need to be present.
+
+## M2
+
+Adding a 2-way interaction to a long model is one possibility. But one can also add parenthesis around the simpler model and multiply with the new variable:
+
+Standard model (leaving away regression coefficients):
+
+$$
+\mu = S + W + S \cdot W
+$$
+
+reduced model, if only interaction counts:
+
+Standard model:
+
+$$
+\mu = S \cdot W
+$$
+
+Adding the effect of temperature:
+
+$$
+\mu = T\cdot(S + W + S \cdot W)
+$$
+
+or 
+
+$$
+\mu = T\cdot(S \cdot W)
+$$
+
+## M4
+
+How do we constrain priors to have a positive or negative effect?
+
+1. Use a prior distribution that is bound to be larger than 1, e.g. the log-normal
+2. For negative effects, add effect with a `-` instead of a `+` as usual.
+
+Example:
+
+```{r}
+
 ```
 
