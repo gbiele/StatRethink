@@ -581,3 +581,32 @@ plot.pred(IQc.AxSES.mSES,dt)
 compare(IQc.A_SES,IQc.AxSES.m,IQc.AxSES,IQc.AxSES.mSES)
 ```
 
+```{r}
+library(akima)
+library(plotly)
+mu = link(IQc.AxSES.mSES)
+s = interp(dt$A,dt$SES,colMeans(mu))
+names(s) = c("A","SES","IQ")
+fig = with(s,
+     plot_ly(x = ~A, y = ~SES, z = ~IQ) %>% add_surface(
+       contours = list(
+         z = list(
+           show=TRUE,
+           usecolormap=TRUE,
+           highlightcolor="#ff0000",
+           project=list(z=TRUE)
+         )
+       )
+     )
+)
+fig <- fig %>% layout(
+  scene = list(
+    camera=list(
+      eye = list(x=1.87, y=0.88, z=0.64)
+    )
+  )
+)
+
+fig
+```
+
