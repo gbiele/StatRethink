@@ -47,7 +47,7 @@ source("../utils.R")
 
 # The Scarr-Rowe effect
 
-We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%E2%80%93Rowe_effect) (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
+We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%E2%80%93Rowe_effect) (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes is larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
 
 This interaction can be visualized as follows:
 
@@ -86,7 +86,7 @@ drawdag(dag, cex = 1.5)
 ```
 
 
-**Note that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path.** Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of four other variables $\small IQ = f(A,SES)$, but it does not tell us what the function $f()$ is. 
+**Note that DAGs do not encode interaction effects by drawing an arrow from the moderator to the relevant path.** Instead, there is a path from the moderator to the outcome variable. So the DAG only tells us that IQ is a function of two other variables $\small IQ = f(A,SES)$, but it does not tell us what the function $f()$ is. 
 
 This function could be 
 
@@ -101,18 +101,16 @@ $$
 IQ =  f(SES) A
 $$
 
-Lets simulate data that show the the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are normally distributed:
+Lets simulate data that show the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are close to normally distributed:
 
 ```{r class.source = 'fold-show'}
 set.seed(3)
 N = 250
-SES = rnorm(N,mean = 5,1)
-A = rnorm(N,mean = 10,2)
 SES = rlnorm(N,log(4.75),.3)
 A = rlnorm(N,log(10),.2)
 ```
 
-Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. For good measure, we also let the effect of the familial environment vary by SES.
+Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. 
 
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE}
 library(boot)
@@ -199,6 +197,7 @@ We start with a simple linear regression. But first some intuitions on priors:
 Here is the regression model:
 
 ```{r class.source = 'fold-show'}
+set.seed(1)
 IQ.A = 
   quap(
     alist(
@@ -447,7 +446,7 @@ for (k in 2:length(qs)) {
   idx = which(dt$SES > qs[k-1] & dt$SES < qs[k])
   tmp.dt = dt[idx,]
   with(tmp.dt,
-       plot(IQ~A, pch = 16, main = paste0(k-1,". quantile SES"),
+       plot(IQ~A, pch = 16, main = paste0(k-1,". quartile SES"),
        ylim = range(dt$IQ), xlim = range(dt$A)))
 }
   
