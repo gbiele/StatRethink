@@ -64,6 +64,7 @@ plot_mu.CIs = function(q.fit,data,col = "black", spaghetti = FALSE, type = "post
   }
 }
 
+
 plot.pred = function(q.fit, dt, type = "posterior") {
   qs = quantile(SES, probs = seq(0,1,.25))
   par(mfrow = c(1,4), mar=c(2.5,2.5,2,.5), mgp=c(1.5,.5,0), tck=-.01)
@@ -81,4 +82,24 @@ plot.pred = function(q.fit, dt, type = "posterior") {
                 col = "blue",
                 type = type)
   }
+}
+
+make_gif = function(dr = NULL, fn = NULL, fps = 20) {
+  library(magick)
+  ## list file names and read in
+  imgs <- list.files(dr, full.names = TRUE, pattern = "*.png")
+  img_list <- lapply(imgs, image_read)
+  
+  ## join the images together
+  img_joined <- image_join(img_list)
+  
+  ## animate at 20 frames per second
+  img_animated <- image_animate(img_joined, fps = fps) 
+  
+  ## view animated image
+  # img_animated
+  
+  ## save to disk
+  image_write(image = img_animated,
+              path = fn)
 }
