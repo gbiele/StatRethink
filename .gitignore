@@ -2,4 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-Chapter9/sim/*
+Chapter5/animation/*
+Chapter9/sim
+*.DS_Store
