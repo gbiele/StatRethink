@@ -17,7 +17,6 @@ calc.P = function(mu,log_sigma,x) {
   )
 }
 
-
 post.mu[1] = -2
 post.log_sigma[1] = 1.5
 P[1] = calc.P(post.mu[1], post.log_sigma[1], x)
@@ -35,15 +34,18 @@ for (k in 2:iter) {
     if (runif(1) < acceptance[k]) {
       post.mu[k] = propposal.mu
       post.log_sigma[k] = propposal.log_sigma
-      P[k] = P[k-1]
+      P[k] =  proposal.P
     } else {
       post.mu[k] = post.mu[k-1]
       post.log_sigma[k] = post.log_sigma[k-1]
-      P[k] = proposal.P
+      P[k] = P[k-1]
       keep.old[k] = TRUE
     }
   }
 }
+
+plot(exp(post.log_sigma),post.mu, pch = 16, col = adjustcolor("black",alpha = .25))
+title(round(mean(acceptance),2))
 
 clr = adjustcolor("blue", alpha = .25)
 clr2 = adjustcolor("blue", alpha = .05)
@@ -60,38 +62,30 @@ xlims.r[1:250] = rep(exp(max(post.log_sigma)),250)
 xlims.r[251:500] = seq(xlims.r[250],xlims.r[500], length.out = 250)
 i = 0
 layout.mat = cbind(matrix(1,ncol = 2,nrow = 2), rbind(c(2,2),c(3,3)))
-for (k in ks) {
-  i = i+1
-  png(filename = paste0("sim/MH",stringr::str_pad(i,4,pad = "0"),".png"),width = 10, height = 5, units = "cm", res = 300,pointsize = 7)
-  layout(layout.mat)
-  par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
-  plot(exp(post.log_sigma)[1:k], post.mu[1:k],
-       ylim = c(ylims.b[i], ylim.t),
-       xlim = c(xlim.l, xlims.r[i]),
-       'l',ylab = "mu", xlab = "sigma", col = clr)
-  dot.col = ifelse(keep.old[k] == TRUE, "red","blue")
-  points(exp(post.log_sigma[k]), post.mu[k], col = dot.col, pch = 16)
-  points(exp(post.log_sigma[1:k]), post.mu[1:k], col = clr2, pch = 16)
-  if (k < 500) {
-    idx = 1:k
-  } else {
-    idx = (k-500):k
-  }
-  plot(idx,post.mu[idx],"l", ylab = "mu", xlab = "iteration", ylim = c(ylims.b[i], ylim.t))
-  plot(idx,exp(post.log_sigma[idx]),"l", ylab = "sigma", xlab = "iteration", ylim = c(xlim.l, xlims.r[i]))
-  dev.off()
-}
 
-make_gif("sim","metropolis.gif")
 
-library(av)
 av_capture_graphics(
-  {
-    for(img in imgs){
-      im <- magick::image_read(img)
-      plot(as.raster(im))
-    }  
+  { i = 0
+    for (k in ks) {
+      i = i+1
+      layout(layout.mat)
+      par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
+      plot(exp(post.log_sigma)[1:k], post.mu[1:k],
+           ylim = c(ylims.b[i], ylim.t),
+           xlim = c(xlim.l, xlims.r[i]),lwd = .25, 
+           'l',ylab = "mu", xlab = "sigma", col = clr)
+      dot.col = ifelse(keep.old[k] == TRUE, "red","blue")
+      points(exp(post.log_sigma[k]), post.mu[k], col = dot.col, pch = 16)
+      points(exp(post.log_sigma[1:k]), post.mu[1:k], col = clr2, pch = 16)
+      if (k < 1000) {
+        idx = 1:k
+      } else {
+        idx = (k-1000):k
+      }
+      plot(idx,post.mu[idx],"l", ylab = "mu", xlab = "iteration", ylim = c(ylims.b[i], ylim.t))
+      plot(idx,exp(post.log_sigma[idx]),"l", ylab = "sigma", xlab = "iteration", ylim = c(xlim.l, xlims.r[i]))
+     }  
   },
   output = "metropolis.mp4",
   framerate = 20,
-  width = 1180, height = 590)
+  width = 1200, height = 600, pointsize = 30)
