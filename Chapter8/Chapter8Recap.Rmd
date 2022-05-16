@@ -104,7 +104,7 @@ $$
 Lets simulate data that show the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are close to normally distributed:
 
 ```{r class.source = 'fold-show'}
-set.seed(3)
+set.seed(25)
 N = 250
 SES = rlnorm(N,log(4.75),.3)
 A = rlnorm(N,log(10),.2)
@@ -677,61 +677,4 @@ fig
 ![Giagrande 2019: Scarr-Rowe effect](Giagrande_ScarrRoweEffect.png)
 
 # Excersices
-
-Here is a list of which group should present which exercises:
-
-- E1: **No Priors**
-- E2: **Outliers** / Average Joes / Aspiring Golem engineers / Statistical Owls: Question 
-- E3: **Bayesic B’s** / No Priors
-- M1: **Statistical Owls** / Average Joes / Golems posterior
-- M2: **Paranormal distribution** / No Prios / Average Joes
-- M3: **Team Marbles** / Bayesic B’s / Statistical Owls
-- M4: **Golem’s Posterior** / (Probably) Aspiring Golem Engineers / Team Marbles / Statistical Owls
-
-## E2
-Check if relationships are multiplicative?
-This indeed means that both factors need to be present.
-
-## M2
-
-Adding a 2-way interaction to a long model is one possibility. But one can also add parenthesis around the simpler model and multiply with the new variable:
-
-Standard model (leaving away regression coefficients):
-
-$$
-\mu = S + W + S \cdot W
-$$
-
-reduced model, if only interaction counts:
-
-Standard model:
-
-$$
-\mu = S \cdot W
-$$
-
-Adding the effect of temperature:
-
-$$
-\mu = T\cdot(S + W + S \cdot W)
-$$
-
-or 
-
-$$
-\mu = T\cdot(S \cdot W)
-$$
-
-## M4
-
-How do we constrain priors to have a positive or negative effect?
-
-1. Use a prior distribution that is bound to be larger than 1, e.g. the log-normal
-2. For negative effects, add effect with a `-` instead of a `+` as usual.
-
-Example:
-
-```{r}
-
-```
 
