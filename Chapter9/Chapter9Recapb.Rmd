@@ -1,0 +1,186 @@
+---
+title: "Chapter 8: Recap"
+author: "Guido Biele"
+date: "11.05.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = 'center')
+
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+source("../utils.R")
+```
+
+# Metropolis
+
+explain algorithm with easy problem
+
+# Why Hamiltonian Monte Carlo
+
+The Metropolis algorithm and improved versions like Gibbs perform generally well, but they have problems when parameters are correlated.
+
+Take for example these data, with high colinearity, akin the 2-legs example:
+
+```{r class.source = 'fold-show'}
+set.seed(1)
+Sigma = matrix(c(1,.95,.95,1), nrow = 2)
+X = MASS::mvrnorm(100,mu = c(0,0), Sigma = Sigma)
+Y = X %*% c(1,1) + rnorm(100)
+```
+
+```{r, fig.height=4, fig.width=4, out.width="50%"}
+XY = cbind(X1 = X[,1], X2 = X[,2], Y = Y)
+colnames(XY)[3] = "Y"
+par(mar=c(3,3,2,1), mgp=c(1.25,.5,0), tck=-.01)
+pairs(XY)
+```
+
+If we estimate a model $\small Y ~ Normal(\beta_1 X_1 \ + \beta_2 X_2, \sigma)$ the coefficients $\small \beta_1$ and $\small \beta_2$ are highly correlated.
+
+Lets see what the Metropolis sampler does with this: 
+
+![Metropolis sampler for hard problem](metropolis_hard.mp4)
+
+We can observe following things:
+
+- The sampler takes quite some time to find the posterior distribution
+- even after 900 trials the sampler is not stationary, i.e. the samples do not vary around a constant mean, but slowly change over time
+- Despite lots of samples, the sampler has not explored the parameter space well (see the "white space" at the border of the posterior distribution)
+
+This is just one example where Metropolis or Gibbs samplers can have difficulties.
+
+# Fitting models with Stan and ulam
+
+One sampling algorithm that does much better than Metropolis is Gibbs is Hamiltonian Monte Carlo. On an intuitive level, the key difference in favor of Hamiltonian Monte Carlo is that is generates proposals less randomly then either Metropolis or Gibbs. Less randomly hear means that the direction from the current sample to the proposal is not random, but that proposals are more likely in direction of the bulk of the posterior distribution.
+
+To clarify the relationship of different terms:
+
+- _Hamiltonian Monte Carlo_ is the name for a type of MCMC samplers
+- _Stan_ is one (the leading) software that implements a HMC sampler and also a probabilistic programming language
+- `ulam` is a function in the `rethinking` packages that translates rethinking models (`alist(...)`) into the Stan language runs the sampler
+- Other packages that use _Stan_ to generate MCMC samples are _brms_ and _rastanarm_, where one can formulate model like typically in `R` (e.g. `fit = brms(y ~ x1 + x2, data = dt)` ) and `rstan` and `cmdstandr`, which require that that the use writes the model directly in the Stan progamming language.
+
+
+
+# A healthy chain
+
+Properties of a healthy chain.
+
+Here is an example of a healthy chains:
+
+```{r}
+chains.well.mixing = matrix(rnorm(4000),ncol = 4)
+trace.rankplot(chains.well.mixing)
+```
+
+This chain is healthy because it is stationary, well mixed, and shows convergence.
+
+## Stationarity
+
+Stationarity means that the chains fluctuate around a stable mean, which one can imagine as horizontal line.
+
+Here is an example of non-stationary chains:
+
+```{r}
+trace.rankplot = function(chains) {
+  par(mfrow = c(2,1))
+  matplot(chains, typ = "l", lty = 1) 
+  ranks = t(matrix(rank(as.vector(chains)), nrow = ncol(chains)))
+  h = hist(ranks, plot = F, breaks = 30)
+  rank.hists = 
+    apply(ranks,2, 
+          function(x) counts = hist(x,breaks = h$breaks, plot = F)$counts)
+  
+  matplot(h$mids,rank.hists,'s', ylim = c(0,max(rank.hists)),lty = 1)
+}
+```
+
+
+```{r}
+AR = cbind(sin(seq(1,2*pi,length.out = 1000)),
+           sin(0.5+seq(1,3*pi,length.out = 1000)),
+           sin(1.5+seq(1,3*pi,length.out = 1000)),
+           sin(2.5+seq(1,3*pi,length.out = 1000)))
+chains.AR =
+  chains.well.mixing/4 + 
+  AR
+trace.rankplot(chains.AR)  
+
+```
+
+
+## Good mmixing
+
+Good mixing means that the samples vary with a constant variance around their mean. 
+
+Here is an example of chains that did not mix:
+
+```{r}
+chains.not.mixing = 
+  matrix(rnorm(4000,
+               sd = as.vector(AR)^2),
+         ncol = 4)
+trace.rankplot(chains.not.mixing)  
+```
+
+
+## Convergence
+
+Convergence means that all chains converged to the same mean. Here is an example of chains that did not converge:
+
+```{r}
+offsets = cbind(rep(-.25,1000),
+                rep(0,1000),
+                rep(.25,1000),
+                rep(.5,1000))
+chains.not.converged = 
+  chains.well.mixing/4 + 
+  offsets
+trace.rankplot(chains.not.converged)  
+
+```
+
+
+# Simulating good posteriors
+
+## High n_eff
+
+## Many chains: Why and how many?
+
+## Bad models make bad posteriors
+
+(wild chain)

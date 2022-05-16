@@ -48,7 +48,7 @@ metropolis = function(start.list = starts) {
 }
 
 
-make_anim = function(theta) {
+make_anim = function(theta, fn = NULL) {
   library(av)
   clr = adjustcolor("blue", alpha = .25)
   clr2 = adjustcolor("blue", alpha = .05)
@@ -89,9 +89,9 @@ make_anim = function(theta) {
         plot(idx,theta[idx,3],"l", ylab = "b2", xlab = "iteration", ylim = c(ylims.b[i], ylim.t))
       }  
     },
-    output = "metropolis_hard_stan.mp4",
+    output = fn,
     framerate = 20,
-    width = 1200, height = 600, pointsize = 30)
+    width = 900, height = 450, pointsize = 25)
 }
 
 post.theta = metropolis(start.list = list(c(-2,3,-3,1.5)))[[1]]
@@ -115,6 +115,31 @@ sf = sm$sample(data = stan_data, chains = 4,
                            list(theta = c(-2,3,-3,1.5)),
                            list(theta = c(-2,-3,3,1.5)),
                            list(theta = c(-2,-3,-3,1.5))))
+
+library(rethinking)
+data.list = list(Y = Y, X1 = X[,1], X2 = X[,2])
+
+ulam.startlist = list(
+  list(a = -2, b1 = 3, b2 = 3, log_sigma = 1.5),
+  list(a = -2, b1 = 3, b2 = 3, log_sigma = 1.5),
+  list(a = -2, b1 = 3, b2 = 3, log_sigma = 1.5),
+  list(a = -2, b1 = 3, b2 = 3, log_sigma = 1.5)
+)
+
+ulam(alist(
+  Y ~ dnorm(mu, sigma),
+  mu <- a + X1*b1 + X2*b2,
+  sigma <- exp(log_sigma),
+  a ~ dnorm(1,1),
+  b1 ~ dnorm(0,1),
+  b2 ~ dnorm(0,1),
+  log_sigma ~ dnorm(0,1),
+  sigma ~ dexp(1)),
+  data = data.list,
+  start = ulam.startlist,
+  cores = 4
+  )
+
 
 theta.4 = 
   sf$draws(inc_warmup = TRUE) %>% 
