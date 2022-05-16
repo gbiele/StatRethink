@@ -94,7 +94,7 @@ make_anim = function(theta) {
     width = 1200, height = 600, pointsize = 30)
 }
 
-post.theta = metropolis(start.list = list(c(-2,3,-3,1.5)))
+post.theta = metropolis(start.list = list(c(-2,3,-3,1.5)))[[1]]
 make_anim(post.theta, fn = "metropolis_hard.mp4")
 
 post.theta.4 = metropolis(
@@ -108,11 +108,26 @@ library(cmdstanr)
 library(posterior)
 sm = cmdstan_model("MetropolisHard.stan")
 stan_data = list(N = length(Y), Y = as.vector(Y), X = X)
-sf = sm$sample(data = stan_data, chains = 1, 
+sf = sm$sample(data = stan_data, chains = 4, 
                iter_warmup = 1000, iter_sampling = 10001, 
                save_warmup = T,
-               init = list(list(theta = c(-2,3,-3,1.5))))
-theta = sf$draws(inc_warmup = TRUE) %>% subset_draws("theta") %>% as_draws_df() %>% as.matrix()
+               init = list(list(theta = c(-2,3,3,1.5)),
+                           list(theta = c(-2,3,-3,1.5)),
+                           list(theta = c(-2,-3,3,1.5)),
+                           list(theta = c(-2,-3,-3,1.5))))
+
+theta.4 = 
+  sf$draws(inc_warmup = TRUE) %>% 
+  subset_draws("theta") %>% 
+  as_draws_list() %>% 
+  lapply(function(x) do.call(cbind,x))
+theta.4[[1]] = rbind(c(-2,3,3,1.5),theta.4[[1]] )
+theta.4[[2]] = rbind(c(-2,3,-3,1.5),theta.4[[2]] )
+theta.4[[3]] = rbind(c(-2,-3,3,1.5),theta.4[[3]] )
+theta.4[[4]] = rbind(c(-2,-3,-3,1.5),theta.4[[4]] )
+theta = theta.4[[1]]
+
+
 
 make_anim(theta, fn = "metropolis_hard_stan.mp4")
 
@@ -144,7 +159,7 @@ make_anim.2 = function(theta.a,theta.b,d2d) {
                main = titles[j],
                'l',ylab = "b2", xlab = "b1", col = clr)
           contour(d2d, levels = .01, drawlabels = FALSE, col = "grey", add = TRUE)
-          dot.col = ifelse(keep.old[k] == TRUE, "red","blue")
+          dot.col = "blue" # ifelse(keep.old[k] == TRUE, "red","blue")
           points(theta.list[[j]][k,2], theta.list[[j]][k,3], col = dot.col, pch = 16, cex = .5)
           points(theta.list[[j]][1:k,2], theta.list[[j]][1:k,3], col = clr2, pch = 16, cex = .5)
           if (j == 1) text(0,-3,paste0("iteration ", k), pos = 4)
@@ -158,7 +173,7 @@ make_anim.2 = function(theta.a,theta.b,d2d) {
 
 make_anim.2(theta.a, theta.b, d2d)
 
-make_anim.4 = function(theta.list) {
+make_anim.4 = function(theta.list, fn = NULL, stop.trace = 1000) {
   library(av)
   iterations = nrow(theta.list[[1]])
   colors = c("blue","red","orange","green")
@@ -184,16 +199,21 @@ make_anim.4 = function(theta.list) {
         idx = sample(idx,length(idx))
         points(b1[idx],b2[idx], col = clr2[idx], pch = 16, cex = .5)
         for (j in sample(4,4)) {
-          lines(theta.list[[j]][1:k,2], theta.list[[j]][1:k,3], col = clr[j])
-          dot.col = ifelse(keep.old[k] == TRUE, colors[j],"black")
-          points(theta.list[[j]][k,2], theta.list[[j]][k,3], col = dot.col, pch = 16, cex = .5)
+          lines(theta.list[[j]][1:min(k,stop.trace),2], 
+                theta.list[[j]][1:min(k,stop.trace),3],
+                col = clr[j])
+          points(theta.list[[j]][k,2], theta.list[[j]][k,3], 
+                 col = colors[j], 
+                 pch = 16, 
+                 cex = .5)
         }
       }  
     },
-    output = "metropolis_hard_4.mp4",
+    output = fn,
     framerate = 20,
     width = 600, height = 600, pointsize = 30)
 }
 
-make_anim.4(post.theta.4)
+make_anim.4(post.theta.4, "metropolis_hard_4_chains.mp4")
+make_anim.4(theta.4, "Stan_hard_4_chains.mp4")
 

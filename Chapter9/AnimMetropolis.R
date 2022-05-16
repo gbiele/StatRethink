@@ -17,6 +17,7 @@ calc.P = function(mu,log_sigma,x) {
   )
 }
 
+
 post.mu[1] = -2
 post.log_sigma[1] = 1.5
 P[1] = calc.P(post.mu[1], post.log_sigma[1], x)
@@ -63,7 +64,7 @@ xlims.r[251:500] = seq(xlims.r[250],xlims.r[500], length.out = 250)
 i = 0
 layout.mat = cbind(matrix(1,ncol = 2,nrow = 2), rbind(c(2,2),c(3,3)))
 
-
+library(av)
 av_capture_graphics(
   { i = 0
     for (k in ks) {
