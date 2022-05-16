@@ -1,0 +1,74 @@
+---
+title: "Chapter 8: Recap"
+author: "Guido Biele"
+date: "11.05.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+source("../utils.R")
+```
+
+# Metropolis
+
+explain algorithm with easy problem
+
+# Why hamiltonian Monte Carlo
+
+show resuls for hard problem
+
+# Fitting and in ulam
+
+# A healthy chain
+
+## Stationarity
+
+## Good mmixing
+
+## Convergence
+
+# Simulating good posteriors
+
+## High n_eff
+
+## Many chains: Why and how many?
+
+## Bad models make bad posteriors
+
+(wild chain)
