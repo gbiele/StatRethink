@@ -1,5 +1,5 @@
 ---
-title: "Chapter 8: Recap"
+title: "Chapter 9: Recap"
 author: "Guido Biele"
 date: "11.05.2022"
 output:
@@ -35,7 +35,7 @@ h3,h4,h5,h6{
 ```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = 'center')
 
 library(rethinking)
 library(magrittr)
@@ -47,28 +47,480 @@ source("../utils.R")
 
 # Metropolis
 
-explain algorithm with easy problem
+The metropolis algorithm is the simplest Markov Monte Carlo Chain (MCMC) algorithm. Even though it is not used anymore because it is not very efficient, it is useful to explain the key components of MCMC algorithms.
 
-# Why hamiltonian Monte Carlo
+The goal of an MCMC algorithm is to generate a posterior distribution, i.e. we want to calculate how probable parameters are given the data, the likelihood and the prior.
 
-show resuls for hard problem
+To introduce the Metropolis algorithm, we use a simple example where we try to estimate the mean and standard deviation of this distribution:
 
-# Fitting and in ulam
+```{r class.source = 'fold-show', fig.height=4, fig.width=5, fig.align = 'center', out.width="40%"}
+set.seed(1)
+y = rnorm(100)
+hist(y)
+```
+
+## The log posterior
+
+As a first step, we need to calculate the probability of a parameter given the data, likelihood and priors. Here we use the by now hopefully well known ingredients:
+
+```{r class.source = 'fold-show'}
+calc.P = function(mu,log_sigma,x) {
+  return(
+    dnorm(x, mu, exp(log_sigma), log = T) %>% sum() + # likelihood
+      dnorm(mu, mean = 0, sd = 1, log = T) +          # prior mu
+      dnorm(log_sigma, mean = 0, sd = 1, log = T)     # prior sigma
+  )
+}
+```
+
+As is generally done in Bayesian computation, we do the computations on the log scale, so multiplication becomes addition.
+
+To start the process, we set some initial parameter values. To make things later easy, we store the initial values in vectors that will also hold our posterior samples. The vector `P` holds the log posteriors.
+
+```{r class.source = 'fold-show'}
+# number of samples we want to draw
+iter = 4000
+# vectors to store simulation results
+post.mu = vector(length = iter)
+post.log_sigma = vector(length = iter)
+P = vector(length = iter)
+# initialize parameter values (usually done ranomly)
+post.mu[1] = -2
+post.log_sigma[1] = 1.5
+# calculate log posterior
+P[1] = calc.P(post.mu[1], post.log_sigma[1], y)
+```
+
+## Making proposals
+
+For the Metropolis algorithm proposal need to be symmetric around the current parameter values. **Here we use a normal distribution with a standard deviation of `0.5`**. This standard deviation is an important parameter because if it is to small and we initialize far away from the posterior distribution the algorithm will take a lot of time to find the posterior distribution. On the other hand, if the standard deviation is to large, the algorithm will make lots of proposals that are rejected, which also slows things down.
+One rule of thumb is to set the standard deviation such that around 80% of the proposals are accepted. This is partially a process of trial and error, though it helps to choose reasonable priors and to choose standard deviations for proposals that are consistent with the priors.
+
+```{r class.source = 'fold-show'}
+i = 2 # current iteration
+propposal.mu = 
+  rnorm(1, 
+        mean = post.mu[i-1],
+        sd = 0.05)
+propposal.log_sigma = 
+  rnorm(1, 
+        mean = post.log_sigma[i-1], 
+        sd = 0.05)
+```
+
+## Adding a sample
+
+Because our goal is to describe a posterior distribution, we should choose more of those samples that have a high log posterior. 
+
+On the other hand, we also want explore the space of possible parameters and should therefor also accept samples that have lower log posteriors. We also do not simply want to find the maximum a posteriori, i.e. the parameter combination at which the log posterior is highest, but we want to know the (relative) probability of parameters combinations.
+
+A first step is to calculate the log posterior for the proposal:
+
+```{r class.source = 'fold-show'}
+proposal.P = calc.P(propposal.mu, propposal.log_sigma, y)
+```
+
+The decision rule about accepting the proposal as the next samples is as follows:
+
+- If the log posterior of the proposal is higher, always choose the proposal as the new sample
+- If the log posterior of the proposal is lower, randomly choose between the last sample and the new sample. The log posteriors determine the probability of choosing the proposal or old sample, such that the smaller the log posterior of the proposal is compared to the log posterior of the last sample, the smaller is the propbability to choose the proposal. 
+
+This was the decision rule in words, here it is in code:
+
+First, we want to know what is the relative probability of the data under the proposal, compared to under the last sample.
+
+```{r class.source = 'fold-show'}
+c(log_post.last_sample = P[1], log_post.proposal = proposal.P)
+```
+Because we are on the log scale, we subtract and then take the exponent:
+
+```{r class.source = 'fold-show'}
+exp(proposal.P-P[1])
+```
+
+So the probability of the proposal is `r round(exp(proposal.P-P[1]),)` time the probability of the last sample.
+
+Because the proposal has a lower probability, we choose randomly:
+
+```{r class.source = 'fold-show'}
+accept = 
+  ifelse(
+    exp(proposal.P-P[1]) < runif(1),
+    TRUE, FALSE)
+accept
+```
+In this case we `r ifelse(accept == TRUE,"accept", "reject")` the proposal.
+
+Now that we have decided about the first sample, we generate a new proposal to generate the next sample.
+
+Un-hide the next code block to see how to generate 4000 samples.
+
+```{r }
+last.P = proposal.P
+for (k in 2:iter) {
+  # generate proposal and calculate log_posterior
+  propposal.mu = rnorm(1,mean = post.mu[k-1], sd = .05)
+  propposal.log_sigma = rnorm(1, mean = post.log_sigma[k-1], sd = .05)
+  proposal.P = calc.P(propposal.mu, propposal.log_sigma, y)
+  # acceptance probability
+  acceptance = min(1, exp(proposal.P-last.P))
+  # acceptance decision rule
+  if (acceptance >= 1) {
+    post.mu[k] = propposal.mu
+    post.log_sigma[k] = propposal.log_sigma
+    last.P = proposal.P
+  } else {
+    if (runif(1) < acceptance) {
+      post.mu[k] = propposal.mu
+      post.log_sigma[k] = propposal.log_sigma
+      last.P = proposal.P
+    } else {
+      post.mu[k] = post.mu[k-1]
+      post.log_sigma[k] = post.log_sigma[k-1]
+    }
+  }
+}
+```
+
+And here is the result of this process:
+
+![Metropolis algorithm visualized. Red dots are rejected proposals](metropolis.mp4)
+
+Did we learn the correct mean and standard deviation?
+
+We can plot the posterior distribution, which does not include the first 2000 _burn in samples_ in which the sampler tried to find the posterior distribution.
+
+```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
+par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+layout(matrix(c(1,3,1,3,2,4), nrow = 2))
+posterior.histogram = function(x,xlab) {
+  plot(1:length(x),x, 'l', ylab = xlab, xlab = "iteration",
+       main = paste0("traceplot ",xlab))
+  hist(x, main = paste0("mean = ", round(mean(x),2)), xlab = xlab)
+}
+posterior.histogram(post.mu[-(1:1200)],"mu")
+posterior.histogram(exp(post.log_sigma[-(1:1200)]),"sigma")
+```
+
+And to double check, here are arithmetic mean and sd:
+
+```{r}
+c(mean = mean(y), sd = sd(y))
+```
+
+While this was a trivial example, it shows us the MCMC, here in the form of the Metropolis algorithm, can compute posterior distributions.
+
+# Why Hamiltonian Monte Carlo?
+
+The Metropolis algorithm and improved versions like Gibbs perform generally well, but they have problems when parameters are correlated.
+
+Take for example these data    with high colinearity, akin the 2-legs example:
+
+```{r class.source = 'fold-show'}
+set.seed(1)
+Sigma = matrix(c(1,.95,.95,1), nrow = 2)
+X = MASS::mvrnorm(100,mu = c(0,0), Sigma = Sigma)
+Y = X %*% c(1,1) + rnorm(100)
+```
+
+```{r, fig.height=4, fig.width=4, out.width="50%"}
+XY = cbind(X1 = X[,1], X2 = X[,2], Y = Y)
+colnames(XY)[3] = "Y"
+par(mar=c(3,3,2,1), mgp=c(1.25,.5,0), tck=-.01)
+pairs(XY)
+```
+
+If we estimate a model $\small Y ~ Normal(\beta_1 X_1 \ + \beta_2 X_2, \sigma)$ the coefficients $\small \beta_1$ and $\small \beta_2$ are highly correlated.
+
+Lets see what the Metropolis sampler does with this: 
+
+![Metropolis sampling for hard problem](metropolis_hard.mp4)
+
+We can observe following things:
+
+- the sampler takes many iterations to find the posterior distribution of this (still relatively simple) problem
+- even after 9000 trials the sampler is not stationary, i.e. the samples do not vary around a constant mean, but slowly change over time
+- despite lots of samples, the sampler has not explored the parameter space well (see the "white space" at the border of the posterior distribution)
+
+This is just one example where Metropolis or Gibbs samplers can have difficulties.
+
+# Fitting models with _Stan_ and `ulam`
+
+Lets try to fit the model whith which the Metropolis sampler had problems with `ulam`.
+
+One sampling algorithm that does much better than Metropolis is Gibbs sampling Hamiltonian Monte Carlo. On an intuitive level, the key difference in favor of Hamiltonian Monte Carlo is that it generates proposals less randomly than either Metropolis or Gibbs. Less randomly hear means that the direction from the current sample to the proposal is not random, but that proposals are more likely in direction of the bulk of the posterior distribution.
+
+To clarify the relationship of different terms:
+
+- _Hamiltonian Monte Carlo_ is the name for a type of MCMC samplers
+- _Stan_ is one (the leading) software that implements a HMC sampler and also a probabilistic programming language
+- `ulam` is a function in the `rethinking` packages that translates rethinking models (`alist(...)`) into the Stan language and runs the HMC sampler
+- Other packages that use _Stan_ to generate MCMC samples are `brms` and `rastanarm`, where one can formulate models like typically in `R` (e.g. `fit = brms(y ~ x1 + x2, data = dt)` ) and `rstan` and `cmdstandr`, which require that that the use writes the model directly in the Stan progamming language.
+
+
+## Fitting in `ulam`
+
+We first put the data for the model together:
+
+```{r class.source = 'fold-show'}
+data.list = list(
+  Y = as.vector(Y),
+  X1 = X[,1],
+  X2 = X[,2]
+)
+```
+
+Note that differently than for `quap` models, we need to do an transformation before we submit the data to `ulam`. It is OK to submit data as `data.frame` or a list. The latter is more flexible, which is why we use it.
+
+Next we define the `rethinking` model:
+
+```{r class.source = 'fold-show'}
+model = alist(
+  Y ~ normal(mu,exp(log_sigma)),
+  mu <- a + b1*X1 + b2*X2,
+  a ~ dnorm(0,1),
+  b1 ~ dnorm(0,1),
+  b2 ~ dnorm(0,1),
+  log_sigma ~ dnorm(0,1)
+)
+```
+
+This is exactly the same model we also fit the with  Metropolis sampling. Putting a normal prior on `log_sima` and later exponentiation it is slightly unusual. The reason this is done here is that I wanted to avoid non-symmetric proposal on the prior for the error variance.
+
+Until here, everything was as we know it from `quap` models. But now we use the `ulam` function, which requires a few additional parameters because we are now actually doing simulations.
+
+```{r class.source = 'fold-show', eval = F}
+u.fit = ulam(
+  model,
+  data = data.list,
+  iter = 2000,      # 200 iterations, (1000 warmup)
+  chains = 4,       # for chains, to check convergence
+  cores = 4,        # use 4 cores in parallel
+  cmdstan = TRUE)   # use cmdstanr not rstan
+```
+
+```{r echo = FALSE}
+if (file.exists("u.fit.Rdata")) {
+  load("u.fit.Rdata")
+} else {
+  ulam.startlist = list(
+  a = rep(-2,3),
+  b1 = c(3,3,-3,-3),
+  b2 = c(3,-3,3,-3),
+  log_sigma = rep(1.5,4))
+  u.fit = ulam(
+  model,
+  data = data.list,
+  iter = 2000,      # 200 iterations, (1000 warmup)
+  chains = 4,       # for chains, to check convergence
+  cores = 4,        # use 4 cores in parallel
+  cmdstan = TRUE,   # use cmdstanr not rstan
+  start = ulam.startlist)  
+  save(u.fit, file = "u.fit.Rdata")
+}
+```
+
+Here is the how HMC (via ulam and Stan) explores the posterior distribution:
+
+![HMC via Stan and `ulam` for hard problem](metropolis_hard_stan.mp4).
+
+
+Maybe the comparison to the Metropolis sampler is not so clear, so lets look at both together:
+
+![Metropolis vs HMC](metropolis_hard_both.mp4)
 
 # A healthy chain
 
+How do we know that the results from `ulam` are better than the results from the Metropolis sampling scheme?
+
+First an example: This is an ensemble of 4 healthy chains:
+
+```{r}
+trace.rankplot = function(chains) {
+  par(mfrow = c(2,1), mar=c(2,3,0.1,.5), mgp=c(1.75,.5,0), tck=-.01)
+  matplot(chains, typ = "l", lty = 1, ylab = "theta", xlab = "") 
+  ranks = matrix(rank(chains), ncol = ncol(chains))
+  h = hist(ranks, plot = F, breaks = 30)
+  rank.hists = 
+    apply(ranks,2, 
+          function(x) counts = hist(x,breaks = h$breaks, plot = F)$counts)
+  par(mar=c(3,3,0,.5))
+  matplot(h$mids,rank.hists,'s', ylim = c(0,max(rank.hists)),lty = 1, 
+          xlab = "iteration", ylab = "frequency")
+}
+```
+
+
+```{r}
+chains.well.mixing = matrix(rnorm(4000),ncol = 4)
+trace.rankplot(chains.well.mixing)
+```
+
+This chain is healthy because it is 
+
+- stationary
+- well mixed
+- shows convergence.
+
 ## Stationarity
 
-## Good mmixing
+Stationarity means that the chains vary around a stable mean, which one can imagine as horizontal line.
+
+Here is an example of non-stationary chains:
+
+```{r}
+AR = cbind(sin(seq(1,2*pi,length.out = 1000)),
+           sin(0.5+seq(1,3*pi,length.out = 1000)),
+           sin(1.5+seq(1,3*pi,length.out = 1000)),
+           sin(2.5+seq(1,3*pi,length.out = 1000)))
+chains.AR =
+  chains.well.mixing/4 + 
+  AR
+trace.rankplot(chains.AR)  
+
+```
+
+These chains exhibit autocorrelation, because the chains i-1, i-2, i-3 ... can be used to predict the parameter values at chain i. This is undesirable, because it means that the samples are not independent.
+
+## Good mixing
+
+Good mixing means that the samples vary with a constant variance around their mean. 
+
+Here is an example of chains that did not mix:
+
+```{r}
+chains.not.mixing = 
+  matrix(rnorm(4000,
+               sd = as.vector(AR)^2),
+         ncol = 4)
+trace.rankplot(chains.not.mixing)  
+```
+
 
 ## Convergence
 
+Convergence means that all chains converged to the same mean. Here is an example of chains that did not converge:
+
+```{r}
+offsets = cbind(rep(-.25,1000),
+                rep(0,1000),
+                rep(.25,1000),
+                rep(.5,1000))
+chains.not.converged = 
+  chains.well.mixing/4 + 
+  offsets
+trace.rankplot(chains.not.converged)  
+
+```
+
+
 # Simulating good posteriors
 
-## High n_eff
+## Convergence diagnostics
 
-## Many chains: Why and how many?
+With convergence we mean that multiple chains should converge to the same posterior distribution when starting at different starting points. Here is a slightly unorthodox figure that hows this for for the parameter b1 and b2 from out "hard" analysis with colinear predictors:
+
+<p align="center">
+  <video width="600" height="600" controls>
+  <source src="Stan_hard_4_chains.mp4" type="video/mp4">
+Your browser does not support the video tag.
+</video>
+</p>
+
+
+More typically, one shows one traceplot per parameter:
+
+```{r class.source = 'fold-show'}
+traceplot_ulam(
+  u.fit,
+  pars = c("b1",c("b2")),
+  n_cols = 1,
+  max_rows = 2)
+```
+
+While we can eyeball traceplots to see if the chains have converged, it is better to have some statistic that makes this more objective.
+
+The key statistic here is Rhat, which is a number that--roughly said--compares the variances within chains to the variance between chains. If, the chains would converge to different means, the variance between chains becomes larger than the variance within chains and the Rhat value becomes larger then 1.01, the currently recommended threshold.^[As with ols thresholds, this should be seen in context. An Rhat values of 1.1 can be OK, a Rhat value > 1.1 is not OK.] The ` precis`function shows this and other values:
+
+```{r}
+precis(u.fit) %>% round(3)
+```
+
+We can use our examples above to look at Rhat values for "bad" chains:
+
+```{r, fig.width=6, fig.height=3, message = F}
+library(bayesplot)
+library(posterior)
+
+nms = c("mixing","not mixing", "AR", "not converging")
+
+test.posteriors = 
+  array(NA, dim = c(1000,4,4), 
+        dimnames = list(iter = 1:1000, chain = 1:4, variable = nms))
+test.posteriors[,,1] = chains.well.mixing
+test.posteriors[,,2] = chains.not.mixing
+test.posteriors[,,3] = chains.AR
+test.posteriors[,,4] = chains.not.converged
+
+
+par(mfrow = c(2,2), mar=c(2,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+for (j in 1:4) {
+  matplot(test.posteriors[,,j], typ = "l", lty = 1, ylab = "theta", xlab = "") 
+  title(dimnames(test.posteriors)$variable[j])
+}
+  
+
+test.posteriors %>% 
+  summarise_draws() %>% 
+  kable(digits = 2) %>% 
+  kable_styling(full_width = FALSE)
+
+```
+I have used the `summarise_draws` function from the `posterior` packages, which also shows the effective sample size (ess, this is the same as n_eff) for the bulk (something like the central part of the posterior distribution) and for the tail of the posterior distribution.
+
+We see that Rhat and the effective sample size increase primarily when chains are non-stationary and do not converge.
+
+The effective sample size (n_eff or ess) is a direction function of Rhat and the number of posterior samples. One should not just increase the number of iterations when the effective sample size is low. Rather, one should check if the model can be improved through better priors and/or a re-parameterization.
+
+## Rhat, ess/n_eff, number of chains
+
+- _We need multiple chains_ to check if the sampler converges to the same posterior
+- Rhat is the key convergence diagnostic
+- The effective number of samples depends on (a) Rhat and (b) the number of posterior samples. It tells us how much we can trust statistics we can calculate from the posterior. As a rule of thumb, a few hundred samples are enough. If we are mainly interested in the mean, we should look at the n_eff / ess for the bulk, if we are interested in the tail (e.g. when we are looking at cut-off values in the tail region) we should look at the n_eff / ess for the bulk.
+- _Multiple chains are useful_ because they increase the number of posterior samples and thus contribute to ess / n_eff.
+- Typically 4 chains is OK. Fewer chains reduce the chance to detect problems. More chains can be useful to detect problems in tricky models. (this would typically be )
+- **In sum: Go with defaults!**
+  - 4 chains
+  - 1000 warmup and 100 post warm up iterations
+  - check if Rhat <= 1.01
+  - check if relevant ess / n_eff > 500
 
 ## Bad models make bad posteriors
 
-(wild chain)
+```{r}
+data.list = list(
+  Y = as.vector(Y),
+  X1 = X[,1],
+  X2 = X[,1]
+)
+
+wide.model = alist(
+  Y ~ normal(mu,exp(log_sigma)),
+  mu <- a + b1*X1 + b2*X2,
+  a ~ dnorm(0,1),
+  b1 ~ dnorm(0,1000),
+  b2 ~ dnorm(0,1000),
+  log_sigma ~ dnorm(0,1)
+)
+
+u.fit.wide = ulam(
+  wide.model,
+  data = data.list,
+  iter = 2000,      # 200 iterations, (1000 warmup)
+  chains = 4,       # for chains, to check convergence
+  cores = 4,        # use 4 cores in parallel
+  cmdstan = TRUE)   # use cmdstanr not rstan
+
+traceplot(u.fit.wide, n_row = 2, n_col = 2, pars = c("b1","b2"))
+```
+

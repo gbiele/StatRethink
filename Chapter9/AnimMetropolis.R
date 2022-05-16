@@ -89,4 +89,4 @@ av_capture_graphics(
   },
   output = "metropolis.mp4",
   framerate = 20,
-  width = 1200, height = 600, pointsize = 30)
+  width = 900, height = 450, pointsize = 30)
