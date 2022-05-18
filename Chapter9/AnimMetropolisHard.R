@@ -57,12 +57,12 @@ make_anim = function(theta, fn = NULL) {
   xlim.l = min(theta[,2])
   xlims.r = rep(max(theta[-(1:1000),2]), length(ks))
   xlims.r[1:350] = rep(max(theta[,2]),350)
-  xlims.r[351:750] = seq(xlims.r[351],xlims.r[750], length.out = 400)
+  xlims.r[351:750] = seq(xlims.r[350],xlims.r[750], length.out = 400)
   
   
   ylims.b = rep(min(theta[-(1:1000),3]),length(ks))
   ylims.b[1:350] = rep(min(theta[,3]),350)
-  ylims.b[351:750] = seq(ylims.b[351],ylims.b[750], length.out = 400)
+  ylims.b[351:750] = seq(ylims.b[350],ylims.b[750], length.out = 400)
   ylim.t = max(theta[,3])
   
   av_capture_graphics(
@@ -95,7 +95,7 @@ make_anim = function(theta, fn = NULL) {
 }
 
 post.theta = metropolis(start.list = list(c(-2,3,-3,1.5)))[[1]]
-#make_anim(post.theta, fn = "metropolis_hard.mp4")
+make_anim(post.theta, fn = "metropolis_hard.mp4")
 
 post.theta.4 = metropolis(
   start.list = list(c(-2,3,3,1.5),
@@ -152,7 +152,7 @@ theta.4 = list(
 
 theta = theta.4[[2]]
 
-#make_anim(theta, fn = "metropolis_hard_stan.mp4")
+make_anim(theta, fn = "metropolis_hard_stan.mp4")
 
 
 theta.a = post.theta
@@ -196,7 +196,7 @@ make_anim.2 = function(theta.a,theta.b,d2d) {
     width = 900, height = 450, pointsize = 17.5)
 }
 
-#make_anim.2(theta.a, theta.b, d2d)
+make_anim.2(theta.a, theta.b, d2d)
 
 make_anim.4 = function(theta.list, fn = NULL, stop.trace = 1000) {
   library(av)
@@ -239,6 +239,6 @@ make_anim.4 = function(theta.list, fn = NULL, stop.trace = 1000) {
     width = 600, height = 600, pointsize = 22.5)
 }
 
-make_anim.4(post.theta.4, "metropolis_hard_4_chains.mp4", stop.trace = 750)
+#make_anim.4(post.theta.4, "metropolis_hard_4_chains.mp4", stop.trace = 750)
 make_anim.4(theta.4, "Stan_hard_4_chains.mp4", stop.trace = 100)
 
