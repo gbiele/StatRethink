@@ -47,7 +47,7 @@ source("../utils.R")
 
 # Metropolis
 
-The metropolis algorithm is the simplest Markov Monte Carlo Chain (MCMC) algorithm. Even though it is not used anymore because it is not very efficient, it is useful to explain the key components of MCMC algorithms.
+The Metropolis algorithm is the simplest Markov Chain Monte Carlo (MCMC) algorithm. Even though it is not used anymore because it is not very efficient, it is useful to explain the key components of MCMC algorithms.
 
 The goal of an MCMC algorithm is to generate a posterior distribution, i.e. we want to calculate how probable parameters are given the data, the likelihood and the prior.
 
@@ -616,7 +616,7 @@ We see that prior for beta allows slope that are orders of magnitude steeper tha
 wide.model
 ```
 
-The priors on b1 and b2 are indeed very wide. Note that a 4 unit change on the x axis corresponds to a 12 unit change on the y axis, for only one parameter. 12/4/2 = 1.5, so even if we set the prior sd for b1 and b2 to 15, we are stilling using very wide priors (though not redicliously wide). Lets try this model:
+The priors on b1 and b2 are indeed very wide. Note that a 4 unit change on the x axis corresponds to a 12 unit change on the y axis, for only one parameter. 12/4/2 = 1.5, so even if we set the prior sd for b1 and b2 to 15, we are stilling using very wide priors (though not ridiculously  wide). Lets try this model:
 
 ```{r class.source = 'fold-show'}
 less.wide.model = alist(
