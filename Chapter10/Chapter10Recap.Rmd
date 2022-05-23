@@ -1,0 +1,195 @@
+---
+title: "Chapter 10: Recap"
+author: "Guido Biele"
+date: "11.05.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+  max-width: 1000px;
+  margin: auto;
+  margin-left:310px;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  overflow:auto;
+}
+
+
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = 'center')
+
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+source("../utils.R")
+```
+
+# Generalized linear models
+
+So far we have used linear regressions, where we modeled the outcome as follows:
+
+$$
+y \sim Normal(\mu,sigma) \\
+\mu  = \alpha + \beta X
+$$
+
+This regression works generally well, even if $\small y$ is not normally distributed. (The residuals should be though. And a posterior predictive plot is always useful!)
+
+## Distributions
+
+However, for some outcome types a linear regression simply does not work. This is particularity clear when the outcome is bound to be equal to or larger than zero (like counts that "clump" at zero) or when the outcome is binary.
+
+In these situations we can use this kind of model:
+
+$$
+y \sim dist(\theta_1,\theta_2) \\
+$$
+
+Here $\small dist(\theta_1,\theta_2)$ is a distribution with two parameters^[There are also distributions with 1 or 3 or more parameters] that is consistent with the observed data.
+
+__Choosing a different distribution means choosing a different likelihood function__. That is, we exchange `dnomr` with an alternative distribution that is appropriate for the data.
+
+Here are a few examples:
+
+- The [Binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) models the _"number of successes in a sequence of n independent experiments, each asking a yes–no question"_. Hence we use the Binomial distribution function to calculate the likelihood of the data given model and parameters when we model number of successes. A special case is when we have only one trial / experiment, the Binomial distribution models binary outcomes.
+
+```{r out.width="80%", fig.height=4}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
+x = seq(0,5,1)
+plot(x-.2,dbinom(x, 5, .2),"h", xlim = c(0,20), lwd = 2,
+     ylab = "probability mass", xlab = "number of success")
+x = seq(0,10,1)
+lines(x,dbinom(x, 10, .5),"h", col = "blue", lwd = 2)
+x = seq(0,20,1)
+lines(x+.2,dbinom(x, 20, .75),"h", col = "red", lwd = 2)
+legend("topright",
+       lwd = 2, col = c("black","blue","red"),
+       legend = c(
+         expression(theta[1]~" = n = 5, "~theta[2]~" = p = .2"),
+         expression(theta[1]~" = n = 10, "~theta[2]~" = p = .5"),
+         expression(theta[1]~" = n = 30, "~theta[2]~" = p = .75")
+       ),
+       bty = "n")
+```
+
+- The [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) _"expresses the probability of a given number of events occurring in a fixed interval of time or space if these events occur with a known constant mean rate"_ . Hence we use the Poisson distribution function to calculate the likelihood of the data given model and parameters when we occurrence of events (counts).
+
+```{r, out.width="80%", fig.height=4}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01, cex = 1.25)
+x = seq(0,5,1)
+plot(x-.2,dpois(x, .5),"h", xlim = c(0,20), lwd = 2,
+     ylab = "probability mass", xlab = "number of events")
+x = seq(0,10,1)
+lines(x,dpois(x, 5),"h", col = "blue", lwd = 2)
+x = seq(0,20,1)
+lines(x+.2,dpois(x, 10),"h", col = "red", lwd = 2)
+legend("topright",
+       lwd = 2, col = c("black","blue","red"),
+       legend = c(
+         expression(theta[1]~" = "~lambda~" = p =  .5"),
+         expression(theta[1]~" = "~lambda~" = p = 5"),
+         expression(theta[1]~" = "~lambda~" = p = 10")
+       ),
+       bty = "n")
+```
+
+## Link functions
+
+As can be seen from the previous plots, the expected value (the mean parameter) of the Binomial and Poisson distributions are constrained:
+
+- For the Binomial distribution:  $\small 0 \leq \textrm{success probability } p \leq 1$
+- For the Poisson distribution:  $\small 0 \leq \textrm{expected rate } \lambda$.
+
+But if we would just model e.g. 
+$$
+p =  \alpha + \beta X
+$$
+we could get values between minus and plus infinity. Therefore the generalized linear model also used link functions that map the result of the _linear predictor_ $\small \alpha + \beta X$ to the desired range:
+
+$$
+p = link(\alpha + \beta X)
+$$
+
+Different distribution use different link function to implement different constraints:
+
+- Link function for the Binomial distribution: $\small p = inv.logit(\alpha + \beta X)$
+
+$$
+\small inv.logit(x) = \frac{1}{1+exp(-x)} = \frac{exp(x)}{1+exp(x)}
+$$
+
+```{r, out.width="80%", fig.height=4}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01, cex = 1.25)
+curve(boot::inv.logit(x),-5.1,5.1,n = 100,
+      xlab = expression(alpha~" + "~beta~"X"), ylab = "p")
+```
+
+
+- For the Poisson: $\lambda = exp(\alpha + \beta X)$
+
+```{r, out.width="80%", fig.height=4}
+par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01, cex = 1.25)
+curve(exp(x),-3,4,n = 100,
+      xlab = expression(alpha~" + "~beta~"X"), ylab = expression(lambda))
+```
+
+One important effect of link functions is that we cannot interpret regression weights in the same way as for simple linear regression. In a nutshell, if link functions exponentiate the linear predictor, regression weights represent multiplicative rather than additive effects.
+
+In `R` `family` is the term for an object that tells a regression model both what outcome distribution to use and what link function to use.
+
+When do we use the Binomial and when the Poisson Likelihood?
+
+
+- Poisson when there is no clear limit to the number of counts
+  - number of apples in an orchard
+  - number of people with a PhD
+  - number of romantic partners per person
+
+- Binomial when the counted number of success is limited by the number of trials. This is the reason that the Binomial distribution has 2 parameters.
+  - number of people with a PhD that have red hair
+  - number of norwegian romantic partners per person
+  
+# Logistic regression
+
+- prior predictive checks
+
+- posterior predictive checks
+
+- contrasts
+
+- odds ratios (relative vs absolute effects, relative risk, risk difference)
