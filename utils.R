@@ -103,3 +103,4 @@ make_gif = function(dr = NULL, fn = NULL, fps = 20) {
   image_write(image = img_animated,
               path = fn)
 }
+
