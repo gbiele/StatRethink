@@ -66,7 +66,7 @@ set_par = function(mfrow = c(1,1), mar=c(3,3,.5,.5), cex = 1.25)
 
 # A different view of the logistic regression
 
-We can think of a logistic regression as model in which individuals have a latent trait that determines if they fall in one category or another. For instance, scholastic aptitude is a trait that  (co-) determines if a student passes a class:
+We can think of a logistic regression as model in which individuals have a latent trait that determines if they fall in one category or another. For instance, latent scholastic aptitude is a trait that  (co-) determines if a student passes a class:
 
 ```{r class.source = 'fold-show'}
 threshold = -2
@@ -76,7 +76,7 @@ threshold = -2
 ```{r out.width="60%"}
 set_par(cex = 1.5)
 curve(dlogis(x),-6,6, xlim = c(-5,5),
-      xlab = "scholastic aptitude")
+      xlab = "latent scholastic aptitude")
 x = seq(threshold,5,.1)
 shade(dlogis(x)~x,c(threshold,6), col = adjustcolor("green3",.5))
 x = seq(-6,threshold,.1)
@@ -96,7 +96,7 @@ To get the probability to fail at a certain threshold, we use the cumulative pro
 ```{r out.width="60%"}
 set_par(cex = 1.5)
 curve(plogis(x),-6,6,xlim = c(-5,5),
-      xlab = "scholastic aptitude",
+      xlab = "latent scholastic aptitude",
       ylab = "plogis(x) = inv_logit(x)")
 curve(plogis(x),-6,-2,col = "red", add = T, lwd = 1.5)
 curve(plogis(x),-2,6,col = "green3", add = T, lwd = 1.5)
@@ -114,22 +114,22 @@ log_odds
 ```
 This is exactly our threshold.
 
-Now let us assume that there is another variable that increases the probability to pass a class, so that also students with lower scholastic aptitude of -3 can pass a class (could be class difficulty).
+Now let us assume that there is another variable that increases the probability to pass a class, so that also students with lower latent scholastic aptitude of -3 can pass a class (could be class difficulty).
 
 In a logistic regression we estimate the following:
 
 $$
 log \left( \frac{P_{fail}}{P_{pass}} \right) = \alpha + \beta \cdot X
 $$
-Here $\small \alpha$ is the intercept and baseline log-odds to pass the test (due to scholastic aptitude), $\small X$ is our additional variable and $\small \beta$ captures the change in the log odds of passing the class due to variable $\small X$.
+Here $\small \alpha$ is the intercept and baseline log-odds ratio to pass the test (due to latent scholastic aptitude), $\small X$ is our additional variable and $\small \beta$ captures log odds ratio from passing the class due to variable $\small X$.
 
-Because our baseline threshold / log odds is -3 and the threshold for children with variable X is -3, we calculate
+Because our baseline threshold / log odds ratio is -2 and the threshold for children with variable X is -3, we calculate
 
 $$
 \beta = -2 -(-3) = 1
 $$
 
-So if we simulate data according to this data generating process and estimate a logistic regression, we should find that $\small \alpha = -2$ and $\beta = 1$.
+So if we simulate data according to this data generating process and estimate a logistic regression, we should find that $\small \alpha = -2$ and $\small \beta = 1$.
 
 Lets simulate the data:
 
@@ -141,7 +141,7 @@ thresholds = -3 + X
 pass = rlogis(N) > thresholds
 ```
 
-And estimate the model
+We estimate the model:
 
 ```{r class.source = 'fold-show'}
 q.fit = quap(
@@ -159,7 +159,7 @@ precis(q.fit) %>%
 
 Due to simulation noise we are not exactly recovering the parameters, but we are getting the correct thresholds with `r precis(q.fit)$mean[1] %>% round(2)` at baseline and a + b =  `r precis(q.fit)$mean[1] %>% round(2)` + `r precis(q.fit)$mean[2] %>% round(2)` = `r sum(precis(q.fit)$mean) %>% round(2)` for individuals where X = 1.
 
-This shows us again that regression weights in logistic regressions represent changes in log odds due to a predictor variable.
+This shows us again that regression weights in logistic regressions represent changes in log odds ratios due to a predictor variable.
 
 # Ordinal logistic regression
 
@@ -170,7 +170,7 @@ Ordinal logistic regressions are named as such, because just like logistic regre
 ```{r out.width="60%"}
 plot_dlogis.thresh = function(thresholds) {
   curve(dlogis(x),-6,6,xlim = c(-5,5),
-        xlab = "scholastic aptitude")
+        xlab = "latent scholastic aptitude")
   n_cat = length(thresholds) + 1
   clrs =
     colorRampPalette(c("blue","blue4"))(n_cat)
@@ -207,7 +207,7 @@ plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE) {
   clrs = 
     colorRampPalette(c("blue","blue4"))(n_cat) 
   curve(plogis(x),-6,6,xlim = c(-5,5),
-        xlab = "scholastic aptitude")
+        xlab = "latent scholastic aptitude")
   for (k in 1:n_cat) {
     s = ifelse(k == 1, -6, thresholds[k-1])
     e = ifelse(k == n_cat, 6, thresholds[k])
@@ -252,9 +252,9 @@ Here we simulate data:
 
 ```{r class.source = 'fold-show'}
 N = 1000
-R = 
-  cut(rlogis(1000),
-      breaks = c(-Inf,-2,0,2,Inf)) %>% 
+R = cut(
+  rlogis(1000),
+  breaks = c(-Inf,-2,0,2,Inf)) %>% 
   as.numeric()
 ```
 
@@ -295,6 +295,19 @@ ol.model =
   )
 ```
 
+The key different between the simple logistic and the ordered logistic regression is that the former has one threshold parameter:
+
+$$
+log \left( \frac{P(fail)}{P(success)} \right) = \alpha_k
+$$
+
+and the latter has $k = \small \textrm{1-number of levels}$ threshold parameters:
+
+$$
+log \left( \frac{P(R>\alpha_k)}{P(R<\alpha_k)} \right) = \alpha_k 
+$$
+
+
 The `dordlogit` **calculates the likelihood of the observation given the model using the `plogis` / `inv_logit` function, whereby different threshold values lead to different likelihoods**:
 
 ```{r, fig.width=10, fig.height=8}
@@ -321,7 +334,7 @@ legend("topleft", fill = c("grey25","blue"),
 }
 ```
 
-So the basic ordered logistic regression model tries to find the correct threshold values that allow to reproduce the observed rating levels.
+So the basic ordered logistic regression model tries to find the correct threshold values that allow to reproduce the observed distribution of ratings.
 
 We fit the model.
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
@@ -334,8 +347,7 @@ u.fit = ulam(
 And here are the estimated thresholds:
 
 ```{r class.source = 'fold-show', fig.height=3}
-precis(u.fit, depth = 2) %>% 
-    plot()
+precis(u.fit, depth = 2) %>% plot()
 threshold.est = precis(u.fit, depth = 2)[,1]
 text(threshold.est,
      3:1,
@@ -347,43 +359,90 @@ As expected we recover the correct threshold values (with some error/bias due to
 
 ## Ordinal logistic regression with predictors
 
-To understand how to set up a model such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variables an thresholds again. The plot also shows a hypothetical person with a scholastic aptitude of -0.5.
+To understand how to set up a model, such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variables an thresholds again. The plot also shows a hypothetical person with a latent scholastic aptitude of 0 as a white dot.
 
 ```{r, out.width="60%"}
 set_par(cex = 1.5)
 plot_dlogis.thresh(thresholds)
-plotrix::draw.circle(-.5,.005,radius = .1,col = "white")
+plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
-If we lets for example take a person with a scholastic aptitude of 0.5. If we want to increase the chance that this person achieves a rating of 3 by increasing the value of the latent variable scholastic aptitude or by shifting the the thresholds to the left:
+If we want to increase the chance that this hypothetical person achieves a rating of R = 3, we can either increase the value of the latent variable scholastic aptitude or shift the the thresholds to the left:
 
 ```{r, fig.height=5, fig.width=10, out.width="120%"}
 set_par(mfrow = c(1,2),cex = 1.25)
+thresholds = c(-2,0,2)
 plot_dlogis.thresh(thresholds)
-plotrix::draw.circle(.5,.005, radius = .1,col = "white")
-plotrix::draw.circle(-.5,.005, radius = .1,col = adjustcolor("white",alpha = .5))
-arrows(x0 = -.5, x1 = .5, y0 = .005, length = .1, col = "white")
+arrows(x0 = 0, x1 = 1, y0 = .005, length = .1, col = "white")
+plotrix::draw.circle(1,.005, radius = .1,col = "white")
+plotrix::draw.circle(0,.005, radius = .1,col = adjustcolor("white",alpha = .75))
+
 
 thresholds = c(-3,-1,1)
 plot_dlogis.thresh(thresholds)
-plotrix::draw.circle(-.5,.005,radius = .1,col = "white")
 abline(v = thresholds+1, col = adjustcolor("red",alpha = .25), lty = 2)
 arrows(x0 = thresholds+1, x1 = thresholds,
        y0 = c(seq(.025,.075,length.out = 3)),
        col = "red", length = .1)
+plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
-If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally.
+If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally. In both plots above the bright white dot is in in the middle between the 2/3 and 3/4 thresholds.
 
-Therefore we can, just as we saw earlier for the logistic regression, just add a term for individual level effect to the basic threshold / intercept only model to capture the effect of predictor variables on responses:
+Therefore we can, as we saw earlier for the logistic regression, add terms for individual level effects to the basic threshold / intercept only model to capture the effect of predictor variables on responses:
 
 $$
 log \left( \frac{P_i(R>\alpha_k)}{P_i(R<\alpha_k)} \right) = \alpha_k + \beta \cdot X_i
 $$
 where $\small \alpha_k$ are thresholds and $\beta$ captures the effect of the variable $X$ by modifying each individuals threshold.
 
-Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds to give a one level higher (lower) response, i.e. R = 4 instead of R = 3 (R = 3 instead of R = 4).
+Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. R = 4 instead of R = 3 (R = 3 instead of R = 4).
 
-Because there is only one regression weight $\small \beta$ the log odds are the same for all category transitions, i.e. R = 1 to R = 2, R = 2 to R = 3. This is referred to as the proportional odds assumptions, which may or may not be true.
+Because there is only one regression weight $\small \beta$, the log odds ratios are the same for all category transitions, i.e. 
+
+$$
+log \left( \frac{P_i(R>\alpha_1|X = 0)}{P_i(R<\alpha_1|X = 1)} \right) = 
+log \left( \frac{P_i(R>\alpha_2|X = 0)}{P_i(R<\alpha_2|X = 1)} \right) = 
+log \left( \frac{P_i(R>\alpha_3|X = 0)}{P_i(R<\alpha_3|X = 1)} \right)
+$$
+
+This is referred to as the proportional odds assumptions, which may or may not be true.
+
+To see the ordered logistic regression in action, we'll use the example data from the Portugues school again. In particular, we are looking at the (coarsened) first grade and estimate again the association with maternal education.
+
+```{r out.width="80%", fig.height=4}
+df=read.table("../Chapter11/data/student-mat.csv",sep=";",header=TRUE)
+df = df[df$Medu>0,]
+set_par()
+df$G1 = as.numeric(cut(df$G1, breaks = seq(0,20,2),include.lowest = T))
+df$G1 %>% table() %>% barplot()
+```
+
+```{r}
+cs = table(df$G1) %>% prop.table() %>% cumsum()
+cs = cs[cs!=1]
+log(cs/(1-cs))
+```
+
+
+Here is the ulam model:
+
+```{r class.source = 'fold-show'}
+ol.model = 
+  alist(
+    G1 ~ dordlogit(phi,thresholds),
+    phi <- b*Medu,
+    b ~ normal(0,1),
+    thresholds ~ dnorm(0,3)
+  )
+```
+
+We fit the model.
+```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
+u.fit = ulam(
+  ol.model,
+  data=list(G1 = df$G1, Medu = df$Medu),
+  chains=4,cores=4)
+```
 
 # Summary
