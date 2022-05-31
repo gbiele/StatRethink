@@ -414,35 +414,170 @@ To see the ordered logistic regression in action, we'll use the example data fro
 df=read.table("../Chapter11/data/student-mat.csv",sep=";",header=TRUE)
 df = df[df$Medu>0,]
 set_par()
-df$G1 = as.numeric(cut(df$G1, breaks = seq(0,20,2),include.lowest = T))
+df$G1 = as.numeric(cut(df$G1, breaks = seq(0,20,2),include.lowest = T))-1
 df$G1 %>% table() %>% barplot()
 ```
 
-```{r}
-cs = table(df$G1) %>% prop.table() %>% cumsum()
-cs = cs[cs!=1]
-log(cs/(1-cs))
+To recapitulate the thresholds are just odds ratios at category boundaries, lets calculate them:
+
+```{r class.source = 'fold-show'}
+cum_prob = df$G1 %>% 
+  table() %>% 
+  prop.table() %>% 
+  cumsum()
+cum_prob = cum_prob[cum_prob!=1]
+simple_thresholds = log(cum_prob/(1-cum_prob))
+simple_thresholds %>% round(2)
 ```
 
 
-Here is the ulam model:
+And we estimate a thresholds only model with `ulam`:
+
+```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
+tm.fit = ulam(
+  alist(
+    G1 ~ dordlogit(0,thresholds),
+    thresholds ~ dnorm(0,3)
+  ),
+  data=list(G1 = df$G1),
+  chains=4,cores=4)
+```
+
+And we plot the simple thresholds calculated manually against those estimated with ulam:
+
+```{r, out.width="60%"}
+post = extract.samples(tm.fit)
+ulam_thresholds = colMeans(post$thresholds)
+CI = apply(post$thresholds, 2, PI)
+set_par(cex=1.5)
+plot(simple_thresholds,
+     ulam_thresholds,
+     ylim = range(CI),
+     pch = 16, col = "blue")
+arrows(x0 = simple_thresholds,
+       y0 = CI[1,], y1 = CI[2,],
+       col = "blue", length = 0)
+abline(0,1,lty = 3, col = "grey")
+```
+Now that we have understood thresholds, lets implement a model that uses predictor.
+Specifically, we estimate the effect of past failure and maternal education on grades.
 
 ```{r class.source = 'fold-show'}
 ol.model = 
   alist(
     G1 ~ dordlogit(phi,thresholds),
-    phi <- b*Medu,
-    b ~ normal(0,1),
+    phi <- bM*Medu + iFE*failures,
+    iFE <- bF + bFE*Medu,
+    c(bF, bM, bFE) ~ normal(0,1),
     thresholds ~ dnorm(0,3)
   )
 ```
 
 We fit the model.
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
-u.fit = ulam(
+ol.fit = ulam(
   ol.model,
-  data=list(G1 = df$G1, Medu = df$Medu),
+  data=list(G1 = df$G1, Medu = df$Medu, failures = df$failures),
   chains=4,cores=4)
 ```
+
+
+We first just check Rhat values to make sure the model converged:
+
+```{r class.source = 'fold-show'}
+precis(ol.fit, depth = 2) %>% round(3)
+```
+
+This looks OK.
+
+As a quick posterior predictive check we compare the histogram of the observed and predicted grades. We use the `sim` function instead of the `link` function to get posterior predictions on the scale of the ordered outcome variable.
+
+```{r out.width="60%"}
+set_par()
+
+pp = sim(ol.fit)
+obs.counts = cut(df$G1, breaks = seq(.5,10.5,1)) %>% table()
+plot(obs.counts, 's', xaxt = "n", ylim = c(0,110)) 
+axis(1,at = (1:9)+.5, labels = 1:9, lwd = 2)
+for (k in 1:250) {
+  pp.counts = cut(pp[k,], breaks = seq(.5,10.5,1)) %>% table()
+  lines(1:10, pp.counts, 's', col = adjustcolor("blue",".25"))
+}
+```
+
+
+Lets quickly compare the thresholds with thresholds from a thresholds only model again:
+```{r, out.width="60%"}
+post = extract.samples(ol.fit)
+ulam_thresholds = colMeans(post$thresholds)
+CI = apply(post$thresholds, 2, PI)
+set_par(cex=1.5)
+plot(simple_thresholds,
+     ulam_thresholds,
+     ylim = range(CI),
+     pch = 16, col = "blue")
+arrows(x0 = simple_thresholds,
+       y0 = CI[1,], y1 = CI[2,],
+       col = "blue", length = 0)
+abline(0,1,lty = 3, col = "grey")
+```
+
+Because the model now also estimates effects of education and past failures, the thresholds are different. Only if the the covariates would be independent of grades would we expect to see identical thresholds.
+
+Now lets look at the coefficients of interest:
+
+```{r class.source = 'fold-show', fig.height=3}
+coeffs = precis(ol.fit, pars = c("bM","bF","bFE"))
+coeffs %>% plot()
+coeffs %>% round(2)
+```
+
+What do these results mean?
+
+- for each level of maternal education the odds ratio to get a one level higher grade is exp(`r round(coeffs["bM",1],2)`) = `r round(exp(coeffs["bM",1]),2)`
+- for each paste fail the odds ratio to get a one level higher grade is exp(`r round(coeffs["bF",1],2)`) = `r round(exp(coeffs["bF",1]),2)`, though we are uncertain that the odds ratio is less than 1.
+- the "effect" of past fails depends on maternal education, with a log odd ratio of `r round(coeffs["bFE",1],2)`
+
+It is a bit hard to interpret these results because they are on the log odds ratio scale and because it is not totally clear (to me) how to interpret interaction effects. Therefor, we use posterior predictions to understand the results better.
+
+First, we create posterior predictions for all levels of maternal education and past fails:
+
+```{r class.source = 'fold-show'}
+sim.data = expand.grid(
+  Medu = sort(unique(df$Medu)),
+  failures = sort(unique(df$failures)))
+
+pp = sim(ol.fit,data = sim.data)
+```
+
+Here is a general overview:
+
+```{r, out.width="60%"}
+mu = colMeans(pp)
+CI = apply(pp,2,PI)
+set_par(cex = 1.5)
+plot(0,type = "n", xlim = c(0.5,4.5),
+     ylim = range(CI), xaxt = "n",
+     xlab = "previous fails",
+     ylab = "grade")
+axis(1,at = 1:4)
+
+for (Medu in 1:4) {
+  idx = sim.data$Medu == Medu
+  x = (1:4)+(Medu-2.5)/6
+  points(x,mu[idx], pch = 16, col = Medu)
+  arrows(x0 = x, y0 = CI[1,idx], y1 = CI[2,idx], length = 0, col = Medu)
+}
+legend("topright", pch = 16, col = 1:4, legend = 1:4, title = "Medu", bty = "n")
+```
+
+This plot suggests several questions:
+
+- do grades decrease from 1 to 4 previous fails?
+- is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were previous fails?
+- are the above mentioned slopes robustly different?
+
+
+
 
 # Summary
