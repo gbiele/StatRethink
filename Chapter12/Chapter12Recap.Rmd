@@ -91,7 +91,9 @@ We can calculate the log odds of an an outcome as before, this time using probab
 $$
 \textrm{log odds} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
 $$
-To get the probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit:
+To get the cumulative probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit.
+
+In R we can use `boot::inv.logit` or `plogis` to get the cumulative density function of the logistic distribution.
 
 ```{r out.width="60%"}
 set_par(cex = 1.5)
@@ -112,7 +114,21 @@ P_pass = 1-P_fail
 log_odds = log(P_fail/P_pass)
 log_odds
 ```
-This is exactly our threshold.
+This is exactly our threshold and explain why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`.
+
+```{r, out.width="80%", fig.width=10, fig.height=5}
+set_par(mfrow = c(1,2), cex = 1.5)
+curve(plogis(x),-5,5, xlab = "threshold")
+arrows(x0 = threshold, y0 = 0, y1 = plogis(threshold), col = "blue", lwd = 2)
+arrows(x0 = threshold, x1 = -5.4, y0 = plogis(threshold), col = "blue", lwd = 2)
+text(-5.4,plogis(threshold),labels = round(plogis(threshold),2), pos = 2, col = "blue", xpd = TRUE, cex = .75)
+curve(qlogis(x),0,1, xlab = "cumulative probability")
+arrows(x0 = plogis(threshold), y0 = -5, y1 = threshold, col = "blue", lwd = 2)
+arrows(y0 = threshold, x0 = plogis(threshold), x1 = -0.04, col = "blue", lwd = 2)
+text(-5.4,plogis(threshold),labels = round(plogis(threshold),1), pos = 2, xpd = TRUE)
+text(plogis(threshold),-5.4,labels = round(plogis(threshold),2), pos = 1, col = "blue", xpd = TRUE, cex = .75)
+```
+
 
 Now let us assume that there is another variable that increases the probability to pass a class, so that also students with lower latent scholastic aptitude of -3 can pass a class (could be class difficulty).
 
@@ -143,6 +159,7 @@ pass = rlogis(N) > thresholds
 
 We estimate the model:
 
+
 ```{r class.source = 'fold-show'}
 q.fit = quap(
   alist(
@@ -157,9 +174,10 @@ precis(q.fit) %>%
   round(2)
 ```
 
-Due to simulation noise we are not exactly recovering the parameters, but we are getting the correct thresholds with `r precis(q.fit)$mean[1] %>% round(2)` at baseline and a + b =  `r precis(q.fit)$mean[1] %>% round(2)` + `r precis(q.fit)$mean[2] %>% round(2)` = `r sum(precis(q.fit)$mean) %>% round(2)` for individuals where X = 1.
 
-This shows us again that regression weights in logistic regressions represent changes in log odds ratios due to a predictor variable.
+Due to simulation noise we are not exactly recovering the parameters, but we are getting very close to the correct thresholds with `r precis(q.fit)$mean[1] %>% round(2)` at baseline and a + b =  `r precis(q.fit)$mean[1] %>% round(2)` + `r precis(q.fit)$mean[2] %>% round(2)` = `r sum(precis(q.fit)$mean) %>% round(2)` for individuals where X = 1.
+
+This shows us again that regression weights in logistic regressions represent changes in log odds ratios, and thus also changes in the threshold, due to a predictor variable.
 
 # Ordinal logistic regression
 
@@ -168,57 +186,65 @@ This shows us again that regression weights in logistic regressions represent ch
 Ordinal logistic regressions are named as such, because just like logistic regressions they assume a latent logistic variable that determines responses. Differently than standard logistic regression, ordered logistic regressions use multiple thresholds, which are used to map the latent variable onto ordered responses:
 
 ```{r out.width="60%"}
-plot_dlogis.thresh = function(thresholds) {
-  curve(dlogis(x),-6,6,xlim = c(-5,5),
+plot_dlogis.thresh = function(threshs, xlim = c(-5,5), plot.text = TRUE) {
+  threshs = as.numeric(threshs)
+  x.st = xlim[1]-1
+  x.en = xlim[2]+1
+  curve(dlogis(x),x.st,x.en,xlim = xlim,
         xlab = "latent scholastic aptitude")
-  n_cat = length(thresholds) + 1
+  n_cat = length(threshs) + 1
   clrs =
     colorRampPalette(c("blue","blue4"))(n_cat)
   for (k in 1:n_cat) {
-    st = ifelse(k == 1, -6, thresholds[k-1])
-    en = ifelse(k == n_cat, 6, thresholds[k])
-    x = seq(st,en,.1)
+    st = ifelse(k == 1, x.st, threshs[k-1])
+    en = ifelse(k == n_cat, x.en, threshs[k])
+    x = seq(st,en,length.out = 50)
     polygon(c(min(x),x,max(x)), c(0,dlogis(x),0), col = clrs[k])
-    abline(v = thresholds[k], lty = 2, col = "red", lwd = 2)
-    text((st+en)/2,dlogis(0)/2,paste0("R=",k), col = "grey50", cex = 1.5)
-    text(thresholds[k],dlogis(0),thresholds[k], col = "red", pos = 2)
+    arrows(x0 =  threshs[k], y0 = 0, y1 = dlogis(0), lty = 2, col = "red", lwd = 2,length = 0)
+    if (plot.text == TRUE) {
+      text((st+en)/2,dlogis(0)/2,paste0("R=",k), col = "grey50", cex = 1.5)
+      text(threshs[k],dlogis(0),round(threshs[k],2), col = "red", pos = 2)
+    }
   }
 }
-thresholds = c(-2,0,2)
+thresholds = c(-1.24,.25,2)
 n_cat = length(thresholds) + 1
 clrs = colorRampPalette(c("blue","blue4"))(n_cat)
 set_par(cex = 1.5)
 plot_dlogis.thresh(thresholds)
 ```
 
-Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds ratios) for the simple logistic regression, we can use it to recover threshold from an ordered logistic model.
+Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds ratios) for the simple logistic regression, we can use it to recover thresholds from an ordered logistic model.
 
-For instance, the first threshold is:
+For instance, when `r round(plogis(thresholds[1])*100,1)`% of individuals respond with R = 1:
 
 ```{r class.source = 'fold-show'}
-log(plogis(-2)/(1-plogis(-2)))
+log(.224/(1-.224)) %>% 
+  round(2)
 ```
 
 As you might have guessed, we can also read the probability of different responses from the cumulative logit distribution:
 
 ```{r out.width="80%"}
-plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE) {
+plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5)) {
+  x.st = xlim[1]-1
+  x.en = xlim[2]+1
   n_cat = length(thresholds) + 1
   clrs = 
     colorRampPalette(c("blue","blue4"))(n_cat) 
-  curve(plogis(x),-6,6,xlim = c(-5,5),
+  curve(plogis(x),x.st,x.en,xlim = c(-5,5),
         xlab = "latent scholastic aptitude")
   for (k in 1:n_cat) {
-    s = ifelse(k == 1, -6, thresholds[k-1])
-    e = ifelse(k == n_cat, 6, thresholds[k])
+    s = ifelse(k == 1, x.st, thresholds[k-1])
+    e = ifelse(k == n_cat, x.en, thresholds[k])
     curve(plogis(x), s,e, col = clrs[k], add = T, lwd = 2)
     
     b = ifelse(k == 1, 0, plogis(thresholds[k-1]))
     t = ifelse(k == n_cat, 1, plogis(thresholds[k]))
-    x = seq(s,e,.1)
+    x = seq(s,e,.01)
     y.p = c(plogis(x), plogis(max(x)))
-    x.p = c(x,6)
-    polygon(c(x.p,6),c(y.p,plogis(x[1])), col = clrs[k], border = "NA")
+    x.p = c(x,x.en)
+    polygon(c(x.p,x.en),c(y.p,plogis(x[1])), col = clrs[k], border = "NA")
     arrows(x0 = -4, y1 = t, y0 = b, angle = 90, code = 3, length = .15)
     
     prob.level = 
@@ -254,7 +280,7 @@ Here we simulate data:
 N = 1000
 R = cut(
   rlogis(1000),
-  breaks = c(-Inf,-2,0,2,Inf)) %>% 
+  breaks = c(-Inf,thresholds,Inf)) %>% 
   as.numeric()
 ```
 
@@ -275,20 +301,21 @@ x = barplot(m, col = clrs,
         ylab = "cumulative N",
         xlab = "Response",
         names.arg = 1:n_cat)
-ps = c(plogis(thresholds),1-plogis(max(thresholds)))
+ps = c(plogis(thresholds[1]),diff(c(plogis(thresholds),1)))
 cs = c(0,plogis(thresholds),1)
 for (k in 1:n_cat)
   text(tail(x,1),
        mean(cs[k:(k+1)])*N,
-       round(ps[k],2),
-       col ="white")
+       paste(round(ps[k]*100),"%"),
+       col ="white",
+       cex = .5)
 ```
 
 
 Here is an ordered logistic model:
 
 ```{r class.source = 'fold-show'}
-ol.model = 
+bol.model = 
   alist(
     R ~ dordlogit(0,thresholds),
     thresholds ~ dnorm(0,3)
@@ -313,7 +340,7 @@ The `dordlogit` **calculates the likelihood of the observation given the model u
 ```{r, fig.width=10, fig.height=8}
 set_par(mfrow = c(2,2))
 
-thresh_list = list(thresholds,c(-3,-1,1))
+thresh_list = list(thresholds,thresholds-1.25)
 
 for (k in 1:2) {
   thres = thresh_list[[k]]
@@ -337,21 +364,36 @@ legend("topleft", fill = c("grey25","blue"),
 So the basic ordered logistic regression model tries to find the correct threshold values that allow to reproduce the observed distribution of ratings.
 
 We fit the model.
-```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
-u.fit = ulam(
-  ol.model,
+
+```{r echo = F}
+fn = "bol_fit.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  bol.fit = ulam(
+  bol.model,
+  data=list(R=R),
+  chains=4,cores=4)
+  save(bol.fit,file = fn)
+}
+```
+
+```{r class.source = 'fold-show', eval = F}
+bol.fit = ulam(
+  bol.model,
   data=list(R=R),
   chains=4,cores=4)
 ```
 
-And here are the estimated thresholds:
+And here are the estimated thresholds, with the true thresholds as vertical dotted blue lines.
 
 ```{r class.source = 'fold-show', fig.height=3}
-precis(u.fit, depth = 2) %>% plot()
-threshold.est = precis(u.fit, depth = 2)[,1]
+precis(bol.fit, depth = 2) %>% plot()
+threshold.est = precis(bol.fit, depth = 2)[,1]
 text(threshold.est,
      3:1,
      round(threshold.est,2), pos = 3)
+abline(v = thresholds,col = "blue", lty = 3)
 ```
 
 
@@ -359,7 +401,7 @@ As expected we recover the correct threshold values (with some error/bias due to
 
 ## Ordinal logistic regression with predictors
 
-To understand how to set up a model, such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variables an thresholds again. The plot also shows a hypothetical person with a latent scholastic aptitude of 0 as a white dot.
+To understand how to set up a model, such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variables and thresholds again. The plot also shows a hypothetical person with a latent scholastic aptitude of 0 as a white dot.
 
 ```{r, out.width="60%"}
 set_par(cex = 1.5)
@@ -371,19 +413,18 @@ If we want to increase the chance that this hypothetical person achieves a ratin
 
 ```{r, fig.height=5, fig.width=10, out.width="120%"}
 set_par(mfrow = c(1,2),cex = 1.25)
-thresholds = c(-2,0,2)
 plot_dlogis.thresh(thresholds)
-arrows(x0 = 0, x1 = 1, y0 = .005, length = .1, col = "white")
+arrows(x0 = 0, x1 = 1, y0 = .005, length = .1, col = "yellow")
 plotrix::draw.circle(1,.005, radius = .1,col = "white")
 plotrix::draw.circle(0,.005, radius = .1,col = adjustcolor("white",alpha = .75))
 
 
-thresholds = c(-3,-1,1)
-plot_dlogis.thresh(thresholds)
-abline(v = thresholds+1, col = adjustcolor("red",alpha = .25), lty = 2)
-arrows(x0 = thresholds+1, x1 = thresholds,
+thresholds.b = thresholds - 1
+plot_dlogis.thresh(thresholds.b)
+abline(v = thresholds, col = adjustcolor("red",alpha = .25), lty = 2)
+arrows(x0 = thresholds, x1 = thresholds.b,
        y0 = c(seq(.025,.075,length.out = 3)),
-       col = "red", length = .1)
+       col = "yellow", length = .1)
 plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
@@ -408,20 +449,22 @@ $$
 
 This is referred to as the proportional odds assumptions, which may or may not be true.
 
-To see the ordered logistic regression in action, we'll use the example data from the Portugues school again. In particular, we are looking at the (coarsened) first grade and estimate again the association with maternal education.
+To see the ordered logistic regression in action, we'll use the example data from the Portuguese school again. In particular, we are looking at the (coarsened) first grade and estimate again the association with maternal education.
 
 ```{r out.width="80%", fig.height=4}
 df=read.table("../Chapter11/data/student-mat.csv",sep=";",header=TRUE)
 df = df[df$Medu>0,]
 set_par()
-df$G1 = as.numeric(cut(df$G1, breaks = seq(0,20,2),include.lowest = T))-1
-df$G1 %>% table() %>% barplot()
+df$G3 = as.numeric(cut(df$G3, breaks = seq(0,20,2),include.lowest = T))
+df$G3 %>% table() %>% barplot()
 ```
+Yes, ordinal logistic regression can also handle multi-modal data!
+
 
 To recapitulate the thresholds are just odds ratios at category boundaries, lets calculate them:
 
 ```{r class.source = 'fold-show'}
-cum_prob = df$G1 %>% 
+cum_prob = df$G3 %>% 
   table() %>% 
   prop.table() %>% 
   cumsum()
@@ -433,17 +476,32 @@ simple_thresholds %>% round(2)
 
 And we estimate a thresholds only model with `ulam`:
 
-```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
+```{r echo = F}
+fn = "tm_fit.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  tm.fit = ulam(
+  alist(
+    G3 ~ dordlogit(0,thresholds),
+    thresholds ~ dnorm(0,3)),
+  data=list(G3 = df$G3),
+  chains=4,cores=4)
+  save(tm.fit,file = fn)
+}
+```
+
+```{r class.source = 'fold-show', eval = F}
 tm.fit = ulam(
   alist(
-    G1 ~ dordlogit(0,thresholds),
+    G3 ~ dordlogit(0,thresholds),
     thresholds ~ dnorm(0,3)
   ),
-  data=list(G1 = df$G1),
+  data=list(G3 = df$G3),
   chains=4,cores=4)
 ```
 
-And we plot the simple thresholds calculated manually against those estimated with ulam:
+Now we can plot the simple thresholds calculated manually against those estimated with ulam:
 
 ```{r, out.width="60%"}
 post = extract.samples(tm.fit)
@@ -459,13 +517,14 @@ arrows(x0 = simple_thresholds,
        col = "blue", length = 0)
 abline(0,1,lty = 3, col = "grey")
 ```
-Now that we have understood thresholds, lets implement a model that uses predictor.
+
+Now that we have understood thresholds, we can implement a model that uses predictors.
 Specifically, we estimate the effect of past failure and maternal education on grades.
 
 ```{r class.source = 'fold-show'}
 ol.model = 
   alist(
-    G1 ~ dordlogit(phi,thresholds),
+    G3 ~ dordlogit(phi,thresholds),
     phi <- bM*Medu + iFE*failures,
     iFE <- bF + bFE*Medu,
     c(bF, bM, bFE) ~ normal(0,1),
@@ -474,10 +533,25 @@ ol.model =
 ```
 
 We fit the model.
-```{r class.source = 'fold-show', warning=FALSE, message=FALSE, results='hide'}
+
+```{r}
+fn = "ol_fit.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  ol.fit = ulam(
+  ol.model,
+  data=list(G3 = df$G3, Medu = df$Medu, failures = df$failures),
+  chains=4,cores=4)
+  save(ol.fit,file = fn)
+}
+```
+
+
+```{r class.source = 'fold-show', eval = F}
 ol.fit = ulam(
   ol.model,
-  data=list(G1 = df$G1, Medu = df$Medu, failures = df$failures),
+  data=list(G3 = df$G3, Medu = df$Medu, failures = df$failures),
   chains=4,cores=4)
 ```
 
@@ -496,7 +570,7 @@ As a quick posterior predictive check we compare the histogram of the observed a
 set_par()
 
 pp = sim(ol.fit)
-obs.counts = cut(df$G1, breaks = seq(.5,10.5,1)) %>% table()
+obs.counts = cut(df$G3, breaks = seq(.5,10.5,1)) %>% table()
 plot(obs.counts, 's', xaxt = "n", ylim = c(0,110)) 
 axis(1,at = (1:9)+.5, labels = 1:9, lwd = 2)
 for (k in 1:250) {
@@ -554,10 +628,11 @@ Here is a general overview:
 
 ```{r, out.width="60%"}
 mu = colMeans(pp)
-CI = apply(pp,2,PI)
+CI80 = apply(pp,2,function(x) PI(x, prob = .8))
+CI90 = apply(pp,2,function(x) PI(x, prob = .9))
 set_par(cex = 1.5)
 plot(0,type = "n", xlim = c(0.5,4.5),
-     ylim = range(CI), xaxt = "n",
+     ylim = range(CI90), xaxt = "n",
      xlab = "previous fails",
      ylab = "grade")
 axis(1,at = 1:4)
@@ -566,18 +641,106 @@ for (Medu in 1:4) {
   idx = sim.data$Medu == Medu
   x = (1:4)+(Medu-2.5)/6
   points(x,mu[idx], pch = 16, col = Medu)
-  arrows(x0 = x, y0 = CI[1,idx], y1 = CI[2,idx], length = 0, col = Medu)
+  arrows(x0 = x, y0 = CI80[1,idx], y1 = CI80[2,idx], length = 0, col = Medu, lwd = 2)
+  arrows(x0 = x, y0 = CI90[1,idx], y1 = CI90[2,idx], length = 0, col = Medu)
 }
 legend("topright", pch = 16, col = 1:4, legend = 1:4, title = "Medu", bty = "n")
 ```
 
 This plot suggests several questions:
 
-- do grades decrease from 1 to 4 previous fails?
-- is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were previous fails?
+- Do grades decrease from 0 to 3 previous fails?
+- Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 3-4 fails?
 - are the above mentioned slopes robustly different?
 
+Le first look at the data for which we simulated outcomes:
+
+```{r}
+sim.data
+phi = link(ol.fit,data = sim.data)$phi
+thresholds = extract_post_ulam(ol.fit)$thresholds
+pp = matrix(NA, nrow = nrow(thresholds), ncol = nrow(sim.data))
+for (k in 1:nrow(sim.data)) {
+  log_odds_ratio = apply(thresholds,2, function(x) x + phi[,k])
+  cum_prob = apply(log_odds_ratio,1, function(x) plogis(x)) %>% t()
+  cum_prob = cbind(cum_prob,1-cum_prob[,ncol(cum_prob)])
+  pp[,k] = apply(cum_prob,1, function(x) mean(x*(1:9))) # expected grade
+}
+```
+
+To answer the the first question, **Do grades decrease from 0 to 3 previous fails?**, we calculate:
+
+$$
+\delta = \frac{1}{3}\sum^i_{1:3} G(fails = i) - G3(fails = i-1)
+$$
+
+```{r}
+posterior_hist = function(x,label, set_par = TRUE, xlim = NULL) {
+  if (set_par == T) set_par(cex = 1.5, mar=c(3,3,3,.5))
+  hist(x, ylab = label, xlim = xlim, xlab = label,
+       main = paste0(round(mean(x),2),", (",paste(round(PI(x),2), collapse = ", "),")"))
+  abline(v = 0, col = "red", lty = 3)
+  abline(v = (PI(x)), col = "blue", lwd = 2)
+}
+```
 
 
+```{r class.source = 'fold-show', out.width = "60%"}
+delta = rep(0,nrow(pp))
+for (i in 1:3) {
+  delta = delta +
+    pp[,which(sim.data$failures == i)] - 
+    pp[,which(sim.data$failures == i-1)]
+}
+delta = delta / 3
+posterior_hist(delta, "delta fails", xlim = range(delta))
+```
+
+To answer the the first question, **Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 3-4 fails?**, we first calculate the effect of maternal education in students with 0 and 2 or 3 precious fails:
+
+```{r class.source = 'fold-show', fig.height=5, fig.width=10, out.width="120%"}
+# calculate contrasts
+delta_F0 = rep(0,nrow(pp))
+delta_F23 = rep(0,nrow(pp))
+for (i in 2:4) {
+  delta_F0 = delta_F0 +
+    pp[,which(sim.data$Medu == i & sim.data$failures == 0)] - 
+    pp[,which(sim.data$Medu == i-1 & sim.data$failures == 0)]
+  delta_F23 = delta_F23 +
+    rowMeans(pp[,which(sim.data$Medu == i & sim.data$failures > 1)]) - 
+    rowMeans(pp[,which(sim.data$Medu == i-1 & sim.data$failures > 1)])
+}
+delta_F0 = delta_F0 / 3
+delta_F23 = delta_F23 / 3
+
+# plot posterior distribution
+set_par(mfrow = c(1,2), cex = 1.25, mar=c(3,3,3,.5))
+posterior_hist(
+  delta_F0,
+  "delta(fails=0)",
+  set_par = FALSE,
+  xlim = c(-.7,.3))
+posterior_hist(
+  delta_F23,
+  "delta(fails>1)",
+  set_par = FALSE,
+  xlim = c(-.7,.3))
+```
+
+We see that whereas higher maternal education is associated with better grades when the student had not failed the class yet, there is weak evidence for the oposite effec for students who failed the class 2-3 already. To see if the two effects are really different, we need to compare them explicielty, which we do next:
+
+And next we can calculate the difference between these two delta:
+
+```{r class.source = 'fold-show', out.width="60%"}
+interaction_eff = delta_F0-delta_F23
+posterior_hist(interaction_eff, "delta(fails=0)-delta(fails=0)", xlim = range(interaction_eff))
+```
+
+The slopes are indeed clearly different.
 
 # Summary
+
+- think of (ordinal) logistic regression as a model in which a latent variable together with thresholds determines ordered categorical responses
+- the basic thresholds are just logg-odds ratios of probability to respond at levels 1 to k vs k+1 to max level.
+- regression weights can be understood as shift of the location of the latent variable, or as shift of all thresholds. The letter interpretation makes clear why they can be interpreted as log odds ratio.
+- To understand the results of ordinal logistic regressions it is most useful to generate posterior predictions (using thresholds and category values) and the to calculate contrasts of interest.
