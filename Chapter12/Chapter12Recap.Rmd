@@ -716,7 +716,7 @@ posterior_hist( # un-hide previous code block for this function
 
 To answer the the first question, **Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 3-4 fails?**, we first calculate the effect of maternal education in students with 0 and 2 or 3 precious fails:
 
-```{r class.source = 'fold-show', fig.height=5, fig.width=10, out.width="120%"}
+```{r class.source = 'fold-show'}
 # calculate contrasts
 delta_F0 = rep(0,nrow(pp))
 delta_F23 = rep(0,nrow(pp))
@@ -733,7 +733,8 @@ for (i in 2:4) { # here, i is the maternal education level
 delta_F0 = delta_F0 / 3
 delta_F23 = delta_F23 / 3
 ```
-```{r echo = F}
+
+```{r echo = F, fig.height=5, fig.width=10}
 # plot posterior distribution
 set_par(mfrow = c(1,2), cex = 1.25, mar=c(3,3,3,.5))
 posterior_hist(
