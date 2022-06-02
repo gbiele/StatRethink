@@ -89,7 +89,7 @@ In this model, **the latent variable is distributed according to the logistic di
 We can calculate the log odds of an an outcome as before, this time using probabilities.
 
 $$
-\textrm{log odds ratio} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
+\textrm{log odds} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
 $$
 To get the cumulative probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit.
 
@@ -137,9 +137,9 @@ In a logistic regression we estimate the following:
 $$
 log \left( \frac{P_{fail}}{P_{pass}} \right) = \alpha - \beta \cdot X
 $$
-Here $\small \alpha$ is the intercept and baseline log-odds ratio to pass the test (due to latent scholastic aptitude), $\small X$ is our additional variable and $\small \beta$ captures log odds ratio from passing the class due to variable $\small X$.
+Here $\small \alpha$ is the intercept and baseline log-odds to pass the test (due to latent scholastic aptitude), $\small X$ is our additional variable and $\small \beta$ captures log odds ratio from passing the class due to variable $\small X$.
 
-Because our baseline threshold / log odds ratio is -2 and the threshold for children with variable X is -3, we calculate
+Because our baseline threshold / log odds is -2 and the threshold for children with variable X is -3, we calculate
 
 $$
 \beta = -2 -(-3) = 1
@@ -214,7 +214,7 @@ set_par(cex = 1.5)
 plot_dlogis.thresh(thresholds)
 ```
 
-Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds ratios) for the simple logistic regression, we can use it to recover thresholds from an ordered logistic model.
+Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds) for the simple logistic regression, we can use it to recover thresholds from an ordered logistic model.
 
 For instance, when `r round(plogis(thresholds[1])*100,1)`% of individuals respond with R = 1:
 
@@ -436,7 +436,7 @@ log \left( \frac{P_i(R>\alpha_k)}{P_i(R<\alpha_k)} \right) = \alpha_k - \beta \c
 $$
 where $\small \alpha_k$ are thresholds and $\beta$ captures the effect of the variable $X$ by modifying each individual's threshold.
 
-Now we have seen previously that a threshold is just the log odds ratio of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. R = 4 instead of R = 3 (R = 3 instead of R = 4).
+Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. R = 4 instead of R = 3 (R = 3 instead of R = 4).
 
 Because there is only one regression weight $\small \beta$ per variable, the log odds ratios are the same for all category transitions, i.e. 
 
@@ -459,7 +459,7 @@ df$G3 %>% table() %>% barplot()
 ```
 Yes, ordinal logistic regressions can also handle multi-modal data!
 
-To recapitulate that thresholds are just odds ratios at category boundaries, lets calculate them:
+To recapitulate that thresholds are just odds at category boundaries, lets calculate them:
 
 ```{r class.source = 'fold-show'}
 cum_prob = df$G3 %>% 
