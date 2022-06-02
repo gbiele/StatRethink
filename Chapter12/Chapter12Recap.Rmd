@@ -89,7 +89,7 @@ In this model, **the latent variable is distributed according to the logistic di
 We can calculate the log odds of an an outcome as before, this time using probabilities.
 
 $$
-\textrm{log odds} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
+\textrm{log odds ratio} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
 $$
 To get the cumulative probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit.
 
@@ -572,7 +572,7 @@ plot(obs.counts, 's', xaxt = "n", ylim = c(0,110))
 axis(1,at = (1:9)+.5, labels = 1:9, lwd = 2)
 for (k in 1:250) {
   pp.counts = cut(pp[k,], breaks = seq(.5,10.5,1)) %>% table()
-  lines(1:10, pp.counts, 's', col = adjustcolor("blue",".25"))
+  lines(1:10, pp.counts, 's', col = adjustcolor("blue",alpha = .25))
 }
 ```
 We can see the the ordinal logistic model has no problems modeling a multimodal response distribution.
