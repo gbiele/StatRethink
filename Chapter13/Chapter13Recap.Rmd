@@ -1,0 +1,646 @@
+---
+title: "Chapter 13: Recap"
+author: "Guido Biele"
+date: "08.06.2022"
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+header-includes: 
+    \usepackage{xcolor}
+    \usepackage{amsmath}
+---
+
+  
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+  max-width: 1000px;
+  margin: auto;
+  margin-left:310px;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  overflow:auto;
+}
+
+
+```
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE,
+                      fig.align = 'center', out.width="80%")
+library(rethinking)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(MASS)
+library(psych)
+source("../utils.R")
+
+set_par = function(mfrow = c(1,1), mar=c(3,3,.5,.5), cex = 1.25) 
+  par(mfrow = mfrow, mar=mar, mgp=c(1.75,.5,0), tck=-.01, cex = cex)
+
+```
+
+
+Let's assume you are an HR manager (with a soft spot for statistics) and you are trying to find out how to best analyse data from a survey about employee satisfaction.
+
+The consultant you hired cam back with a bunch of colorful charts and employee satisfaction numbers that were precise to 3 digits, but you couldn't stop thinking of you professors rambling that firms would learn more about their employees if they uses the data better and did some multilevel analysis.
+
+You weren't entirely convinced because you found his argumentation to abstract, but you also were a good hacker and thought now is the time to just simulate some data and see if one is really doing better with a multilevel analysis.
+
+Here are the things you know about your firm:
+
+- There are 15 departments 
+- Each department has between 5 (administration) and 100 (production) employees
+- The last years have brought many changes to the firm, whereby all departments were typically impacted in a similar manner by these changes. Therefore you think that employee satisfaction should be similar between departments.
+
+Here is this expressed in some variables.
+```{r class.source = 'fold-show'}
+n_departments = 15
+n_employees = 
+  rep(c(5,22,98), each = 5) + 
+  rbinom(n_departments,5,.5)
+
+mean_firm_satisfaction = 3
+sd_firm_satisfaction = .25
+```
+
+
+Here is a simple model of the data generating process, and its translation in simulation code:
+
+<table>
+  <tr>
+    <th style="width:20%" >model</th>
+    <th style="width:37%">simulation code</th>
+    <th style="width:33%">in words</th>
+  </tr>
+  <tr>
+    <td>$\mu_d = normal(3, .25)$</td>
+    <td>
+
+  ```nemerle
+  department_mus = 
+    rnorm(n_departments,
+          3,.25)
+  ```
+</td>
+  <td>The average satisfaction in departments has a normal distribution with mean_firm_satisfaction = 3 and sd_firm_satisfaction = 0.25 </td>
+  </tr>
+  <tr>
+    <td>$S_i = normal(\mu_d, 1)$</td>
+    <td>
+
+  ```nemerle
+  employee_satisfaction = 
+    rnorm(n_employees[d],
+          department_mus[d],
+          1)
+  ```
+</td>
+<td>The satisfaction of individual employees varies with sd = 1 around the average satisfaction in departments.</td>
+  </tr>
+</table>
+
+<br>
+
+
+No we can simulate satisfaction of employees in the firm:
+```{r class.source = 'fold-show'}
+set.seed(1)
+department_mus = 
+    rnorm(n_departments,
+          mean_firm_satisfaction,
+          sd_firm_satisfaction)
+firm_satisfaction = c()
+for (d in 1:n_departments) {
+  employee_satisfaction = 
+    rnorm(n_employees[d],
+          department_mus[d],
+          1)
+  firm_satisfaction = rbind(
+    firm_satisfaction,
+    data.frame(
+      department = as.integer(d),
+      satisfaction = employee_satisfaction
+    )
+  )
+}
+```
+
+
+
+Here is a brief summary of the data:
+
+```{r class.source = 'fold-show'}
+dep.satisf = 
+  describeBy(firm_satisfaction$satisfaction,
+           group = firm_satisfaction$department,
+           mat = TRUE, skew = FALSE) %>% 
+  .[,-1] 
+
+dep.satisf %>% 
+  kable(digits = 1, row.names = FALSE) %>% 
+  kable_styling(full_width = FALSE)
+```
+
+A standard way to visualize these results is to use bar charts of group means, maybe together with error bars. The figure also shows the true department level satisfaction as green stars.
+
+```{r}
+
+plot_data = function(return.x = FALSE) {
+  set_par()
+  se = dep.satisf$se
+  x = barplot(dep.satisf$mean,
+              names.arg = dep.satisf$group1,
+              xlab = "department",
+              ylab = "satisfaction",
+              ylim = c(0, max(dep.satisf$mean+1.96*se)))
+  
+  arrows(x0 = x,
+         y0 = dep.satisf$mean - 1.96*se,
+         y1 = dep.satisf$mean + 1.96*se,
+         length = 0)
+  abline(h = mean(firm_satisfaction$satisfaction), col = "red", lty = 3)
+  points(x,department_mus, pch = 8, col = "green3")
+  
+  if (return.x == TRUE)
+    return(x)
+}
+
+
+plot_data()
+```
+
+# 3 levels of pooling
+
+How we want to analyse the data depends partially on our assumptions about the data generating process. In the context of multilevel modeling, we can think of three qualitatively different assumptions:
+
+- __Full pooling__ The groups are identical, we do not need to take differences between groups into account. _All groups get the same average._
+- __No pooling__ The groups are completely independent. _Each group gets its own average._
+- __Partial pooling__ The groups are somewhat dependent. _All groups get similar averages_
+## Full pooling analysis
+
+A Bayesian model to estimate _identical_ group means looks as follows:
+
+$$ 
+S_i \sim normal(\bar \mu, \sigma)   \\ 
+\bar \mu \sim normal(3,3)  \\ 
+\sigma \sim exponential(1) \\
+$$
+
+where $\bar mu$ is the average satisfaction in the firm. 
+
+However, to facilitate the comparison to alternative models, we re-write the model as follows:
+
+<table>
+  <tr>
+    <th>Full pooling</th>
+  </tr>
+  <tr>
+    <td>
+     $$\begin{align*} S_i \sim normal(\bar \mu, \sigma)  & \;\;\;\;{\small \textrm{Individuals satisfaction is department satisfaction plus error}} \\ \mu_d  \sim normal(\bar \mu,.0001) & \;\;\;\;{\small \textrm{Department satisfaction is equal to average firm satisfaction}} \\ \bar \mu \sim normal(3,3) & \;\;\;\;{\small \textrm{Prior for average firm satisfaction}} \\ \sigma \sim exponential(1) & \;\;\;\;{\small \textrm{Prior for error variance}} \\ \end{align*}$$
+    </td>
+  </tr>
+</table>
+
+
+$\mu_d$ are department level satisfactions, which depend on the firm level satisfaction $\bar \mu$ and the variations between departments. By setting standard deviation for the variation between departments to 0.0001, we are enforcing that the department level means will be equal.
+
+
+The corresponding `ulam` model looks as follows:
+
+```{r class.source = 'fold-show'}
+m.full_pooling = alist(
+  S ~ dnorm(mu_bar, sigma),
+  mu_bar ~ dnorm(3,3),
+  sigma ~ dexp(2)
+)
+m.full_pooling.b = alist(
+  S ~ dnorm(mu[d], sigma),
+  mu <- mu_bar + z[d]*.0001,
+  z[d] ~ dnorm(0,1),
+  mu_bar ~ dnorm(3,3),
+  sigma ~ dexp(2),
+  gq> vector[d]:mus<<-mu_bar+z*.0001
+)
+```
+
+Before we fit the model, we put the data into a list:
+
+```{r class.source = 'fold-show'}
+u.data = list(
+  S = firm_satisfaction$satisfaction,
+  d = as.integer(firm_satisfaction$department)
+)
+```
+
+Now we estimate the model ...
+
+```{r, echo = FALSE}
+fn = "full_pooling.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  fit.full_pooling = ulam(
+    m.full_pooling,
+    data = u.data,
+    log_lik = TRUE,
+    chains = 4)
+  fit.full_pooling.b = ulam(
+    m.full_pooling.b,
+    data = u.data,
+    log_lik = TRUE,
+    chains = 4)
+  save(fit.full_pooling, fit.full_pooling.b, file = fn)
+}
+```
+
+
+```{r class.source = 'fold-show', eval = F}
+fit.full_pooling = ulam(
+  m.full_pooling,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4)
+fit.full_pooling.b = ulam(
+  m.full_pooling.b,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4)
+```
+
+
+and check convergence:
+```{r class.source = 'fold-show'}
+precis(fit.full_pooling) %>% 
+  round(2)
+precis(fit.full_pooling.b, pars = "mus",
+       depth = 2) %>% 
+  round(2)
+```
+
+Do the two models really describe the data equyally well, and is the number of effective parameters more or less equal?
+
+```{r}
+compare(fit.full_pooling,
+        fit.full_pooling.b)
+```
+
+
+And here is our initial figure with the estimated average employee satisfactions:
+
+```{r}
+x = plot_data(return.x = TRUE)
+est.full_pooling = precis(fit.full_pooling.b, pars = "mus", depth = 2)[,1]
+points(x,est.full_pooling, col = "blue", pch = 16)
+```
+
+As expected we estimated the same mean for everyone
+
+
+## No pooling analysis
+
+A Bayesian model to estimate _independent_ group means looks as follows:
+
+
+<table>
+  <tr>
+    <th>Full pooling</th>
+    <th>No pooling</th>
+  </tr>
+  <tr>
+    <td>
+    $$ S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,.0001) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+    </td>
+    <td>
+     $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{100}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+    </td>
+  </tr>
+</table>
+
+
+In this model, the large standard deviation of the distribution of department level satisfaction ($\small \mu_{\color{red}{d}} \sim normal(3,10)$) encodes the assumption of independent groups.
+
+The corresponding `ulam` model looks as follows:
+
+```{r class.source = 'fold-show'}
+m.no_pooling = alist(
+  S ~ dnorm(mu[d], sigma),
+  mu[d] ~ dnorm(mu_bar,1000),
+  mu_bar ~ dnorm(3,3),
+  sigma ~ dexp(2)
+)
+```
+
+
+Now we estimate the model ...
+
+```{r, echo = FALSE}
+fn = "no_pooling.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  fit.no_pooling = ulam(
+  m.no_pooling,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4)
+  save(fit.no_pooling, file = fn)
+}
+```
+
+
+```{r class.source = 'fold-show', eval = F}
+fit.no_pooling = ulam(
+  m.no_pooling,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4
+)
+```
+
+
+and check convergence:
+```{r class.source = 'fold-show'}
+precis(fit.no_pooling,depth = 2) %>% 
+  round(2)
+```
+
+Now lets look at the true and estimated satisfaction in departments, where the estimated satisfaction from the no-pooling model is shown as blue dots:
+
+```{r}
+x = plot_data(return.x = TRUE)
+est.no_pooling = precis(fit.no_pooling, pars = "mu", depth = 2)
+points(x,est.no_pooling$mean, col = "blue", pch = 16)
+```
+
+As expected, the estimates of this simple Bayesian model correspond to the average we calculated earlier, except that we see a bit of shrinkage towards the prior mean for the small departments (1-5).
+
+## Paritial pooling analysis
+
+In the full and no pooling analysis, we determined the the degree of pooling by setting the standard deviation of for department level satisfaction to a very low or very high number, respectively.
+
+The key advantage of the partial polling models is that instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.
+This allows such models to adapt to situations where the different groups are either similar (low standard deviation) or dissimilar (high standard deviation).
+
+
+$$
+\mu_d  \sim normal(3,10)
+$$
+
+corresp
+
+<table>
+  <tr>
+    <th>Full pooling</th>
+    <th>No pooling</th>
+    <th>Partial pooling</th>
+  </tr>
+  <tr>
+    <td>
+    
+     $$ S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,.0001) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+
+    </td>
+    <td>
+    
+    $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{100}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+    
+    </td>
+    <td>
+    
+    $$S_i \sim normal(\mu_d, \sigma)\\ {\mu_d} \sim normal(\bar \mu,\color{red}{\Sigma}) \\ \sigma \sim exponential(1) \\ \bar \mu \sim normal(3,3) \\ \color{red}{\Sigma \sim exponential(0,.5)}$$
+
+    </td>
+  </tr>
+</table>
+
+Here is the partial pooling `ulam` model:
+
+
+```{r class.source = 'fold-show'}
+m.partial_pooling = alist(
+  S ~ dnorm(mu[d], sigma),
+  mu[d] ~ dnorm(mu_bar,Sigma),
+  mu_bar ~ dnorm(3,3),
+  sigma ~ dexp(2),
+  Sigma ~ dexp(2)
+)
+
+m.partial_pooling.b = alist(
+  S ~ dnorm(mu[d], sigma),
+  mu <- mu_bar + z[d] * Sigma,
+  mu_bar ~ dnorm(3,3),
+  sigma ~ dexp(1),
+  z[d] ~ dnorm(0,1),
+  Sigma ~ dhalfnorm(0,2),
+  gq> vector[d]:mus<<-mu_bar+z*Sigma
+)
+```
+
+Now we estimate the model ...
+
+```{r, echo = FALSE}
+fn = "partial_pooling.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  fit.partial_pooling = ulam(
+  m.partial_pooling,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4)
+  save(fit.partial_pooling, file = fn)
+}
+```
+
+
+```{r class.source = 'fold-show', eval = F}
+fit.partial_pooling = ulam(
+  m.partial_pooling,
+  data = u.data,
+  log_lik = TRUE,
+  chains = 4
+)
+```
+
+
+```{r class.source = 'fold-show'}
+precis(fit.partial_pooling,depth = 2) %>% 
+  round(2)
+```
+
+
+Let's see if the model detected some variability in department level satisfaction:
+
+```{r}
+post.Sigma = extract.samples(fit.partial_pooling)$Sigma
+hist(post.Sigma, xlim = c(0, max(post.Sigma)))
+abline(v = 0, lty = 2, col = "red")
+```
+
+We have estimated a variance that is between the minimal variance of the full pooling model (we chose 0.0001) and the no pooling model (we chose 10000).
+
+Now lets look at the estimated means: 
+
+```{r}
+x = plot_data(return.x = TRUE)
+est.partial_pooling = precis(fit.partial_pooling, pars = "mu", depth = 2)
+points(x,est.partial_pooling$mean, col = "blue", pch = 16)
+```
+
+## Accuracy
+
+To see which method provides the best estimates of department level satisfaction, we compare each with the true values:
+
+```{r}
+abs.delta = rbind(
+  no_pooling = est.no_pooling$mean - department_mus,
+  full_pooling = est.full_pooling$mean - department_mus,
+  partial_pooling = est.partial_pooling$mean - department_mus
+) %>% 
+  abs() %>% 
+  t()
+matplot(abs.delta, pch = 16, col = 2:4)
+legend("topleft", bty = "n",
+       title = "Pooling",
+       col = 2:4,
+       pch = 16,
+       legend = gsub("_pooling","",colnames(abs.delta)))
+```
+
+It seems as if the partial pooling model is doing best, but it is not 100% clear.
+
+A standard metric to calculate the performance of different models is the root means square deviation, which we calculate now:
+
+```{r}
+abs.delta %>% 
+  .^2 %>%          # square deviation
+  colMeans() %>%   # mean
+  sqrt()          # root
+```
+
+Indeed, the partial pooling model comes closest to the observed values.
+
+Note though, that this is not a big surprise, because this is how we specified the data generating process.
+
+Here is a function that produces the same plot we just saw, and that takes the between department standard deviation as an input. This allows us to test if the partial pooling model does well, even if a full or now pooling model is the true DGP.
+
+```{r}
+
+check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
+  fn = paste0("accuracy_",100*sd_firm_satisfaction,"_",n_departments,".Rdata")
+  
+  n_employees = 
+    rep(c(5,22,98), each = 5) + 
+    rbinom(n_departments,n_departments/3,.5)
+  
+  if (file.exists(fn)) {
+    load(fn)
+  } else {
+     # simulate data
+  department_mus = 
+    rnorm(n_departments,
+          mean_firm_satisfaction,
+          sd_firm_satisfaction)
+  firm_satisfaction = c()
+  for (d in 1:n_departments) {
+    employee_satisfaction = 
+      rnorm(n_employees[d],
+            department_mus[d],
+            1)
+    firm_satisfaction = rbind(
+      firm_satisfaction,
+      data.frame(
+        department = as.integer(d),
+        satisfaction = employee_satisfaction
+      )
+    )
+  }
+  
+  #prepare ulam.data
+  u.data = list(
+  S = firm_satisfaction$satisfaction,
+  d = as.integer(firm_satisfaction$department))
+  
+  # fit.models
+  fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4)
+  fit.no_pooling = ulam(m.no_pooling,data = u.data,chains = 4)
+  fit.partial_pooling = ulam(m.partial_pooling.b,data = u.data,chains = 4)
+  
+  save(fit.full_pooling,
+       fit.no_pooling,
+       fit.partial_pooling,
+       department_mus,u.data,
+       firm_satisfaction,
+       file = fn)
+  }
+  
+ # get estimates
+  est.full_pooling = precis(fit.full_pooling, pars = "mus", depth = 2)
+  est.no_pooling = precis(fit.no_pooling, pars = "mu", depth = 2)
+  est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
+  
+  abs.delta = rbind(
+    no_pooling = est.no_pooling$mean - department_mus,
+    full_pooling = est.full_pooling$mean - department_mus,
+    partial_pooling = est.partial_pooling$mean - department_mus
+  ) %>% 
+    abs() %>% 
+    t()
+  
+  layout(matrix(c(1,1,2),nrow = 1))
+  RMSD = abs.delta^2 %>% colMeans() %>% sqrt() 
+  legend = paste(
+    gsub("_pooling","",colnames(abs.delta)),
+    "RMSD:",
+    RMSD %>% round(2)
+  )
+  matplot(abs.delta, pch = 16, col = 2:4)
+  legend("topleft", bty = "n",
+         title = "Pooling",
+         col = 2:4,
+         pch = 16,
+         legend = legend)
+  
+  post.Sigma = extract.samples(fit.partial_pooling)$Sigma
+  hist(post.Sigma, xlim = c(0, max(post.Sigma)), probability = T)
+  curve(dexp(x,2), add = T)
+  abline(v = 0, lty = 2, col = "red")
+  abline(v = sd_firm_satisfaction, lty = 2, lwd = 2, col = "green3")
+}
+
+```
+
+```{r}
+check.accuracy(sd_firm_satisfaction = .01, n_departments = 45)
+```
+
+```{r}
+check.accuracy(sd_firm_satisfaction = 1, n_departments = 45)
+```
+
+# Bias - variance trade off
