@@ -636,11 +636,11 @@ check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
 ```
 
 ```{r}
-check.accuracy(sd_firm_satisfaction = .01, n_departments = 45)
+check.accuracy(sd_firm_satisfaction = .01, n_departments = 30)
 ```
 
 ```{r}
-check.accuracy(sd_firm_satisfaction = 1, n_departments = 45)
+check.accuracy(sd_firm_satisfaction = 1, n_departments = 30)
 ```
 
 # Bias - variance trade off
