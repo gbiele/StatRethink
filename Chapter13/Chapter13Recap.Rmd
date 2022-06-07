@@ -203,7 +203,7 @@ How we want to analyse the data depends partially on our assumptions about the d
 - __Partial pooling__ The groups are somewhat dependent. _All groups get similar averages_
 ## Full pooling analysis
 
-A Bayesian model to estimate _identical_ group means looks as follows:
+A Bayesian model to estimate _identical_ group means (full pooling) looks as follows:
 
 $$ 
 S_i \sim normal(\bar \mu, \sigma)   \\ 
@@ -211,7 +211,7 @@ S_i \sim normal(\bar \mu, \sigma)   \\
 \sigma \sim exponential(1) \\
 $$
 
-where $\bar mu$ is the average satisfaction in the firm. 
+where $\bar \mu$ is the average satisfaction in the firm. 
 
 However, to facilitate the comparison to alternative models, we re-write the model as follows:
 
@@ -239,7 +239,7 @@ m.full_pooling = alist(
   sigma ~ dexp(2)
 )
 m.full_pooling.b = alist(
-  S ~ dnorm(mu[d], sigma),
+  S ~ dnorm(mu, sigma),
   mu <- mu_bar + z[d]*.0001,
   z[d] ~ dnorm(0,1),
   mu_bar ~ dnorm(3,3),
@@ -252,6 +252,7 @@ Before we fit the model, we put the data into a list:
 
 ```{r class.source = 'fold-show'}
 u.data = list(
+  N = nrow(firm_satisfaction),
   S = firm_satisfaction$satisfaction,
   d = as.integer(firm_satisfaction$department)
 )
@@ -314,8 +315,8 @@ And here is our initial figure with the estimated average employee satisfactions
 
 ```{r}
 x = plot_data(return.x = TRUE)
-est.full_pooling = precis(fit.full_pooling.b, pars = "mus", depth = 2)[,1]
-points(x,est.full_pooling, col = "blue", pch = 16)
+est.full_pooling = precis(fit.full_pooling.b, pars = "mus", depth = 2)
+points(x,est.full_pooling$mean, col = "blue", pch = 16)
 ```
 
 As expected we estimated the same mean for everyone
@@ -348,10 +349,12 @@ The corresponding `ulam` model looks as follows:
 
 ```{r class.source = 'fold-show'}
 m.no_pooling = alist(
-  S ~ dnorm(mu[d], sigma),
-  mu[d] ~ dnorm(mu_bar,1000),
+  S ~ dnorm(mu, sigma),
+  mu <- mu_bar + z[d]*1000,
+  z[d] ~ dnorm(0,1),
   mu_bar ~ dnorm(3,3),
-  sigma ~ dexp(2)
+  sigma ~ dexp(2),
+  gq> vector[d]:mus<<-mu_bar+z*.0001
 )
 ```
 
@@ -443,15 +446,7 @@ Here is the partial pooling `ulam` model:
 
 ```{r class.source = 'fold-show'}
 m.partial_pooling = alist(
-  S ~ dnorm(mu[d], sigma),
-  mu[d] ~ dnorm(mu_bar,Sigma),
-  mu_bar ~ dnorm(3,3),
-  sigma ~ dexp(2),
-  Sigma ~ dexp(2)
-)
-
-m.partial_pooling.b = alist(
-  S ~ dnorm(mu[d], sigma),
+  S ~ dnorm(mu, sigma),
   mu <- mu_bar + z[d] * Sigma,
   mu_bar ~ dnorm(3,3),
   sigma ~ dexp(1),
@@ -583,8 +578,9 @@ check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
   
   #prepare ulam.data
   u.data = list(
-  S = firm_satisfaction$satisfaction,
-  d = as.integer(firm_satisfaction$department))
+    N = nrow(firm_satisfaction),
+    S = firm_satisfaction$satisfaction,
+    d = as.integer(firm_satisfaction$department))
   
   # fit.models
   fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4)
