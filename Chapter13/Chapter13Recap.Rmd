@@ -80,6 +80,7 @@ Here are the things you know about your firm:
 Here is this expressed in some variables.
 ```{r class.source = 'fold-show'}
 n_departments = 15
+set.seed(123)
 n_employees = 
   rep(c(5,22,98), each = 5) + 
   rbinom(n_departments,5,.5)
@@ -150,11 +151,9 @@ for (d in 1:n_departments) {
 }
 ```
 
-
-
 Here is a brief summary of the data:
 
-```{r class.source = 'fold-show'}
+```{r}
 dep.satisf = 
   describeBy(firm_satisfaction$satisfaction,
            group = firm_satisfaction$department,
@@ -166,7 +165,7 @@ dep.satisf %>%
   kable_styling(full_width = FALSE)
 ```
 
-A standard way to visualize these results is to use bar charts of group means, maybe together with error bars. The figure also shows the true department level satisfaction as green stars.
+A standard way to visualize these results is to use bar charts of group means, maybe together with error bars. The figure also shows the true department level satisfaction, which we usually cannot observe, as green stars. 
 
 ```{r}
 
@@ -190,9 +189,9 @@ plot_data = function(return.x = FALSE) {
     return(x)
 }
 
-
 plot_data()
 ```
+__In our simulated world, the true and the measured satisfaction differ due to random measurement error, as indicated by this line in the simulation code: `employee_satisfaction = rnorm(n_employees[d], department_mus[d], 1)`__
 
 # 3 levels of pooling
 
@@ -201,6 +200,7 @@ How we want to analyse the data depends partially on our assumptions about the d
 - __Full pooling__ The groups are identical, we do not need to take differences between groups into account. _All groups get the same average._
 - __No pooling__ The groups are completely independent. _Each group gets its own average._
 - __Partial pooling__ The groups are somewhat dependent. _All groups get similar averages_
+
 ## Full pooling analysis
 
 A Bayesian model to estimate _identical_ group means (full pooling) looks as follows:
@@ -221,7 +221,7 @@ However, to facilitate the comparison to alternative models, we re-write the mod
   </tr>
   <tr>
     <td>
-     $$\begin{align*} S_i \sim normal(\bar \mu, \sigma)  & \;\;\;\;{\small \textrm{Individuals satisfaction is department satisfaction plus error}} \\ \mu_d  \sim normal(\bar \mu,.0001) & \;\;\;\;{\small \textrm{Department satisfaction is equal to average firm satisfaction}} \\ \bar \mu \sim normal(3,3) & \;\;\;\;{\small \textrm{Prior for average firm satisfaction}} \\ \sigma \sim exponential(1) & \;\;\;\;{\small \textrm{Prior for error variance}} \\ \end{align*}$$
+     $$\begin{align*} S_i \sim normal(\mu_d, \sigma)  & \;\;\;\;{\small \textrm{Individuals satisfaction is department satisfaction plus error}} \\ \mu_d  \sim normal(\bar \mu,.0001) & \;\;\;\;{\small \textrm{Department satisfaction is equal to average firm satisfaction}} \\ \bar \mu \sim normal(3,3) & \;\;\;\;{\small \textrm{Prior for average firm satisfaction}} \\ \sigma \sim exponential(1) & \;\;\;\;{\small \textrm{Prior for error variance}} \\ \end{align*}$$
     </td>
   </tr>
 </table>
@@ -230,7 +230,7 @@ However, to facilitate the comparison to alternative models, we re-write the mod
 $\mu_d$ are department level satisfactions, which depend on the firm level satisfaction $\bar \mu$ and the variations between departments. By setting standard deviation for the variation between departments to 0.0001, we are enforcing that the department level means will be equal.
 
 
-The corresponding `ulam` model looks as follows:
+Here are the corresponding `ulam` models:
 
 ```{r class.source = 'fold-show'}
 m.full_pooling = alist(
@@ -244,53 +244,85 @@ m.full_pooling.b = alist(
   z[d] ~ dnorm(0,1),
   mu_bar ~ dnorm(3,3),
   sigma ~ dexp(2),
+  # calculate mu per department
+  # in generated quantities
   gq> vector[d]:mus<<-mu_bar+z*.0001
 )
 ```
+
+---
+**NOTE**
+The second model implements what is called a "non-centered parameterization" of the model. Here are again two formulations of the model:
+
+<table>
+  <tr>
+    <th style="width:50%">Centered</th>
+    <th style="width:50%"> Non-centered</th>
+  </tr>
+  <tr>
+   <td>
+
+  ```nemerle
+  mus[d] = dnorm(mu_bar, Sigma)
+  
+  ```
+</td> 
+
+    <td>
+
+  ```nemerle
+  mus = mu_bar + z*Sigma
+z[d] ~ dnorm(0,1)
+  ```
+</td>
+  </tr>
+</table>
+___
 
 Before we fit the model, we put the data into a list:
 
 ```{r class.source = 'fold-show'}
 u.data = list(
-  N = nrow(firm_satisfaction),
   S = firm_satisfaction$satisfaction,
   d = as.integer(firm_satisfaction$department)
 )
 ```
 
-Now we estimate the model ...
+Now we estimate the models ...
 
 ```{r, echo = FALSE}
 fn = "full_pooling.Rdata"
+n.cores = ifelse(Sys.info()["sysname"] == "Darwin",4,1)
 if (file.exists(fn)) {
   load(fn)
 } else {
   fit.full_pooling = ulam(
     m.full_pooling,
     data = u.data,
-    log_lik = TRUE,
-    chains = 4)
+    log_lik = TRUE, iter = 1000, 
+    chains = 4, cores = n.cores)
   fit.full_pooling.b = ulam(
     m.full_pooling.b,
     data = u.data,
-    log_lik = TRUE,
-    chains = 4)
+    log_lik = TRUE, iter = 1000,
+    chains = 4, cores = n.cores)
   save(fit.full_pooling, fit.full_pooling.b, file = fn)
 }
 ```
 
 
 ```{r class.source = 'fold-show', eval = F}
+n.cores = ifelse(Sys.info()["sysname"] == "Darwin",4,1)
 fit.full_pooling = ulam(
   m.full_pooling,
   data = u.data,
-  log_lik = TRUE,
-  chains = 4)
+  log_lik = TRUE, iter = 1000,
+  chains = 4, cores = n.cores)
 fit.full_pooling.b = ulam(
   m.full_pooling.b,
   data = u.data,
-  log_lik = TRUE,
-  chains = 4)
+  log_lik = TRUE, iter = 1000,
+  chains = 4, cores = n.cores)
 ```
 
 
@@ -298,18 +330,21 @@ and check convergence:
 ```{r class.source = 'fold-show'}
 precis(fit.full_pooling) %>% 
   round(2)
-precis(fit.full_pooling.b, pars = "mus",
+precis(fit.full_pooling.b,
        depth = 2) %>% 
   round(2)
 ```
 
-Do the two models really describe the data equyally well, and is the number of effective parameters more or less equal?
+Do the two models really describe the data equally well, and is the number of effective parameters more or less equal?
 
 ```{r}
 compare(fit.full_pooling,
-        fit.full_pooling.b)
+        fit.full_pooling.b) %>% 
+  round(2)
 ```
 
+
+Indeed, the difference between the two models is very small. More importantly, we can see that the number of effective parameters of the two versions of the full polling model are `r round(WAIC(fit.full_pooling)[,3],2)` and `r round(WAIC(fit.full_pooling.b)[,3],2)`, even though the models have 2 and 17 parameters, respectively.
 
 And here is our initial figure with the estimated average employee satisfactions:
 
@@ -337,13 +372,15 @@ A Bayesian model to estimate _independent_ group means looks as follows:
     $$ S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,.0001) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
     </td>
     <td>
-     $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{100}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+     $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{1000}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
     </td>
   </tr>
 </table>
 
 
-In this model, the large standard deviation of the distribution of department level satisfaction ($\small \mu_{\color{red}{d}} \sim normal(3,10)$) encodes the assumption of independent groups.
+In this model, the large standard deviation of the distribution of department level satisfaction ($\small \mu_d \sim normal(\bar \mu,1000)$) encodes the assumption of independent groups. 
+
+__Getting from a full pooling to a no polling model by changing a model parameter shows that this are not qualitatively distinct models, but opposite endpoints of a continuous model space.__
 
 The corresponding `ulam` model looks as follows:
 
@@ -354,7 +391,7 @@ m.no_pooling = alist(
   z[d] ~ dnorm(0,1),
   mu_bar ~ dnorm(3,3),
   sigma ~ dexp(2),
-  gq> vector[d]:mus<<-mu_bar+z*.0001
+  gq> vector[d]:mus<<-mu_bar+z*1000
 )
 ```
 
@@ -369,8 +406,8 @@ if (file.exists(fn)) {
   fit.no_pooling = ulam(
   m.no_pooling,
   data = u.data,
-  log_lik = TRUE,
-  chains = 4)
+  log_lik = TRUE, iter = 1000,
+  chains = 4, cores = n.cores)
   save(fit.no_pooling, file = fn)
 }
 ```
@@ -380,7 +417,7 @@ if (file.exists(fn)) {
 fit.no_pooling = ulam(
   m.no_pooling,
   data = u.data,
-  log_lik = TRUE,
+  log_lik = TRUE, iter = 1000,
   chains = 4
 )
 ```
@@ -396,25 +433,19 @@ Now lets look at the true and estimated satisfaction in departments, where the e
 
 ```{r}
 x = plot_data(return.x = TRUE)
-est.no_pooling = precis(fit.no_pooling, pars = "mu", depth = 2)
+est.no_pooling = precis(fit.no_pooling, pars = "mus", depth = 2)
 points(x,est.no_pooling$mean, col = "blue", pch = 16)
 ```
 
-As expected, the estimates of this simple Bayesian model correspond to the average we calculated earlier, except that we see a bit of shrinkage towards the prior mean for the small departments (1-5).
+As expected, the estimates of this simple, no-pooling,  Bayesian model correspond to the averages we calculated earlier, except that we see a bit of shrinkage towards the prior mean for the small departments (1-5).
 
 ## Paritial pooling analysis
 
-In the full and no pooling analysis, we determined the the degree of pooling by setting the standard deviation of for department level satisfaction to a very low or very high number, respectively.
+In the full and no pooling analysis, we determined the the degree of pooling by setting the standard deviation for the department level satisfaction to a very low or very high number, respectively.
 
-The key advantage of the partial polling models is that instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.
+The key advantage of partial polling models is that instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.
 This allows such models to adapt to situations where the different groups are either similar (low standard deviation) or dissimilar (high standard deviation).
 
-
-$$
-\mu_d  \sim normal(3,10)
-$$
-
-corresp
 
 <table>
   <tr>
@@ -430,7 +461,7 @@ corresp
     </td>
     <td>
     
-    $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{100}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
+    $$S_i \sim normal(\mu_d, \sigma) \\  \mu_d  \sim normal(\bar \mu,\color{red}{1000}) \\ \bar \mu \sim normal(3,3) \\ \sigma \sim exponential(1)$$
     
     </td>
     <td>
@@ -442,7 +473,6 @@ corresp
 </table>
 
 Here is the partial pooling `ulam` model:
-
 
 ```{r class.source = 'fold-show'}
 m.partial_pooling = alist(
@@ -466,8 +496,8 @@ if (file.exists(fn)) {
   fit.partial_pooling = ulam(
   m.partial_pooling,
   data = u.data,
-  log_lik = TRUE,
-  chains = 4)
+  log_lik = TRUE, iter = 1000,
+  chains = 4, cores = n.cores)
   save(fit.partial_pooling, file = fn)
 }
 ```
@@ -477,7 +507,7 @@ if (file.exists(fn)) {
 fit.partial_pooling = ulam(
   m.partial_pooling,
   data = u.data,
-  log_lik = TRUE,
+  log_lik = TRUE, iter = 1000,
   chains = 4
 )
 ```
@@ -494,16 +524,19 @@ Let's see if the model detected some variability in department level satisfactio
 ```{r}
 post.Sigma = extract.samples(fit.partial_pooling)$Sigma
 hist(post.Sigma, xlim = c(0, max(post.Sigma)))
-abline(v = 0, lty = 2, col = "red")
+abline(v = sd_firm_satisfaction, lty = 2, lwd = 2, col = "green3")
 ```
 
-We have estimated a variance that is between the minimal variance of the full pooling model (we chose 0.0001) and the no pooling model (we chose 10000).
+The vertical green line is the true standard deviation, which shows that the model accurately estimates the variability of departments.
+
+__Models in which we estimate the between group standard deviation are called partial pooling models, because they lie somewhere on the continuum between no and full polling.__
+
 
 Now lets look at the estimated means: 
 
 ```{r}
 x = plot_data(return.x = TRUE)
-est.partial_pooling = precis(fit.partial_pooling, pars = "mu", depth = 2)
+est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
 points(x,est.partial_pooling$mean, col = "blue", pch = 16)
 ```
 
@@ -511,14 +544,18 @@ points(x,est.partial_pooling$mean, col = "blue", pch = 16)
 
 To see which method provides the best estimates of department level satisfaction, we compare each with the true values:
 
-```{r}
+```{r class.source = 'fold-show'}
 abs.delta = rbind(
   no_pooling = est.no_pooling$mean - department_mus,
   full_pooling = est.full_pooling$mean - department_mus,
   partial_pooling = est.partial_pooling$mean - department_mus
-) %>% 
-  abs() %>% 
-  t()
+) 
+```
+
+Here is a plot of these deviations:
+
+```{r}
+abs.delta = abs.delta %>% abs() %>% t()
 matplot(abs.delta, pch = 16, col = 2:4)
 legend("topleft", bty = "n",
        title = "Pooling",
@@ -527,30 +564,29 @@ legend("topleft", bty = "n",
        legend = gsub("_pooling","",colnames(abs.delta)))
 ```
 
+
 It seems as if the partial pooling model is doing best, but it is not 100% clear.
 
-A standard metric to calculate the performance of different models is the root means square deviation, which we calculate now:
+A standard metric to calculate the performance of different models is the root means square deviation (RMSD), which we calculate now:
 
-```{r}
-abs.delta %>% 
-  .^2 %>%          # square deviation
+```{r class.source = 'fold-show'}
+abs.delta^2 %>%    # square deviation
   colMeans() %>%   # mean
-  sqrt()          # root
+  sqrt()           # root
 ```
 
-Indeed, the partial pooling model comes closest to the observed values.
+Indeed, the partial pooling model as the smallest error. This is due to the same property of shrinkage estimators we already observed earlier in the course: Shrinkage estimators fit the data not as well as other models (here the no pooling model) but they are better at out of sample prediction.
 
 Note though, that this is not a big surprise, because this is how we specified the data generating process.
 
 Here is a function that produces the same plot we just saw, and that takes the between department standard deviation as an input. This allows us to test if the partial pooling model does well, even if a full or now pooling model is the true DGP.
 
 ```{r}
-
 check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
   fn = paste0("accuracy_",100*sd_firm_satisfaction,"_",n_departments,".Rdata")
   
   n_employees = 
-    rep(c(5,22,98), each = 5) + 
+    rep(c(5,22,98), each = n_departments/3) + 
     rbinom(n_departments,n_departments/3,.5)
   
   if (file.exists(fn)) {
@@ -583,9 +619,9 @@ check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
     d = as.integer(firm_satisfaction$department))
   
   # fit.models
-  fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4)
-  fit.no_pooling = ulam(m.no_pooling,data = u.data,chains = 4)
-  fit.partial_pooling = ulam(m.partial_pooling.b,data = u.data,chains = 4)
+  fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4, cores = n.cores)
+  fit.no_pooling = ulam(m.no_pooling,data = u.data,chains = 4, cores = n.cores)
+  fit.partial_pooling = ulam(m.partial_pooling,data = u.data,chains = 4, cores = n.cores)
   
   save(fit.full_pooling,
        fit.no_pooling,
@@ -597,46 +633,158 @@ check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
   
  # get estimates
   est.full_pooling = precis(fit.full_pooling, pars = "mus", depth = 2)
-  est.no_pooling = precis(fit.no_pooling, pars = "mu", depth = 2)
+  est.no_pooling = precis(fit.no_pooling, pars = "mus", depth = 2)
   est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
   
   abs.delta = rbind(
     no_pooling = est.no_pooling$mean - department_mus,
     full_pooling = est.full_pooling$mean - department_mus,
     partial_pooling = est.partial_pooling$mean - department_mus
-  ) %>% 
-    abs() %>% 
-    t()
+  ) %>% abs() %>% t()
   
-  layout(matrix(c(1,1,2),nrow = 1))
+  layout(matrix(c(1,1,2,3),ncol = 2))
   RMSD = abs.delta^2 %>% colMeans() %>% sqrt() 
-  legend = paste(
-    gsub("_pooling","",colnames(abs.delta)),
-    "RMSD:",
-    RMSD %>% round(2)
-  )
-  matplot(abs.delta, pch = 16, col = 2:4)
+  matplot(abs.delta, pch = 16, col = 2:4, ylab = "RMSD",
+          main = paste0("sd = ", sd_firm_satisfaction, ", ",n_departments," groups"))
   legend("topleft", bty = "n",
          title = "Pooling",
          col = 2:4,
          pch = 16,
-         legend = legend)
+         legend = gsub("_pooling","",colnames(abs.delta)))
+  
+  barplot(RMSD, col = 2:4)
   
   post.Sigma = extract.samples(fit.partial_pooling)$Sigma
   hist(post.Sigma, xlim = c(0, max(post.Sigma)), probability = T)
-  curve(dnorm(x,0,2), add = T)
+  curve(dnorm(x,0,2), add = T, col = "blue")
   abline(v = 0, lty = 2, col = "red")
   abline(v = sd_firm_satisfaction, lty = 2, lwd = 2, col = "green3")
 }
 
 ```
 
-```{r}
-check.accuracy(sd_firm_satisfaction = .01, n_departments = 30)
+Here is the performance of the three models if there is no variation between groups/departments.
+
+```{r, fig.width=7, fig.height=4, out.width="110%"}
+set_par(cex = 1, mar=c(3,3,3,.5))
+check.accuracy(sd_firm_satisfaction = .01, n_departments = 15)
 ```
 
-```{r}
-check.accuracy(sd_firm_satisfaction = 1, n_departments = 30)
+Here is the performance of the three models if there is some variation between groups/departments.
+
+```{r, fig.width=7, fig.height=4, out.width="110%"}
+set_par(cex = 1, mar=c(3,3,3,.5))
+check.accuracy(sd_firm_satisfaction = 1, n_departments = 15)
 ```
+
+Here is the performance of the three models if there is a lot of variation between groups/departments.
+
+```{r, fig.width=7, fig.height=4, out.width="110%"}
+set_par(cex = 1, mar=c(3,3,3,.5))
+check.accuracy(sd_firm_satisfaction = 10, n_departments = 15)
+```
+__The partial pooling model is generally nearly as accurate as the "true" model.__ Obviously, this also depends on how much data is available! The last figures are based on a large number (30) of groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
 
 # Bias - variance trade off
+
+One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an estimate of the sample mean.
+
+Lets look at the means from the no pooling an partial pooling models, together with the sample means: 
+
+```{r}
+sample_means = 
+  describeBy(firm_satisfaction$satisfaction, 
+             group = firm_satisfaction$department, 
+             mat = TRUE)[,"mean"]
+set_par()
+plot(1:15, sample_means, ylab = "mean", xlab = "department", cex = 1.5)
+points(1:15, est.no_pooling$mean, pch = 16, col = 2)
+points(1:15, est.partial_pooling$mean, pch = 16, col = 4)
+abline(h = mean(u.data$S), lty = 3)
+arrows(x0 = 1:15,
+       y0 = est.no_pooling$mean,
+       y1 = est.partial_pooling$mean,
+       col = 4, lty = 3, length = .1)
+legend("topright",
+       pch = c(1,16,16),
+       col = c(1,2,4), bty = "n",
+       legend = c("dep.mean","no pooling", "partial pooling"))
+```
+The deviation between sample mean and partial pooling estimate shows that the latter is a biased estimate of the sample mean. This bias is larger for smaller departments (on the left hand side) which which are shrunk more, and it is also larger for departments with extreme means, compare e.g. departments 13 and 14.
+
+Now one could be concerned that partial pooling makes it difficult to detect differences between groups. But the bias just described is only part of the story. Next, we plot the estimates together with their credible intervals: 
+
+```{r}
+set_par()
+ylim = range(c(est.no_pooling[,3:4],est.partial_pooling[, 3:4]))
+plot(1:15, sample_means, ylab = "mean", xlab = "department", cex = 1.5, ylim = ylim)
+points((1:15)-.1, est.no_pooling$mean, pch = 16, col = 2)
+points((1:15)+.1, est.partial_pooling$mean, pch = 16, col = 4)
+abline(h = mean(u.data$S), lty = 3)
+arrows(x0 = (1:15)-.1,
+       y0 = est.no_pooling$`5.5%`,
+       y1 = est.no_pooling$`94.5%`,
+       col = 2, length = 0)
+arrows(x0 = (1:15)+.1,
+       y0 = est.partial_pooling$`5.5%`,
+       y1 = est.partial_pooling$`94.5%`,
+       col = 4, length = 0)
+legend("topright",
+       pch = c(1,16,16),
+       col = c(1,2,4), bty = "n",
+       legend = c("dep.mean","no pooling", "partial pooling"))
+```
+
+What do you see?
+
+The variance of the estimates from the hierarchical partial pooling model is generally smaller. The intuition her is that because the estimate for one department also relies partially on data from other departments, the estimated mean for the department was derived from more data and is therefore less uncertain. 
+
+This reduction in bias means that even though all estimates were shrunk towards the global mean and group differences became smaller, we can still detect group differences well due to the reduces variance of the estimates for the group mean.
+
+More generally, it can be said that total error of an estimate can be decomposed into:
+
+- bias (systematic error) and
+- variance (random error)
+
+```{r}
+VB = function(truth, estimate) {
+  return(c(
+    variance = mean((estimate-mean(estimate))^2),
+    bias = mean((truth-mean(estimate))^2)
+    ))
+}
+```
+
+Shrinkage methods and in particular multilevel regression and partial pooling make a different trade off than the more traditional no-pooling estimate by exchanging some bias for a reduction in variance. 
+
+The following figure shows how partial pooling trades off variance for bias: 
+
+```{r}
+VB.partial_pooling = 
+  do.call(rbind,lapply(1:15, function(d) {
+    VB(sample_means[d],extract_post_ulam(fit.partial_pooling,pars = "mus")[[1]][,d])
+  }))
+VB.no_pooling = 
+  do.call(rbind,lapply(1:15, function(d) {
+    VB(sample_means[d],extract_post_ulam(fit.no_pooling,pars = "mus")[[1]][,d])
+  }))
+
+set_par()
+xlim = range(c(VB.partial_pooling[,1],VB.no_pooling[,1]))
+ylim = range(c(VB.partial_pooling[,2],VB.no_pooling[,2]))
+plot(0, type = "n", col = 4,
+     ylim = ylim, xlim = xlim,
+     ylab = "Bias", xlab = "Variance")
+arrows(x0 = VB.no_pooling[,1],
+       y0 = VB.no_pooling[,2],
+       x1 = VB.partial_pooling[,1],
+       y1 = VB.partial_pooling[,2],
+       length = .1, col = "grey")
+text(VB.partial_pooling[,1], VB.partial_pooling[,2], 1:15, col = 4)
+text(VB.no_pooling[,1], VB.no_pooling[,2], 1:15, col = 2)
+
+legend("topright", bty = "n",
+         col = c(2,4), pch = 16,
+         legend = c("no pooling","partial pooling"))
+```
+
