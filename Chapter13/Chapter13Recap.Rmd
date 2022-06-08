@@ -886,3 +886,53 @@ __Non centered parameterization to solve divergent iterations__
   </tr>
 </table>
 <br>
+
+
+## M6
+
+As we have seen earlier, extreme values are more probable under the Cauchy distribution.
+
+If we then have the data $y = 0$ and use the model
+
+$$
+y \sim Normal(\mu,1) \\
+\mu \sim Normal(10,1)
+$$
+
+- the __Normal prior__ will make __low $\mu$ values unlikely__
+- the __Normal likelihood__ will make the __data given large $\mu$ unlikely__, 
+- so that $\mu$ will be estimated to be between the value of $y$ and the mean of the prior for $mu$ (mean of mu ~5)
+
+If we use the model
+
+$$
+y \sim Normal(\mu,1) \\
+\mu \sim Student(2,10,1)
+$$
+
+- the __Student prior__ will make __low $\mu$ relatively more likely__
+- the __Normal likelihood__ will make the __data give large $\mu$ unlikely__, 
+- so that $\mu$ will be estimated to be closer to the value of $y$ (mean of mu ~0.3)
+
+If we use the model
+
+$$
+y \sim Student(2,\mu,1) \\
+\mu \sim Normal(10,1)
+$$
+
+- the __Normal prior__ will make __low $\mu$ values unlikely__
+- the __Student likelihood__ will __make data that deviate from $\mu$ relatively more likely__
+- so that $\mu$ will be estimated to be close to the mean of the prior for $\mu$ (mean of mu ~9.7)
+
+
+If we use the model
+
+$$
+y \sim Student(2,\mu,1) \\
+\mu \sim Student(2,10,1)
+$$
+
+- the __Student prior__ will make __low $\mu$ relatively more likely__
+- the __Student likelihood__ will __make data that deviate from $\mu$ relatively more likely__
+- so that $\mu$ will be estimated to be between the mean of the prior for $\mu$ and the value of $y$ (mean of mu ~ 6.2)
