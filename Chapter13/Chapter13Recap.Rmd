@@ -652,7 +652,8 @@ check.accuracy = function(sd_firm_satisfaction = .25, n_departments = 15) {
          pch = 16,
          legend = gsub("_pooling","",colnames(abs.delta)))
   
-  barplot(RMSD, col = 2:4)
+  x = barplot(RMSD, col = 2:4, ylab = "RMSD")
+  text(x,RMSD,round(RMSD,2),pos = 3, xpd = TRUE)
   
   post.Sigma = extract.samples(fit.partial_pooling)$Sigma
   hist(post.Sigma, xlim = c(0, max(post.Sigma)), probability = T)
@@ -683,7 +684,10 @@ Here is the performance of the three models if there is a lot of variation betwe
 set_par(cex = 1, mar=c(3,3,3,.5))
 check.accuracy(sd_firm_satisfaction = 10, n_departments = 15)
 ```
-__The partial pooling model is generally nearly as accurate as the "true" model.__ Obviously, this also depends on how much data is available! The last figures are based on a large number (30) of groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
+
+The last plot shows that if the number of groups is only moderately and the prior for the bias is relatively narrow, one can obtained biased estimates of the between group standard deviation. It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.
+
+__The partial pooling model is generally nearly as accurate as the "true" model.__ Obviously, this also depends on how much data is available! The last figures are based on 15 groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
 
 # Bias–variance tradeoff
 
