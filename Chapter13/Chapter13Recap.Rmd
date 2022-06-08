@@ -685,7 +685,7 @@ check.accuracy(sd_firm_satisfaction = 10, n_departments = 15)
 ```
 __The partial pooling model is generally nearly as accurate as the "true" model.__ Obviously, this also depends on how much data is available! The last figures are based on a large number (30) of groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
 
-# Bias - variance trade off
+# Bias–variance tradeoff
 
 One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an estimate of the sample mean.
 
@@ -788,3 +788,37 @@ legend("topright", bty = "n",
          legend = c("no pooling","partial pooling"))
 ```
 
+# Summary
+
+- Hierarchical models assume estimate group level parameters by assuming that these come from a common distribution
+- Typically, this common distribution is a normal distribution
+- Using the common distribution induces shrinkage, i.e. group level parameters are moved towards the mean of the common distribution
+- The amount of shrinkage is estimated from the data
+- As other shrinkage approaches, hierarchical or multilevel models trade off bias for variance, and typically make better out of sample predictions
+
+# Exercises
+
+## E2 
+
+Rewrite the following model as a multilevel model
+
+**No pooling** | **Partial pooling**
+- | -
+$$y_i \sim Binomial(1,p_i) \\ logit(p_i) \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,1.5)} \\ \beta \sim Normal(0,0.5)$$ | $$
+y_i \sim Binomial(1,p_i) \\
+logit(p_i) \sim \alpha_{GROUP[i]} + \beta x_i \\
+\color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\
+\beta \sim Normal(0,0.5) \\
+\color{red}{\bar \alpha \sim Normal(0,1.5)} \\
+\color{red}{\sigma_\alpha \sim Exponential(0,1)}
+$$
+
+
+## E3 
+
+Rewrite the following model as a multilevel model
+
+**No pooling** | **Partial pooling**
+- | -
+$$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,5)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) $$ | $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) \\ \color{red}{\bar \alpha \sim Normal(0,5)} \\ \color{red}{\sigma_\alpha \sim Exponential(1)}
+$$
