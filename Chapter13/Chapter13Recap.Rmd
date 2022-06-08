@@ -67,7 +67,7 @@ set_par = function(mfrow = c(1,1), mar=c(3,3,.5,.5), cex = 1.25)
 
 Let's assume you are an HR manager (with a soft spot for statistics) and you are trying to find out how to best analyse data from a survey about employee satisfaction.
 
-The consultant you hired cam back with a bunch of colorful charts and employee satisfaction numbers that were precise to 3 digits, but you couldn't stop thinking of you professors rambling that firms would learn more about their employees if they uses the data better and did some multilevel analysis.
+The consultant you hired cam back with a bunch of colorful charts and employee satisfaction numbers that were precise to 3 digits, but you couldn't stop thinking of you professors rambling that firms would learn more about their employees if they used their data better and did some multilevel analysis.
 
 You weren't entirely convinced because you found his argumentation to abstract, but you also were a good hacker and thought now is the time to just simulate some data and see if one is really doing better with a multilevel analysis.
 
@@ -75,7 +75,7 @@ Here are the things you know about your firm:
 
 - There are 15 departments 
 - Each department has between 5 (administration) and 100 (production) employees
-- The last years have brought many changes to the firm, whereby all departments were typically impacted in a similar manner by these changes. Therefore you think that employee satisfaction should be similar between departments.
+- The last years have brought many changes to the firm, whereby all departments were typically impacted in a similar manner by these changes. Therefore you think that employee satisfaction should be similar in the departments.
 
 Here is this expressed in some variables.
 ```{r class.source = 'fold-show'}
