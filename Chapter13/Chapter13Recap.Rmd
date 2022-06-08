@@ -822,3 +822,67 @@ Rewrite the following model as a multilevel model
 - | -
 $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,5)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) $$ | $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) \\ \color{red}{\bar \alpha \sim Normal(0,5)} \\ \color{red}{\sigma_\alpha \sim Exponential(1)}
 $$
+
+## M3
+
+The Normal and the Cauchy distributions:
+
+```{r, fig.height=6}
+set_par(mfrow = c(2,1))
+curve(dnorm(x),-7,7,ylab = "density") 
+curve(dcauchy(x), col = "blue", add = T, n = 500)
+legend("topleft",lty = 1,bty = "n",
+       col = c("black","blue"),
+       legend = c("Normal","Cauchy"))
+curve(dcauchy(x)/dnorm(x), -7,7, col = "red", n = 500, log = "y")
+```
+
+## M4
+
+The Student-t and the Cauchy distributions:
+
+```{r}
+set_par()
+curve(dnorm(x),-7,7,ylab = "density", col = "grey")
+curve(dstudent(x,nu = 2), add = T, col = "green3", n = 500) 
+#curve(dstudent(x,nu = 10), add = T, col = "green3",n = 500, lty = 3) 
+curve(dcauchy(x), col = "blue", add = T, n = 500)
+legend("topleft",lty = c(1,1,1),bty = "n",
+       col = c("green3","blue","gray"),
+       legend = c("Student-t, df = 2","Cauchy", "Normal"))
+```
+
+__Non centered parameterization to solve divergent iterations__
+
+<table>
+  <tr>
+    <th style="width:56%" >centered</th>
+    <th style="width:44%">non-centered</th>
+  </tr>
+  <tr>
+    <td>
+    
+<pre style="background-color: #F8F8F8; border-color: white">alist(
+  S ~ dbinom(N,p),
+  logit(p) <- a[tank],
+  <b>a[tank] ~ dstudent(2,a_bar,sigma),</b>
+  a_bar ~ dnorm(0,1.5),
+  sigma ~ dexp(1)
+  
+)
+</pre>
+    </td>
+    <td>
+
+<pre style="background-color: #F8F8F8; border-color: white">alist(
+   S ~ dbinom(N,p),
+   logit(p) <- a[tank],
+   <b>a <- a_bar + z*sigma,</b>
+   a_bar ~ dnorm(0,1.5),
+   sigma ~ dexp(1),
+   <b>z[tank] ~ dstudent(2,0,1)</b>
+)</pre>
+</td>
+  </tr>
+</table>
+<br>
