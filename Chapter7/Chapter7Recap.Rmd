@@ -13,11 +13,13 @@ header-includes:
     \usepackage{amsmath}
 ---
 
-  
 ```{css, echo = F}
 body{
   font-family: Helvetica;
   font-size: 16pt;
+  max-width: 1000px;
+  margin: auto;
+  margin-left:310px;
 }
 pre{
   font-size: 20px;
@@ -27,10 +29,19 @@ h1{
     font-size: 24pt;
   }
 h1,h2{
-    font-size: 22pt;
+    font-size: 20pt;
   }
 h3,h4,h5,h6{
   font-size: 18pt;
+}
+
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  overflow:auto;
 }
 ```
 
@@ -701,7 +712,7 @@ To show how shrinkage works, we estimate spline models with different standard d
 
 The following figure shows the estimated relationships for different samples drawn from the population.
 
-![]("shrinkage.gif")
+![](shrinkage.gif)
 
 
 Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coeffcients is narrow (top left) compared to when it is wider (bottom right).
