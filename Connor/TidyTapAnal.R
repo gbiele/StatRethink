@@ -93,8 +93,8 @@ my.prior = c(
   prior(class = "b", normal(0,3)),
   prior(class = "sds", normal(0,3))
   )
-BehSub$AvgMove.c = as.numeric(cut(BehSub$AvgMove,breaks = seq(-1.001,1.001, length.out = 11)))
-sf = brm(AvgMove.c ~ s(Entropy, by = Condition) + Condition + (1 | Subject),
+BehSub$AvgMove.c = as.numeric(cut(BehSub$AvgMove,breaks = seq(-1.001,1.001, length.out = 15)))
+sf = brm(AvgMove.c ~ s(Entropy) + (1 | Subject),
          data = BehSub,
          backend = "cmdstanr",
          prior = my.prior,
