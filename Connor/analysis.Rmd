@@ -289,11 +289,13 @@ Now lets look at the predicted move ratings:
 ```{r}
 qs = quantile(BehSub$Entropy,c(.25,.75))
 p = conditional_effects(sf,"Entropy:Condition")[[1]]
-p %>% 
+p1 = 
+  p %>% 
   ggplot(aes(x = Entropy, y = estimate__, color = Condition, fill = Condition)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = .25, color = NA) + 
   geom_vline(xintercept = qs)
+p1
 ```
 
 
@@ -334,38 +336,51 @@ hist(delta_highlow, xlim = xlim); abline(v = 0, col = "red")
 ```
 On average, participants move ratings are by `r mean(delta_highlow)` (95% credible interval: `r paste(round(quantile(delta_highlow,c(.025,.975)),2), collapse = ", ")`) higher at medium entropy than at high or low entropy.
 
-One challenge here is to define medium entropy. One could e.g. Use the slopes of the earlier figure to determine when the plateau is reached.
+One challenge here is to define medium entropy. One could e.g. use the slopes of the earlier figure to determine when the plateau is reached.
 
 
-```{r}
+```{r echo=F, eval = F}
+library(data.table)
+
 newdata = 
   expand.grid(Entropy = seq(.5,.8,.005),
               Subject = unique(BehSub$Subject),
               Condition = unique(BehSub$Condition))
-
-pp = posterior_epred(
-  sf, 
-  newdata = newdata) %>% 
-  apply(1,
-        function(x) {
-          apply(x,1,
-                function(z)
-                  sum(z*(1:10)))
+fn = "pp_slopes.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  pp_slopes = posterior_epred(
+    sf, 
+    newdata = newdata) %>% 
+    apply(1,
+          function(x) {
+            apply(x,1,
+                  function(z)
+                    sum(z*(1:10)))
           })
+  save(pp_slopes, file = fn)
+}
 
-library(data.table)
 px = 
-  cbind(newdata,pp) %>% 
+  cbind(newdata,pp_slopes) %>% 
   data.table() %>% 
   melt(id.vars = names(newdata), variable.name = "iter") %>% 
   .[, .(move = mean(value)), by = .(Entropy,iter)]
 
 dx = 
   px %>% 
-  .[, .(d = -diff(move), Entropy = Entropy[-1]), by = .(iter)] %>% 
+  .[, .(d = diff(move), Entropy = Entropy[-1]), by = .(iter)] %>% 
   .[, .(d = mean(d), lower = quantile(d,.025), upper = quantile(d,.975)), by = "Entropy"]
 
 
-dx %>% ggplot(aes(x = Entropy, y = d)) + geom_line() + geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = .25)
+p2 = dx %>% 
+  ggplot(aes(x = Entropy, y = d)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = .25) + 
+  geom_vline(xintercept = dx[lower < .05 & lower > -.05 & upper < .05 & upper > -.05][,Entropy])
+
+library(patchwork)
+p1 / p2
 ```
 
