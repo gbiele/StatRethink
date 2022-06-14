@@ -93,17 +93,77 @@ my.prior = c(
   prior(class = "b", normal(0,3)),
   prior(class = "sds", normal(0,3))
   )
-BehSub$AvgMove.c = as.numeric(cut(BehSub$AvgMove,breaks = seq(-1.001,1.001, length.out = 15)))
-sf = brm(AvgMove.c ~ s(Entropy) + (1 | Subject),
+
+BehSub$AvgMove.c = as.numeric(cut(BehSub$AvgMove,breaks = seq(-1.001,1.001, length.out = 11)))
+f = AvgMove.c ~ s(Entropy, by = Condition) + Condition + (1 | Subject)
+
+standata = make_standata(f,family = cumulative(link = "probit"),data = BehSub)
+
+my.inits = lapply(1:4, function(x) {
+  list(
+    intercept = seq(-2,2,length.out = standata$nthres),
+    bs = rep(0,standata$Ks),
+    zs_1_1 = rep(0,standata$knots_1[1]),
+    sd_1 = rep(0.001,standata$M_1)
+  )
+})
+
+
+sf = brm(f,
          data = BehSub,
          backend = "cmdstanr",
          prior = my.prior,
-         family = cumulative(link = "probit"))
+         family = cumulative(link = "probit"),
+         inits = my.inits)
 
-conditional_effects(sf,"Entropy:Condition")
+pp = posterior_epred(sf)
+pred = 
+  apply(pp,1, function(x) {
+    apply(x,1, function(z) sum(z*(1:10)))
+  })
 
-pp = posterior_predict(sf)
-pp = pp/5-2
-plot(colMeans(pp),colMeans(pp)-BehSub$AvgMove)
-cor(colMeans(pp),colMeans(pp)-BehSub$AvgMove)
-hist(colMeans(pp))
+p = apply(pp,1,colMeans)
+CIs = apply(p,1,function(x) quantile(x,probs = c(.025,.975)))
+h = 
+  rbind(rowMeans(p),
+        prop.table(table(BehSub$AvgMove.c))) %>% 
+  barplot(beside = TRUE, ylim = c(0,max(CIs)))
+arrows(x0 = h[2,], y0 = CIs[1,], y1 = CIs[2,], length = 0)
+
+plot(colMeans(pred),colMeans(pred)-BehSub$AvgMove.c)
+cor(colMeans(pred),colMeans(pred)-BehSub$AvgMove.c)
+
+BehSub$Entropy.c = as.numeric(cut(BehSub$Entropy,3))
+qs = c(max(BehSub$Entropy[BehSub$Entropy.c == 1]),max(BehSub$Entropy[BehSub$Entropy.c == 2]))
+qs = quantile(BehSub$Entropy,c(.25,.75))
+p = conditional_effects(sf,"Entropy:Condition")[[1]]
+p %>% 
+  ggplot(aes(x = Entropy, y = estimate__, color = Condition, fill = Condition)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = .25, color = NA) + 
+  geom_vline(xintercept = qs)
+
+pp.test.t1 = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy <= qs[1],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+pp.test.t2 = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy > qs[1] & BehSub$Entropy <= qs[2],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+pp.test.t3 = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy > qs[2],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+par(mfrow = c(1,2))
+hist(pp.test.t2-pp.test.t1)
+hist(pp.test.t1-pp.test.t3)
