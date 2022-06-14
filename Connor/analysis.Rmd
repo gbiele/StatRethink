@@ -1,0 +1,371 @@
+---
+title: "Example analysis"
+author: "GB"
+date: '2022-06-14'
+output:
+  html_document: 
+    mathjax: default
+    toc: true
+---
+
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+pre{
+  font-size: 16px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We tested this by asking subjects to rate music that varied in complexity (quantified here as (pulse) entropy) in terms of how much they wanted to  move ... We wanted to test whether subjects' ratings would be higher when they actively tapped along to the music compared to when they passively listened to it, particularly at moderate levels of rhythmic complexity.
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(zoo)
+library(ggplot2)
+library(ez)
+library(tidyr)
+library(lme4)
+library(lmerTest)
+library(effects)
+```
+
+Here is a look at the raw data
+
+```{r echo = F, message=FALSE, warning=FALSE, fig.width=9}
+TapBeh <- readRDS("TapBehfull.RDA")
+
+BehSub <- na.omit(TapBeh) # probably not necessary to cut out NaNs for this analysis
+BehSub <- BehSub %>% group_by(Subject, Entropy, Song, Condition) %>% #filter(Subject!=24) %>% subject told us they had ADHD halfway through experiment
+  summarize(AvgMove=mean(Move), 
+            AvgPleasure=mean(Pleasure), 
+            AvgArousal=mean(Arousal), 
+            AvgFam=mean(Familiarity), 
+            AvgStyle=mean(Style))
+
+BehSum <- BehSub %>% group_by(Entropy, Song, Condition) %>%
+  summarize(SumMove=mean(AvgMove), 
+            SumPleasure=mean(AvgPleasure), 
+            SumArousal=mean(AvgArousal), 
+            SumFam=mean(AvgFam), 
+            SumStyle=mean(AvgStyle))#,
+#MoveSE=sd(AvgMove)/(sqrt(n())), PleasureSE=sd(AvgPleasure)/(sqrt(n())), ArousalSE=sd(AvgArousal)/(sqrt(n())), MoveZSE=sd(AvgZMove)/(sqrt(n())), PleasureZSE=sd(AvgZPleasure)/(sqrt(n())), ArousalZSE=sd(AvgZArousal)/(sqrt(n())))
+
+
+# plot raw average ratings to compare to predictors with nested effects
+ggplot(data=BehSub, aes(x=Entropy, linetype=Condition, shape=Condition))+
+  facet_wrap(~Condition)+
+  scale_color_manual(values=c("Move"="#ff522f"))+#, "Pleasure"="#5bd1d7", "Arousal"="#004e61"))+
+  scale_fill_manual(values=c("Move"="#ff522f"))+#, "Pleasure"="#5bd1d7", "Arousal"="#004e61"))+
+  geom_hline(yintercept=0, color="black")+
+  geom_line(aes(y=AvgMove, group=Subject))+
+  geom_line(data=BehSum, aes(y=SumMove, color="Move",), size=1.25)+
+  #geom_line(data=BehSum, aes(y=SumPleasure, color="Pleasure"), size=1.25)+
+  #geom_line(data=BehSum, aes(y=SumArousal, color="Arousal"), size=1.25)+
+  scale_y_continuous(limits=c(-1,1))+
+  scale_size(guide="none")+
+  labs(title="Average Raw Ratings by Rhythmic Complexity", y="Rating (0 is neutral)", x="Pulse Entropy")+
+  theme_bw()+theme(plot.title=element_text(size=24),axis.title.y=element_text(size=18),
+                   axis.title.x=element_text(size=18), axis.text.x=element_text(size=16),axis.text.y=element_text(size=16),
+                   legend.title=element_blank(),legend.text=element_text(size=16))
+```
+
+# Original analysis
+
+The standard analysis fits different models and continues with model selection:
+
+```{r}
+# null/empty/intercepts-only model
+m0 <- lmer(AvgMove~1+(1|Subject), data=BehSub) 
+# effect of tapping vs. listening condition
+mt <- lmer(AvgMove~1+Condition+(1|Subject), data=BehSub)
+ # add linear effect of rhythmic complexity
+ml <- lmer(AvgMove~1+Entropy*Condition+(1+Entropy|Subject), data=BehSub)
+# add quadratic effects of rhythmic complexity
+mq <- lmer(AvgMove~1+Condition*poly(Entropy,2)+(1+poly(Entropy,2)|Subject), data=BehSub) 
+anova(m0,mt,ml,mq) # quadratic model is the best fit, yippee!
+summary(mq)  
+```
+
+Connor: "As predicted, there is a significant negative quadratic trend for rhythmic complexity indicating an inverted U-shaped curve".
+
+# Original analysis, but Bayesian
+
+We can do the same in using Bayesian estimation and `rstanarm`:
+
+```{r, echo = FALSE, message=FALSE}
+library(rstanarm)
+fn = "rstanarm_models.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  options(mc.cores = 4)
+  m0 <- stan_lmer(AvgMove~1+(1|Subject), data=BehSub) 
+  # effect of tapping vs. listening condition
+  mt <- stan_lmer(AvgMove~1+Condition+(1|Subject), data=BehSub)
+  # add linear effect of rhythmic complexity
+  ml <- stan_lmer(AvgMove~1+Entropy*Condition+(1+Entropy|Subject), data=BehSub)
+  # add quadratic effects of rhythmic complexity
+  mq <- stan_lmer(AvgMove~1+Condition*poly(Entropy,2)+(1+poly(Entropy,2)|Subject), data=BehSub) 
+  m0_loo = loo(m0)
+  mt_loo = loo(mt)
+  ml_loo = loo(ml)
+  mq_loo = loo(mq)
+  save(m0,mt,ml,mq,m0_loo,mt_loo,ml_loo,mq_loo,file = fn)
+}
+```
+
+
+```{r, eval = F}
+library(rstanarm)
+options(mc.cores = 4)
+m0 <- stan_lmer(AvgMove~1+(1|Subject), data=BehSub) 
+  # effect of tapping vs. listening condition
+  mt <- stan_lmer(AvgMove~1+Condition+(1|Subject), data=BehSub)
+  # add linear effect of rhythmic complexity
+  ml <- stan_lmer(AvgMove~1+Entropy*Condition+(1+Entropy|Subject), data=BehSub)
+  # add quadratic effects of rhythmic complexity
+  mq <- stan_lmer(AvgMove~1+Condition*poly(Entropy,2)+(1+poly(Entropy,2)|Subject), data=BehSub) 
+```
+
+Next we calculate loo values:
+
+```{r, eval = F}
+m0_loo = loo(m0)
+mt_loo = loo(mt)
+ml_loo = loo(ml)
+mq_loo = loo(mq)
+```
+
+and we compare the models: 
+
+```{r}
+loo_compare(m0_loo,mt_loo,ml_loo,mq_loo)
+```
+Also here the quadratic model is clearly the best model.
+
+But lets quickly look at posterior predictions:
+
+```{r}
+hist(BehSub$AvgMove, probability = TRUE, main = "", xlim = c(-2,2))
+posterior_predict(mq) %>% hist(probability = TRUE, col = adjustcolor("blue",alpha = .5), add = T)
+```
+
+The linear model does not seem to capture the data well.
+
+# A better Bayesian analysis
+
+As always, I'll try it with a an ordinal regression / IRT model. Remember that only because we use a slider scale to capture responses, this does not mean that we are really measuring things on a cardinal scale.
+
+```{r}
+BehSub$AvgMove.c = 
+  as.numeric(
+    cut(BehSub$AvgMove,
+        breaks = seq(-1.001,1.001, length.out = 11)))
+table(BehSub$AvgMove.c) %>% barplot()
+```
+
+And now we use brms to estimate an ordinal regression with subject random effects (I don't think we need random slopes here).
+
+```{r, echo = F, message=FALSE, warning=FALSE}
+library(brms)
+fn = "ordinal.Rdata"
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  f = AvgMove.c ~ s(Entropy, by = Condition) + Condition + (1 | Subject)
+  standata = make_standata(f,family = cumulative(link = "probit"),data = BehSub)
+  
+  my.inits = lapply(1:4, function(x) {
+    list(
+      intercept = seq(-2,2,length.out = standata$nthres),
+      bs = rnorm(standata$Ks,0,.05),
+      zs_1_1 = rnorm(standata$knots_1[1],0,.05),
+      sd_1 = runif(standata$M_1,.01,.1)
+    )
+  })
+  
+  sf = brm(f,
+           data = BehSub,
+           backend = "cmdstanr",
+           prior = my.prior,
+           family = cumulative(link = "probit"),
+           inits = my.inits)
+  save(sf, file = fn)
+}
+
+```
+
+
+```{r, eval = F}
+library(brms)
+# model formula
+f = AvgMove.c ~ s(Entropy, by = Condition) + Condition + (1 | Subject)
+# make stan-data to get info for prior specification
+standata = make_standata(f,family = cumulative(link = "probit"),data = BehSub)
+# initialize parameters
+my.inits = lapply(1:4, function(x) {
+    list(
+      intercept = seq(-2,2,length.out = standata$nthres),
+      bs = rnorm(standata$Ks,0,.05),
+      zs_1_1 = rnorm(standata$knots_1[1],0,.05),
+      sd_1 = runif(standata$M_1,.01,.1)
+    )
+  })
+
+# fit model
+sf = brm(f,
+         data = BehSub,
+         backend = "cmdstanr",
+         prior = my.prior,
+         family = cumulative(link = "probit"), # logitic regression with logit link
+         inits = my.inits)
+```
+
+
+Did the model converge?
+
+```{r}
+summary(sf)
+```
+
+To make posterior predictive plots, we first make posterior predictions:
+
+```{r echo = F}
+fn = "pp.Rdata"
+if(file.exists(fn)) {
+  load(fn)
+} else {
+  pp = posterior_epred(sf)
+  pred = 
+    apply(pp,1, function(x) {
+      apply(x,1, function(z) sum(z*(1:10)))
+    })
+  p = apply(pp,1,colMeans)
+  save(pp,p,file = fn)
+}
+```
+
+
+```{r, eval = F}
+pp = posterior_epred(sf)
+pred = 
+  apply(pp,1, function(x) {
+    apply(x,1, function(z) sum(z*(1:10)))
+  })
+p = apply(pp,1,colMeans)
+```
+
+```{r}
+CIs = apply(p,1,function(x) quantile(x,probs = c(.025,.975)))
+clrs = c("grey75",adjustcolor("blue",alpha = .5))
+h = 
+  rbind(rowMeans(p),
+        prop.table(table(BehSub$AvgMove.c))) %>% 
+  barplot(beside = TRUE, ylim = c(0,max(CIs)), col = clrs)
+arrows(x0 = h[2,], y0 = CIs[1,], y1 = CIs[2,], length = 0, col = "blue")
+```
+
+This looks better than the other plot.
+
+
+Now lets look at the predicted move ratings:
+```{r}
+qs = quantile(BehSub$Entropy,c(.25,.75))
+p = conditional_effects(sf,"Entropy:Condition")[[1]]
+p %>% 
+  ggplot(aes(x = Entropy, y = estimate__, color = Condition, fill = Condition)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = .25, color = NA) + 
+  geom_vline(xintercept = qs)
+```
+
+
+We clearly see an inverted-U shape here.
+
+Instead of comparing this with an alternative model that does not use splines, well compare ratings at the high and low entries with those at medium entropy:
+
+```{r, fig.width=11, fig.height=4}
+move.low_e = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy <= qs[1],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+move.medium_e = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy > qs[1] & BehSub$Entropy <= qs[2],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+move.high_e = 
+  posterior_epred(
+    sf, 
+    newdata = BehSub[BehSub$Entropy > qs[2],]) %>% 
+  apply(1,colMeans) %>% 
+  apply(2, function(x) sum(x*(1:10)))
+
+par(mfrow = c(1,3))
+delta_high = move.medium_e-move.high_e
+delta_low = move.medium_e-move.low_e
+delta_highlow = move.medium_e-(move.low_e+move.high_e)/2
+xlim = range(c(delta_high,delta_highlow,delta_low))
+hist(delta_low, xlim = xlim); abline(v = 0, col = "red")
+hist(delta_high, xlim = xlim); abline(v = 0, col = "red")
+hist(delta_highlow, xlim = xlim); abline(v = 0, col = "red")
+```
+On average, participants move ratings are by `r mean(delta_highlow)` (95% credible interval: `r paste(round(quantile(delta_highlow,c(.025,.975)),2), collapse = ", ")`) higher at medium entropy than at high or low entropy.
+
+One challenge here is to define medium entropy. One could e.g. Use the slopes of the earlier figure to determine when the plateau is reached.
+
+
+```{r}
+newdata = 
+  expand.grid(Entropy = seq(.5,.8,.005),
+              Subject = unique(BehSub$Subject),
+              Condition = unique(BehSub$Condition))
+
+pp = posterior_epred(
+  sf, 
+  newdata = newdata) %>% 
+  apply(1,
+        function(x) {
+          apply(x,1,
+                function(z)
+                  sum(z*(1:10)))
+          })
+
+library(data.table)
+px = 
+  cbind(newdata,pp) %>% 
+  data.table() %>% 
+  melt(id.vars = names(newdata), variable.name = "iter") %>% 
+  .[, .(move = mean(value)), by = .(Entropy,iter)]
+
+dx = 
+  px %>% 
+  .[, .(d = -diff(move), Entropy = Entropy[-1]), by = .(iter)] %>% 
+  .[, .(d = mean(d), lower = quantile(d,.025), upper = quantile(d,.975)), by = "Entropy"]
+
+
+dx %>% ggplot(aes(x = Entropy, y = d)) + geom_line() + geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = .25)
+```
+
