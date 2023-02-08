@@ -166,7 +166,7 @@ filtered.samples =
 # rowwise and mutate are dplyr functions
 ```
 
-```{r PlotFiltered, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes."}
+```{r PlotFiltered, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes.",  eval = FALSE}
 filtered.samples$keep = factor(filtered.samples$keep,levels = c("reject","keep"))
 filtered.samples %>% 
   histStack(prior.value~keep,.,
@@ -176,6 +176,8 @@ filtered.samples %>%
             legend.pos = "topright")
 
 ```
+
+![Sampling for approximate Bayesian inference.](test.mp4)
 
 We can see that mostly values around `r round(filtered.samples %>% filter(keep == "keep") %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
 
