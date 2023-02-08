@@ -1,5 +1,5 @@
 ---
-title: "Organisartion and overview"
+title: "Statistical Rethinking (): Organisation and overview"
 author: "Guido Biele"
 format:
   html:
@@ -65,7 +65,19 @@ We'll need this from around week 7 on.
 - [Instructions for rstan](https://mc-stan.org/users/interfaces/rstan.html) 
 - [Instructions for cmdstanr](https://mc-stan.org/cmdstanr/) 
 
+# Videos
+
+Richard McElreath has Lectures on [youtube](https://www.youtube.com/watch?v=FdnMWdICdRs&list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus). **These cannot replace reading the chapters!**
 
 # Overview
 
-- 
+- Bayesian updating and probability distributions (Chapters 2-4)
+- Causal inference (Chapters 5,6)
+- Information theory and model comparison (Chapter 7)
+- Markov Chain Monte Carlo sampling (Chapter 9)
+- Regression model and Causal inference (Chapters 8, 10-13)
+  - interactions
+  - logistic & ordinal regression
+  - multilevel/hierarchical regression
+    
+We skip some chapters (10) and do others only partially (9, 11, 12) 
