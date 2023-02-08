@@ -1,5 +1,5 @@
 ---
-title: "Statistical Rethinking (): Organisation and overview"
+title: "Statistical Rethinking (UiO PSY9550): Organisation and overview"
 author: "Guido Biele"
 format:
   html:
@@ -14,8 +14,8 @@ editor: source
 
 ## Learning goals
 
-- You think more clearly about causation
 - You understand Bayesian analysis as an alternative to NHST
+- You think more clearly about causation
 - You understand simple and moderately complex regression models
 - You learn how to learn on your own
 
@@ -67,7 +67,7 @@ We'll need this from around week 7 on.
 
 # Videos
 
-Richard McElreath has Lectures on [youtube](https://www.youtube.com/watch?v=FdnMWdICdRs&list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus). **These cannot replace reading the chapters!**
+Richard McElreath has lectures on [youtube](https://www.youtube.com/watch?v=FdnMWdICdRs&list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus). **These cannot replace reading the chapters!**
 
 # Overview
 
