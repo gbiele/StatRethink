@@ -1,0 +1,71 @@
+---
+title: "Organisartion and overview"
+author: "Guido Biele"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-location: left
+editor: source
+---
+
+# Organisation
+
+
+## Learning goals
+
+- You think more clearly about causation
+- You understand Bayesian analysis as an alternative to NHST
+- You understand simple and moderately complex regression models
+- You learn how to learn on your own
+
+## Prerequisits
+
+- some R knowledge
+- willing to spend a day a week preparing
+
+## Credit points
+
+- For each chapter teams of 2 have to submit answers
+  - submission by Monday noon
+  - All easy questions for each chapter
+  - 2-4 Selected medium hard question per chapter
+  - 3 hard questions out of any chapter
+- Credit points based on submitted solutions
+
+## Procedure for each session
+
+1. Summary of chapter
+2. Presentation of solutions
+3. Questions
+
+## Canvas and/or Slack?
+
+- Mutual support 
+- Slack seemed to work well last year
+
+# Install the `rethinking` package
+
+[Here](https://github.com/rmcelreath/rethinking) are the official instructions.
+
+## Install rethinking slim (easy)
+
+This is sufficient for the first 6 or so weeks.
+
+```{r}
+#| eval: false
+install.packages(c("coda","mvtnorm","devtools","loo","dagitty"))
+devtools::install_github("rmcelreath/rethinking@slim")
+```
+
+## Install rstan and cmdstanr (harder)
+
+We'll need this from around week 7 on.
+- needs administrator rights
+- [Instructions for rstan](https://mc-stan.org/users/interfaces/rstan.html) 
+- [Instructions for cmdstanr](https://mc-stan.org/cmdstanr/) 
+
+
+# Overview
+
+- 
