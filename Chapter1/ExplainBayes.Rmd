@@ -1,7 +1,7 @@
 ---
 title: "A simple introduction to Bayesian updating"
 author: "Guido Biele"
-date: "16.02.2022"
+date: "08.02.2023"
 output:
   html_document: 
     mathjax: default
@@ -80,8 +80,8 @@ Based on these numbers, we can visualize the prior information.
 To display this information we use the beta distribution, which is, just like proportions, bound between 0 and 1. The typical parameters of the beta distribution are not mean and sample size, but two "shape" parameters alpha and beta. Conveniently, we can calculate alpha and beta from the numbers for mean (guessed expected proportion) and number of observations ("sample size").
 
 ```{r PrioGuess, class.source = 'fold-show'}
-prob.success.prior = .5 # guessed expected proportion 
-n.prior.obs = 2
+prob.success.prior = .2 # guessed expected proportion 
+n.prior.obs = 3
 
 a.prior = prob.success.prior*n.prior.obs # number of successes
 b.prior = (1-prob.success.prior)*n.prior.obs # number of fails
@@ -90,9 +90,11 @@ b.prior = (1-prob.success.prior)*n.prior.obs # number of fails
 Now, with the parameters alpha = `r a.prior` and beta = `r b.prior` in hand, we can use the `rbeta` function to simulate data from the beta distribution. We plot a histogram to see what the prior information looks like.
 
 ```{r PlotPrior, fig.cap = "Histogram of samples obtained by simulating from prior knowledge."}
-N.sim = 100000
+N.sim = 5000
 info_prior = rbeta(N.sim, a.prior, b.prior)
-hist(info_prior, col = "blue",
+hist(info_prior, 
+     breaks = seq(0,1,.05),
+     col = "blue",
      main = "Information before seeing data",
      xlab = "Success probability")
 ```
@@ -108,8 +110,8 @@ Here is a link to a questionnaire with 6 questions am asking you all to fill out
 Lets record the results: https://nettskjema.no/a/249303
 
 ```{r GetData, class.source = 'fold-show'}
-n.obs = 17 # number of responses
-successes = 8 # number of participants with a perfect score
+n.obs = 13 # number of responses
+successes = 4 # number of participants with a perfect score
 prob.success = successes / n.obs 
 ```
 
@@ -142,7 +144,7 @@ simulated.successes =
 simulated.successes
 ```
 
-This `r ifelse(simulated.successes == successes, "worked", "didn't work")`. Lets look at the first 250 (out of `r N.sim`) prior success probabilities and show the simulated success probabilities with which we obtained `r successes` successes out of `r n.obs`.
+This `r ifelse(simulated.successes == successes, "worked", "didn't work")`. Lets look at the first 25 (out of `r N.sim`) prior success probabilities and show the simulated success probabilities with which we obtained `r successes` successes out of `r n.obs`.
   
 ```{r First20Checks}
 simulated.successes = 
@@ -164,12 +166,16 @@ filtered.samples =
         mutate(simulated.successes = rbinom(1,n.obs,prior.value),
                keep = ifelse(simulated.successes == successes,"keep","reject"))
 # rowwise and mutate are dplyr functions
+filtered.samples$keep = 
+  factor(filtered.samples$keep,
+         levels = c("reject","keep"))
 ```
 
 ```{r PlotFiltered, fig.cap = "Histogram of samples obtained by simulating from prior knowledge colored by if the number of successes simulated with a sample is equal to the observed number of successes.",  eval = FALSE}
-filtered.samples$keep = factor(filtered.samples$keep,levels = c("reject","keep"))
+
 filtered.samples %>% 
   histStack(prior.value~keep,.,
+            breaks = seq(0,1,.05),
             col = c("blue","purple"),
             xlab = "Success probability",
             main = "Filter prior information",
@@ -177,13 +183,54 @@ filtered.samples %>%
 
 ```
 
-![Sampling for approximate Bayesian inference.](test.mp4)
+```{r}
+fn = 
+  paste(a.prior,b.prior,n.obs,prob.success,"mp4", sep = ".")
+
+my_histStack = function(dt, ylim = NULL) {
+  dt %>%
+    histStack(prior.value~keep,.,
+              ylim = ylim, xlim = c(0,1),
+              breaks = seq(0,1,.05),
+              col = c("blue","purple"),
+              xlab = "Success probability",
+              main = "Filter prior information with data",
+              legend.pos = "topright", border = NA,
+              cex = 1.75, cex.axis = 1.75, cex.lab = 1.75, cex.main = 2)
+}
+ylim = c(0,
+           hist(filtered.samples$prior.value,
+                breaks = seq(0,1,.05), plot = FALSE)$count %>% max())
+
+if(!file.exists(fn)) {
+  library(plotrix)
+  kk = round(seq(1,nrow(filtered.samples), length.out = 500))
+  for (i in 1:length(kk)) {
+    png(paste0("anim/",sprintf("%03.f", i),".png"),
+        width = 700, height = 700)
+    par(mar = c(5.1, 6.1, 4.1, 1.1))
+    my_histStack(filtered.samples[1:kk[i],], ylim)
+    dev.off()
+  }
+  imgs = list.files("anim", full.names = T)
+  library(av)
+  av::av_encode_video(imgs, framerate = 30,
+                      output = fn)
+}
+tmp = file.remove("animation.mp4")
+tmp = file.copy(fn,"animation.mp4")
+```
+
+<center>
+![Sampling for approximate Bayesian inference.](animation.mp4)
+</center>
 
 We can see that mostly values around `r round(filtered.samples %>% filter(keep == "keep") %>% select(prior.value) %>% colMeans(),2)` were consistent with the data. 
 
 One crucial thing to note is that the shape of our prior information, which includes the blue and purple parts in the histogram above, influences the shape of the distribution of Success probability values consistent with the data. The following figure visualizes.
 
 ```{r MultiFilter, fig.cap = "Filtered prior samples with different prior sample sizes. Green lines indicate filtered prior from a uniform distribution.", fig.width=11, fig.height= 4}
+filtered.samples$keep = factor(filtered.samples$keep,levels = c("reject","keep"))
 par(mfrow = c(1,3), mgp=c(1.75,.5,0))
 for (n.p.obs in c(2, 5, 25)) {
   a.pr = prob.success.prior*n.p.obs
@@ -284,6 +331,7 @@ curve(
   col = "blue",
   add = T, 
   lwd = 2,
+  from = 0, to = 1,
   n = 500)
 ```
 
