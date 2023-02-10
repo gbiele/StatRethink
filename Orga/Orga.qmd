@@ -9,8 +9,9 @@ format:
 editor: source
 ---
 
-# Organisation
+Seminar based on Richgard McElreath's book [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/)
 
+# Organisation
 
 ## Learning goals
 
