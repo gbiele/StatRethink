@@ -73,7 +73,7 @@ Plotting is very easy. Just write the code for the plot into a code block:
 
 ```{r}
 hist(rnorm(1000, mean = 0, sd = 1),
-     main = "Histogram of 1000 random draws\nfrom the standard normal distribution")
+     main = "Histogram of 1000 random draws from the standard normal distribution")
 ```
 
 ```{r}

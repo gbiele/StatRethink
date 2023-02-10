@@ -36,9 +36,9 @@ editor: source
 
 [here](https://github.com/gbiele/StatRethink/tree/master/Orga) you find Rmarkdown and quarto templates that you can use to prepare your the answers you submit.
 
-To download such a template, right-click either here [quarto](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/qSkeleton.qmd) here [Rmarkdown](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/Skeleton.Rmd). As quarto is the more modern format, it is a good idea to use that. TO get started, download the skeleton, open it in Rstudio and click the "Render" button to create the html document for easy reading. To prepare exercise solutions for submission, copy and rename a skeleton, write in your solutions, and render the document.
+To download such a template, right-click either here [quarto](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/qSkeleton.qmd) here [Rmarkdown](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/Skeleton.Rmd). As quarto is the more modern format, it is a good idea to use that. TO get started, download the skeleton, open it in Rstudio and click the "Render" (or "Knit" for Rmarkdown) button to create the html document for easy reading. To prepare exercise solutions for submission, copy and rename a skeleton, write in your solutions, and render the document.
 
-**Please do not send me the .qmd or .Rmd document, but the .html document that was create after you clicked the "Render" button.**
+**Please do not send me the .qmd or .Rmd document, but the .html document that you created.**
 
 Send the solutions via email to guido point biele at fhi point no with the subject line following this pattern:  StatRethink Exercises Chapter [chapter] Team [team name].
 
