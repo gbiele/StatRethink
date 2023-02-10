@@ -1,5 +1,5 @@
 ---
-title: "Statistical Rethinking (UiO PSY9550): Organisation and overview"
+title: "Statistical Rethinking (UiO PSY9550):\nOrganisation and overview"
 author: "Guido Biele"
 format:
   html:
@@ -24,14 +24,35 @@ editor: source
 - some R knowledge
 - willing to spend a day a week preparing
 
+## Procedure
+
+1. Read weekly chapter
+2. Solve exercises and submit html created from quarto Rmarkdown (in groups)
+3. Submit solutions until Monday noon
+4. (GB summarizes material)
+5. Present results in class (one team per question)
+
+## Submitting solutions
+
+[here](https://github.com/gbiele/StatRethink/tree/master/Orga) you find Rmarkdown and quarto templates that you can use to prepare your the answers you submit.
+
+To download such a template, right-click either here [quarto](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/qSkeleton.qmd) here [Rmarkdown](https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/Skeleton.Rmd). As quarto is the more modern format, it is a good idea to use that. TO get started, download the skeleton, open it in Rstudio and click the "Render" button to create the html document for easy reading. To prepare exercise solutions for submission, copy and rename a skeleton, write in your solutions, and render the document.
+
+**Please do not send me the .qmd or .Rmd document, but the .html document that was create after you clicked the "Render" button.**
+
+Send the solutions via email to guido point biele at fhi point no with the subject line following this pattern:  StatRethink Exercises Chapter [chapter] Team [team name].
+
+
 ## Credit points
 
-- For each chapter teams of 2 have to submit answers
+- For each chapter teams of two students have to submit answers
   - submission by Monday noon
   - All easy questions for each chapter
   - 2-4 Selected medium hard question per chapter
   - 3 hard questions out of any chapter
 - Credit points based on submitted solutions
+
+The practice exercises that should be submitted are at the bottom of this page.
 
 ## Procedure for each session
 
@@ -39,12 +60,8 @@ editor: source
 2. Presentation of solutions
 3. Questions
 
-## Canvas and/or Slack?
 
-- Mutual support 
-- Slack seemed to work well last year
-
-# Install the `rethinking` package
+# Installing the `rethinking` package
 
 [Here](https://github.com/rmcelreath/rethinking) are the official instructions.
 
@@ -65,6 +82,8 @@ We'll need this from around week 7 on.
 - [Instructions for rstan](https://mc-stan.org/users/interfaces/rstan.html) 
 - [Instructions for cmdstanr](https://mc-stan.org/cmdstanr/) 
 
+If you do not have admin rights on your computer, it is best to do the installation together with your IT-help.
+
 # Videos
 
 Richard McElreath has lectures on [youtube](https://www.youtube.com/watch?v=FdnMWdICdRs&list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus). **These cannot replace reading the chapters!**
@@ -81,3 +100,7 @@ Richard McElreath has lectures on [youtube](https://www.youtube.com/watch?v=FdnM
   - multilevel/hierarchical regression
     
 We skip some chapters (10) and do others only partially (9, 11, 12) 
+
+# Exercises
+
+- Chapter 1: 2E1-2E4, 2M1-2M3

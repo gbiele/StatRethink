@@ -12,7 +12,6 @@ header-includes:
     \usepackage{amsmath}
 ---
 
-  
 ```{css, echo = F}
 body{
   font-family: Helvetica;
@@ -60,8 +59,6 @@ library(magrittr)
 # Chapter 1 exercise E1
 
 Use header 1 style (`# [your header text]`) to indicate the exercise chapter and number.
-
-
 
 ## Plotting
 
@@ -122,31 +119,28 @@ precis(my.fit)
 divergent(my.fit)
 ```
 
+## Equations
 
-
-## Equations  
-
-If you want to show equations, it is sufficient to write for example y = a + b*x.
+If you want to show equations, it is sufficient to write for example y = a + b\*x.
 
 If you want show prettier equations, have to use LATEX. For instance `$y = a + b*x$`, where the `$`s indicate start and end of an inline equation, becomes $y = a + b*x$. [Here](https://tilburgsciencehub.com/building-blocks/collaborate-and-share-your-work/write-your-paper/amsmath-latex-cheatsheet/) is a cheat sheet that explains latex commands.
 
-For instance, we can write 
+For instance, we can write
 
-- Greek letter like this `$y = \alpha + \beta*x$`: $y = \alpha + \beta*x$.
+-   Greek letter like this `$y = \alpha + \beta*x$`: $y = \alpha + \beta*x$.
 
-- subscripts by using `_``  and superscripts by using `^`; `$y_i = \alpha + \beta*x_i + \gamma^2$`: $y_i = \alpha + \beta*x_i + \gamma^2$.
+-   subscripts by using ``` _``  and superscripts by using ```\^`;`$y_i = \alpha + \beta*x_i + \gamma^2$\`: $y_i = \alpha + \beta*x_i + \gamma^2$.
 
-- fractions like with `\frac{ ... }{ ... }`: `$P(\theta|data) = \frac{P(data|\theta)P(\theta)}{P(data)}$.` becomes $P(\theta|data) = \frac{P(data|\theta)P(\theta)}{P(data)}$. this is Bayes rule. The probability of a hypothesis or parameter value $\theta$ given the data is equal to the probability of the data given $\theta$ times the prior probability of the $\theta$, divided by the probability of the data.
+-   fractions like with `\frac{ ... }{ ... }`: `$P(\theta|data) = \frac{P(data|\theta)P(\theta)}{P(data)}$.` becomes $P(\theta|data) = \frac{P(data|\theta)P(\theta)}{P(data)}$. this is Bayes rule. The probability of a hypothesis or parameter value $\theta$ given the data is equal to the probability of the data given $\theta$ times the prior probability of the $\theta$, divided by the probability of the data.
 
 If we have multi line expressions, we start and end with two `$` and ude `\\` to indicate line breaks:
 
-```
-$$ 
-y \sim normal(\bar \mu, \sigma)   \\ 
-\bar \mu \sim normal(0,3)  \\ 
-\sigma \sim exponential(1) \\
-$$
-```
+    $$ 
+    y \sim normal(\bar \mu, \sigma)   \\ 
+    \bar \mu \sim normal(0,3)  \\ 
+    \sigma \sim exponential(1) \\
+    $$
+
 becomes
 
 $$ 
@@ -155,3 +149,6 @@ y \sim normal(\bar \mu, \sigma)   \\
 \sigma \sim exponential(1) \\
 $$
 
+# Clarification and or discussion questions
+
+Please put things you find unclear / hard to understand / worthy of a discussion here.

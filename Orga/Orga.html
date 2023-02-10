@@ -2612,17 +2612,19 @@ vertical-align: -.125em;
   <ul class="collapse">
   <li><a href="#learning-goals" id="toc-learning-goals" class="nav-link" data-scroll-target="#learning-goals">Learning goals</a></li>
   <li><a href="#prerequisits" id="toc-prerequisits" class="nav-link" data-scroll-target="#prerequisits">Prerequisits</a></li>
+  <li><a href="#procedure" id="toc-procedure" class="nav-link" data-scroll-target="#procedure">Procedure</a></li>
+  <li><a href="#submitting-solutions" id="toc-submitting-solutions" class="nav-link" data-scroll-target="#submitting-solutions">Submitting solutions</a></li>
   <li><a href="#credit-points" id="toc-credit-points" class="nav-link" data-scroll-target="#credit-points">Credit points</a></li>
   <li><a href="#procedure-for-each-session" id="toc-procedure-for-each-session" class="nav-link" data-scroll-target="#procedure-for-each-session">Procedure for each session</a></li>
-  <li><a href="#canvas-andor-slack" id="toc-canvas-andor-slack" class="nav-link" data-scroll-target="#canvas-andor-slack">Canvas and/or Slack?</a></li>
   </ul></li>
-  <li><a href="#install-the-rethinking-package" id="toc-install-the-rethinking-package" class="nav-link" data-scroll-target="#install-the-rethinking-package">Install the <code>rethinking</code> package</a>
+  <li><a href="#installing-the-rethinking-package" id="toc-installing-the-rethinking-package" class="nav-link" data-scroll-target="#installing-the-rethinking-package">Installing the <code>rethinking</code> package</a>
   <ul class="collapse">
   <li><a href="#install-rethinking-slim-easy" id="toc-install-rethinking-slim-easy" class="nav-link" data-scroll-target="#install-rethinking-slim-easy">Install rethinking slim (easy)</a></li>
   <li><a href="#install-rstan-and-cmdstanr-harder" id="toc-install-rstan-and-cmdstanr-harder" class="nav-link" data-scroll-target="#install-rstan-and-cmdstanr-harder">Install rstan and cmdstanr (harder)</a></li>
   </ul></li>
   <li><a href="#videos" id="toc-videos" class="nav-link" data-scroll-target="#videos">Videos</a></li>
   <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
   </ul>
 </nav>
 </div>
@@ -2658,8 +2660,8 @@ vertical-align: -.125em;
 <section id="learning-goals" class="level2">
 <h2 class="anchored" data-anchor-id="learning-goals">Learning goals</h2>
 <ul>
-<li>You think more clearly about causation</li>
 <li>You understand Bayesian analysis as an alternative to NHST</li>
+<li>You think more clearly about causation</li>
 <li>You understand simple and moderately complex regression models</li>
 <li>You learn how to learn on your own</li>
 </ul>
@@ -2670,6 +2672,23 @@ vertical-align: -.125em;
 <li>some R knowledge</li>
 <li>willing to spend a day a week preparing</li>
 </ul>
+</section>
+<section id="procedure" class="level2">
+<h2 class="anchored" data-anchor-id="procedure">Procedure</h2>
+<ol type="1">
+<li>Read weekly chapter</li>
+<li>Solve exercises and submit html created from quarto Rmarkdown (in groups)</li>
+<li>Submit solutions until Monday noon</li>
+<li>(GB summarizes material)</li>
+<li>Present results in class (one team per question)</li>
+</ol>
+</section>
+<section id="submitting-solutions" class="level2">
+<h2 class="anchored" data-anchor-id="submitting-solutions">Submitting solutions</h2>
+<p><a href="https://github.com/gbiele/StatRethink/tree/master/Orga">here</a> you find Rmarkdown and quarto templates that you can use to prepare your the answers you submit.</p>
+<p>To download such a template, right-click either here <a href="https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/qSkeleton.qmd">quarto</a> here <a href="https://raw.githubusercontent.com/gbiele/StatRethink/master/Orga/Skeleton.Rmd">Rmarkdown</a>. As quarto is the more modern format, it is a good idea to use that. TO get started, download the skeleton, open it in Rstudio and click the “Render” button to create the html document for easy reading. To prepare exercise solutions for submission, copy and rename a skeleton, write in your solutions, and render the document.</p>
+<p><strong>Please do not send me the .qmd or .Rmd document, but the .html document that was create after you clicked the “Render” button.</strong></p>
+<p>Send the solutions via email to guido point biele at fhi point no with the subject line following this pattern: StatRethink Exercises Chapter [chapter] Team [team name].</p>
 </section>
 <section id="credit-points" class="level2">
 <h2 class="anchored" data-anchor-id="credit-points">Credit points</h2>
@@ -2683,6 +2702,7 @@ vertical-align: -.125em;
 </ul></li>
 <li>Credit points based on submitted solutions</li>
 </ul>
+<p>The practice exercises that should be submitted are at the bottom of this page.</p>
 </section>
 <section id="procedure-for-each-session" class="level2">
 <h2 class="anchored" data-anchor-id="procedure-for-each-session">Procedure for each session</h2>
@@ -2692,16 +2712,9 @@ vertical-align: -.125em;
 <li>Questions</li>
 </ol>
 </section>
-<section id="canvas-andor-slack" class="level2">
-<h2 class="anchored" data-anchor-id="canvas-andor-slack">Canvas and/or Slack?</h2>
-<ul>
-<li>Mutual support</li>
-<li>Slack seemed to work well last year</li>
-</ul>
 </section>
-</section>
-<section id="install-the-rethinking-package" class="level1">
-<h1>Install the <code>rethinking</code> package</h1>
+<section id="installing-the-rethinking-package" class="level1">
+<h1>Installing the <code>rethinking</code> package</h1>
 <p><a href="https://github.com/rmcelreath/rethinking">Here</a> are the official instructions.</p>
 <section id="install-rethinking-slim-easy" class="level2">
 <h2 class="anchored" data-anchor-id="install-rethinking-slim-easy">Install rethinking slim (easy)</h2>
@@ -2714,11 +2727,12 @@ vertical-align: -.125em;
 <section id="install-rstan-and-cmdstanr-harder" class="level2">
 <h2 class="anchored" data-anchor-id="install-rstan-and-cmdstanr-harder">Install rstan and cmdstanr (harder)</h2>
 <p>We’ll need this from around week 7 on. - needs administrator rights - <a href="https://mc-stan.org/users/interfaces/rstan.html">Instructions for rstan</a> - <a href="https://mc-stan.org/cmdstanr/">Instructions for cmdstanr</a></p>
+<p>If you do not have admin rights on your computer, it is best to do the installation together with your IT-help.</p>
 </section>
 </section>
 <section id="videos" class="level1">
 <h1>Videos</h1>
-<p>Richard McElreath has Lectures on <a href="https://www.youtube.com/watch?v=FdnMWdICdRs&amp;list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus">youtube</a>. <strong>These cannot replace reading the chapters!</strong></p>
+<p>Richard McElreath has lectures on <a href="https://www.youtube.com/watch?v=FdnMWdICdRs&amp;list=PLDcUM9US4XdPz-KxHM4XHt7uUVGWWVSus">youtube</a>. <strong>These cannot replace reading the chapters!</strong></p>
 </section>
 <section id="overview" class="level1">
 <h1>Overview</h1>
@@ -2735,6 +2749,12 @@ vertical-align: -.125em;
 </ul></li>
 </ul>
 <p>We skip some chapters (10) and do others only partially (9, 11, 12)</p>
+</section>
+<section id="exercises" class="level1">
+<h1>Exercises</h1>
+<ul>
+<li>Chapter 1: 2E1-2E4, 2M1-2M3</li>
+</ul>
 </section>
 
 </main>

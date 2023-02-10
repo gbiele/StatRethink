@@ -158,3 +158,6 @@ y \sim normal(\bar \mu, \sigma)   \\
 \sigma \sim exponential(1) \\
 $$
 
+# Clarification and or discussion questions
+
+Please put things you find unclear / hard to understand / worthy of a discussion here.
