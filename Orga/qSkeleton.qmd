@@ -2,17 +2,16 @@
 title: "Exercises for chapter x"
 author: "team name"
 date: "date"
-output:
-  html_document: 
-    mathjax: default
+format:
+  html:
     toc: true
-    toc_depth: 2
-header-includes: 
-    \usepackage{xcolor}
-    \usepackage{amsmath}
+    toc-location: left
+    embed-resources: true
+    page-layout: full
+    html-math-method: katex
+editor: source
 ---
 
-  
 ```{css, echo = F}
 body{
   font-family: Helvetica;
@@ -34,7 +33,6 @@ h1,h2{
 h3,h4,h5,h6{
   font-size: 18pt;
 }
-
 #TOC {
   position: fixed;
   left: 0;
@@ -45,7 +43,11 @@ h3,h4,h5,h6{
 }
 ```
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r setup,}
+#| include: false
+#| message: false
+#| warning: false
+#| results: hide
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 
 library(rethinking)
@@ -55,7 +57,7 @@ library(magrittr)
 
 # Introductory tutorial
 
-[Here](https://ourcodingclub.github.io/tutorials/rmarkdown/) you find a introductory tutorial for Rmarkdown.
+[Here](https://quarto.org/docs/get-started/hello/rstudio.html) you find a introductory tutorial for quarto.
 
 # Chapter 1 exercise E1
 
@@ -96,9 +98,10 @@ curve(qnorm(x, mean = 0, sd = 1),
 
 If you estimate models with `ulam` it is a good idea to do estimation and plotting of model results in separate code blocks.
 
-Use a code block like a following to estimate the model. Here `results='hide'` makes that the standard output will not be included in the rendered html document.
+Use a code block like a following to estimate the model. Here `#| results: hide` makes that the standard output will not be included in the rendered html document.
 
-```{r warning=FALSE, results='hide'}
+```{r results='hide'}
+#| results: hide
 n.cores = ifelse(Sys.info()["sysname"] == "Darwin",4,1)
 
 my.fit = ulam(
