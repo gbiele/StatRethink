@@ -5,3 +5,7 @@
 Chapter5/animation/*
 Chapter9/sim
 *.DS_Store
+*Chapter1/anim/*
+*Chapter6/anim/*
+*Chapter7/anim/*
+*.mp4
