@@ -7,9 +7,6 @@ output:
     mathjax: default
     toc: true
     toc_depth: 2
-header-includes: 
-    \usepackage{xcolor}
-    \usepackage{amsmath}
 ---
 
 ```{css, echo = F}
