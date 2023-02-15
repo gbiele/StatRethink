@@ -376,12 +376,14 @@ plot(0, type = "n", xlim = c(0,1),
 Before we display uncertainty, let's look at how this function looks if we are certain to land on water:
 
 ```{r, echo = F}
-curve(dbeta(x,100000,1),
-      n = 1000,
-      ylab = "density",
-      xlab = "p",
-      col = "blue",
-      bty = "n")
+
+plot(0,type = "n",
+     ylim = c(0,1.01),
+     xlim = c(0,1),
+     ylab = "", xlab = "p",
+     bty = "n")
+arrows(1,0,1,1, col = "blue", length = .1)
+lines(c(0,1),c(0,0), col = "blue")
 ```
 
 If we are certain to land on water, $P(water)$ = 1^[The figure shows density, not probability] and all other probabilities have the value zero.
