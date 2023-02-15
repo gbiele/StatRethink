@@ -1,7 +1,7 @@
 ---
 title: "Chapter 2: Background"
 author: "Guido Biele"
-date: "03.03.2022"
+date: "15.02.2032"
 output:
   html_document: 
     mathjax: default
@@ -45,6 +45,21 @@ h3,h4,h5,h6{
 }
 ```
 
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 ```
@@ -52,12 +67,15 @@ knitr::opts_chunk$set(echo = TRUE, dpi = 300)
 
 ## What is conditional probability?
 
+### Unconditional or marginal probability
+
 Let us say you want to know if a random day in the year is a winter day, is a snow day, and what the relationship between winter and snow days is.
 
 We start by drawing a circle, which symbolizes all days in a year:
 
-```{r, echo = F}
+```{r, echo = F, results='hide', warning=FALSE}
 library(plotrix)
+library(magrittr)
 par(mar = c(0,0,0,0))
 pie(c(3,1), labels = "")
 draw.circle(0,0,.8, col ="white")
@@ -78,7 +96,35 @@ draw_pie()
 
 From this we can see that the probability of winter is 1/4, or 0.25. This is an unconditional (or marginal) probability, and we can write $P(winter)$ = 0.25.
 
-Snowy days are usually in winter. Therefore, we add an ellipse for snow days that largely overlaps with the quadrant for winter days.
+Snowy days are usually in winter. Therefore, we draw an ellipse for snow days that largely overlaps with the quadrant for winter days.
+
+<div class="marginnote">  The **complement rule** (or subtraction rule) for probabilities says that given the probability of an event $P(A)$ (snow) the probability that this event is not happening is $1-P(A)$. $P(\textrm{not}A) = 1-P(A).$ </div>
+
+```{r, echo = F}
+e.rot = 45
+h.e = .25
+k.e = -.25
+a.e = .5
+b.e = .175
+draw_ellipse = function() {
+  draw.ellipse(h.e,k.e,a.e,b.e , angle = e.rot,
+               col = adjustcolor("grey",alpha = .5),
+               border = adjustcolor("grey",alpha = .5)) 
+}
+par(mar = c(0,0,0,0))
+pie(c(3,1), labels = "", border = "lightblue", col = "white", lty = 2)
+draw.circle(0,0,.8, col =adjustcolor("white",alpha = 0))
+draw_ellipse()
+```
+
+The unconditional (or marginal) probability of snow, $P(snow)$, is the probability of snow independent if it is winter or not, and corresponds to the area of the grey ellipse:  $P(snow) =$ 
+`r (pi*a.e*b.e/(pi*.8^2)) %>% round(2)`.
+
+### Joint probability
+
+The joint probability of winter and snow $P(winter, snow)$ or $P(winter \textrm{ and } snow)$ is the ellipse-area that overlaps with the bottom right quadrant, which is shown in the next figure.
+
+<div class="marginnote">  The **addition rule** for probabilities says that the probability that either of two events $P(A)$ (winter) or $P(B)$ (snow) happens is the the sum of the marginal probabilities $P(A) + P(B)$ minus the **joint probability** (snowy winter days). $P(A \textrm{ or } B) = P(A)+P(B)-P(A \textrm{ and } B)$ where $P(A \textrm{ and } B)$ is the joint probability. <br> Then we can also write the joint probability as $P(A \textrm{ or } B) - P(A) - P(B)= -P(A \textrm{ and } B)$ and $P(A \textrm{ and } B) = -(P(A \textrm{ or } B) - P(A) - P(B))$</div>
 
 ```{r, echo = F}
 draw_pie()
@@ -89,18 +135,14 @@ a.e = .5
 b.e = .175
 draw_ellipse = function() {
   draw.ellipse(h.e,k.e,a.e,b.e , angle = e.rot,
-               col = adjustcolor("grey",alpha = .75),
-               border = adjustcolor("grey",alpha = .75)) 
+               col = adjustcolor("grey",alpha = .5),
+               border = adjustcolor("grey",alpha = .5)) 
 }
 draw_ellipse()
+text(0,1,expression("P(snow,winter)" =="blue-gray area"))
 ```
 
-The unconditional (or marginal) probability of snow, $P(snow)$, is the probability of snow independent if it is winter or not, and corresponds to the area of the grey ellipse:  $P(snow) =$ 
-`r pi*a.e*b.e/(pi*.8^2)`.
-
-We can also use the figure above to explain what a joint probability is: The joint probability of winter and snow $P(winter, snow)$ or $P(winter \cap snow)$ is the ellipse-area that overlaps with the bottom right quadrant, which is shown in the next figure.
-
-```{r, echo = F}
+```{r, echo = F, eval = F}
 par(mar = c(0,0,0,0))
 pie(c(3,1), labels = "")
 draw.circle(0,0,.8, col ="white")
@@ -108,17 +150,21 @@ draw.ellipse(h.e,k.e,a.e,b.e , col = "lightblue", angle = e.rot, border = "light
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
-text(0,1,expression("P(snow,winter)" =="gray area"))
+text(0,1,expression("P(snow,winter)" =="blue-gray area"))
 ```
 
-What is a conditional probability? A conditional probability gives the answer to the question "Given that it is winter, what is the probability of snow". This amounts to the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". The next figure visualizes this.
 
+### Conditional probability
+
+A conditional probability gives the answer to the question "Given that it is winter, what is the probability of snow". This amounts to the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". The next figure visualizes this.
+
+<div class="marginnote"> This is an application of the **product rule** for probabilities. <br> If we have two events $A$ (winter) and $B$ (snow), the **joint probability** of both events $P(A,B)$ is calculated by multiplying the **unconditional probability** $P(A)$ (winter) with the **conditional probability** $P(B|A)$ (the conditional probability of snow given winter). If we rearrange  $P(A,B) = P(A) \cdot P(B|A)$ we get $P(A,B)/P(A) = P(B|A)$.</div>
 
 ```{r, echo = F}
 par(mar = c(0,0,0,0))
 pie(c(3,1), labels = "", border = "white")
 draw.circle(0,0,.8)
-text(0,1,expression("P(snow|winter)" == frac("gray area", "blue area")))
+text(0,1,expression("P(snow|winter)" == frac("blue-gray area", "blue area")))
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
@@ -126,34 +172,39 @@ rect(0,0,-.2,-.7, col = "white", border = NA)
 
 To obtain a conditional probability, we are "conditioning" our question about the probability of snow on the value of another variable, namely that the season is winter. In comparison, the joint probability asks "What is the size of the trimmed ellipse-area, _relative to_ the total circle area of 1".
 
-The following figures show fractions that make even clearer hat the joint probability is the probability of snowy winter days divided by the probability of any day (which is just one), and that the conditional probability is the probability of snowy winter days divided by the probability of winter days. Note that because the probability of a winter day is smaller than 1 and dividing by a number smaller than one makes a number larger, dividing by the marginal probability of winter ensures that the conditional probability is larger than the joint probability. This makes sense, as snow in winter has to be more likely than winter-snow in the whole year.
+The following figures show fractions that make even clearer hat the joint probability is the probability of snowy winter days divided by the probability of any day (which is just one), and that the conditional probability is the probability of snowy winter days divided by the probability of winter days. 
+
+<div class="marginnote"> **Joint probability:**  $P(A,B) = P(A) \cdot P(B|A)$ or $P(A,B) = P(B) \cdot P(A|B)$ <br> **Conditional probability:** $P(B|A) = P(A,B)/P(A)$ and $P(A|B) = P(A,B)/P(B)$.</div>
 
 ```{r, echo = F}
 par(mar = c(0,0,0,0), mfrow = c(2,2))
+
 pie(c(3,1), labels = "", ylim = c(0,-.5))
-draw.circle(0,0,.9, col ="white", border = "white")
+draw.circle(0,0,.9, col ="white", lty = 3, border = "grey")
 draw.ellipse(h.e,k.e,a.e,b.e , col = "lightblue", angle = e.rot, border = "lightblue")
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
-lines(c(-1,1),c(-1,-1), lwd = 2)
-text(0,.7,"P(snow,winter)")
+title("P(snow,winter)",line = -1.25)
 
-pie(c(3,1), labels = "")
-draw.circle(0,0,.9, col ="white", border = "white")
+pie(c(3,1), labels = "", ylim = c(0,-.5))
+draw.circle(0,0,.9, col ="white", lty = 3, border = "grey")
+draw.ellipse(h.e,k.e,a.e,b.e , col = "lightblue", angle = e.rot, border = "lightblue")
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
-text(0,.7,"P(snow|winter)")
-lines(c(-1,1),c(-1,-1), lwd = 2)
+title("P(snow|winter)",line = -1.25)
 
 pie(c(3,1), labels = "")
 draw.circle(0,0,.8, col ="white")
-
+lines(c(-1,1),c(1,1), lwd = 2)
 
 pie(c(3,1), labels = "", border = "white")
+draw.circle(0,0,.8, lty = 3, border = "grey")
+lines(c(-1,1),c(1,1), lwd = 2)
 ```
 
+Note that because the probability of a winter day is smaller than 1 and dividing by a number smaller than one makes a number larger, dividing by the marginal probability of winter ensures that the conditional probability is larger than the joint probability. This makes sense, as snow in winter has to be more likely than winter-snow in the whole year.
 
 So, to calculate the conditional probability $P(snow|winter)$ we want to answer the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". Unfortunately, there is no simple equation for calculating the overlap of an ellipse and a circle quadrant. But we can approximate the correct answer by randomly placing points into the circle and checking if they are in the bottom right quadrant (winter), in the ellipse (snow), or in the area of the ellipse that overlaps with the bottom right quadrant (winter and snow).
 
@@ -227,7 +278,7 @@ Let's first calculate the probability of winter, which should be around 0.25. Th
 ```{r}
 N_winter = sum(is.winter)
 P_winter = N_winter/N
-P_winter
+P_winter %>% round(2)
 ```
 
 Now, the probability of snow (star-shaped dots divided by total number of dots):
@@ -235,7 +286,7 @@ Now, the probability of snow (star-shaped dots divided by total number of dots):
 ```{r}
 N_snow = sum(is.snow)
 P_snow = N_snow/N
-P_snow
+P_snow %>% round(2)
 ```
 And now it gets interesting. For the joint probability of winter and snow $P(winter, snow)$ we count the number of blue stars. 
 
@@ -246,7 +297,7 @@ And now it gets interesting. For the joint probability of winter and snow $P(win
 # value for is.winter is TRUE
 N_winter_and_snow = sum(is.snow[is.winter]) 
 P_winter_and_snow = N_winter_and_snow/N
-P_winter_and_snow
+P_winter_and_snow %>% round(2)
 ```
 
 Check the last code block and see that to get the joint probability we divide by the total number of dots `N`.
@@ -255,7 +306,7 @@ In contrast, for conditional probabilities, we want to divide by the number of d
 
 ```{r}
 P_snow_given_winter = N_winter_and_snow/N_winter
-P_snow_given_winter
+P_snow_given_winter %>% round(2)
 ```
 
 If you check further above, you can see that `P_winter_and_snow` and `P_winter` are respectively calculated by dividing `N_winter_and_snow` and `N_winter` with `N`. Therefore, `N_winter_and_snow/N_winter` and `P_winter_and_snow/P_winter` have the same result and we can also write:
@@ -308,9 +359,9 @@ Exercise 2E3, which asks which expressions are consistent with "probability of M
 
 The correct answers are.
 
-1: P(Monday|rain)
+1: P(Monday | rain)
 
-4: P(rain|Monday) * P(Monday) / P(rain)
+4: P(rain | Monday) * P(Monday) / P(rain)
 
 The question is then if we can show that 
 
@@ -358,9 +409,13 @@ This is Bayes Rule, which one uses to calculate the inverse conditional probabil
 
 ## What are probability distribution, and where do we need them for Bayesian statistics?
 
+### Functions
+
 A probability distribution is a function, that is an object that receives input and gives an output. This is very general, and so we can have functions that return always the same value ($f(x) = 0$), that square a value ($f(x) = x^2$), or that check if a certain condition is met ($f(x) = 1(X == 5)$. ^[Text due to Tomás Varnet, who suggested to also explain what a function is.]
 
 In the context of Bayesian statistics analysis, we use probability distributions to describe a state of the world when we remain uncertain.
+
+### Domain of distributions
 
 For such a function, we first need to be explicit what we are uncertain about. Continuing with the globe tossing example, we can say that we are uncertain about if we will catch the globe with the tip of the index finger on water. 
 
@@ -372,6 +427,8 @@ plot(0, type = "n", xlim = c(0,1),
      xlab = "p",
      bty = "n")
 ```
+
+### Probability density
 
 Before we display uncertainty, let's look at how this function looks if we are certain to land on water:
 
@@ -402,6 +459,8 @@ For this function to be a probability distribution, the area under the function 
 
 To see this, we can observe in the next plot that the area under the probability function remains constant while we go from believing weakly (left) to more strongly (right) that the probability to land on water is larger than 0.5.
 
+<div class="marginnote">**Probability distributions in R** In R functions that return the density for a given value x for a distribution strta with **d**. For instance, `dbeta(x = 0.5, shape1 = 1, shape2 = 1)` returns the density for the value 0.5 under the beta distribution where the parameters shape1 and shape2 have the value 1. `dnorm(x = 0.5, mean = 1, sd = 1)` returns the density for the value 0.5 under the normal distribution  with a mean of 1 and a sd of 1. <br> To generate random samples, we use functions that start with **r**: `r`norm(n = 1000, mean = 1, sd = 1)`  returns 1000 random numbers from a normal distribution with the same parameters. </div>
+
 ```{r, echo = F}
 filled.beta = function(a = 1, b = 1, col = "blue", border = NA, ylim = NULL, add = F) {
   x = seq(0,1,.01)
@@ -424,6 +483,8 @@ To summarize, one can think of a probability distribution as a function that exp
 
 Depending on the nature of a parameter, different probability distributions must be used. Above, we use the so called beta distribution, because this distribution allows values between 0 and 1, which matches the fact that probabilities need to be between 0 and 1. For other phenomena different distributions can be used. For instance, we might want to use a normal distribution to characterize our uncertainty about tomorrow's temperature or a Poisson distribution to characterize uncertainty about things we count, like e.g. the number of shoes a person has.
 
+### Probability distributions in Bayesian Statistics
+
 In Bayesian statistics, we use such distributions to express three things:
 
 1. <span style="color:blue">**Prior**</span> judgement about the probability of different parameter^[Parameters are variables that describe characteristics of distributions, like for example the mean and standard deviation of the normal distribution] values before seeing the data. the parameter $p$ we introduced above describe the probability to land on water.
@@ -432,12 +493,15 @@ In Bayesian statistics, we use such distributions to express three things:
 
 Let's walk through a simple example. We start by describing our prior judgement, that we are slightly confident that that index finger touches water rather than land, with a beta distribution:
 
+<div class="marginnote"> We use the `dbeta` function for the prior </div>
 ```{r, echo = F}
 p = seq(0,1,length.out = 100)
 prior = dbeta(p,2,1.5)
 prior = prior/sum(prior)
 plot(p,
      prior,
+     ylab = "density",
+     main = "Prior",
      type = 'l',
      xlab = "p",
      bty = "n",
@@ -446,6 +510,8 @@ plot(p,
 
 Next the likelihood. For the globe tossing example, we can think of each toss as a trial and of each landing on the index finger as a success. The distribution that gives the likelihood of different success probabilities $p$ given a number of trials and successes is the binomial distribution. So we use this distribution to get the likelihood function. Let us assume we had 4 trials and 3 successes.
 
+<div class="marginnote"> The likelihood is just the density of the observed data given different parameters values. Because we count successes out of trials, we calculate the likelihood with the `dbinom` function. (`dbinom(x = 3, size = 4, prob = p)`, where `p` is a vector with parameter values.)  </div>
+
 ```{r, echo = F}
 trials = 4
 successes = 3
@@ -453,6 +519,8 @@ likelihood = dbinom(successes,size = trials, prob = p)
 likelihood = likelihood/sum(likelihood)
 plot(p,
      likelihood,
+     ylab = "density",
+     main = "Likelihood",
      type = 'l',
      xlab = "p",
      bty = "n",
@@ -471,7 +539,7 @@ $$
 \overset{\color{violet}{\text{posterior probability}}}{P(parameter|data)} = \frac{\overset{\color{red}{\text{likelihood}}}{P(data|parameter)} \cdot \overset{\color{blue}{\text{prior probability}}}{P(parameter)}}{\overset{\color{orange}{\text{evidence}}}{P(data)}}
 $$
 
-This shows us that if we just multiply the likelihood with the prior, two things we just calculated and plotted above, we get something that is proportional to the posterior probability of the parameter (probability to land on water with the index finger on water) given the data. This is what id meant if you see this expression:
+This shows us that if we just multiply the likelihood with the prior, two things we just calculated and plotted above, we get something that is proportional to the posterior probability of the parameter (probability to land on water with the index finger on water) given the data. This is what is meant if you see this expression:
 
 $$
 posterior \propto likelihood \cdot prior
@@ -480,13 +548,13 @@ $$
 Let us just calculate and plot this: 
 
 ```{r}
-posterior.likelihood = prior * likelihood
+prior_x_likelihood = prior * likelihood
 ```
 
 
 ```{r, echo = F}
 plot(p,
-     posterior.likelihood,
+     prior_x_likelihood,
      type = 'l',
      xlab = "p",
      ylab = "density",
@@ -501,27 +569,27 @@ plot(p,
 This distribution is only proportional to the posterior distribution, because the product of posterior and likelihood does not sum up to 1. We can calculate the posterior probability distribution by dividing by the sum. 
 
 ```{r}
-s = sum(posterior.likelihood)
-posterior = posterior.likelihood/s
+s = sum(prior_x_likelihood)
+posterior = prior_x_likelihood/s
 c(1/s, sum(posterior))
 ```
 
-The following figure illustrates how we get from the the un-normalized posterior to the normalized posterior, which sums to 1, by multiplying with a constant, which is just `1/posterior.likelihood`.
+The following figure illustrates how we get from the the un-normalized posterior to the normalized posterior, which sums to 1, by multiplying with a constant, which is just `1/prior_x_likelihood`.
 
 ```{r, echo = F}
-plot(p,posterior.likelihood,'l',
+plot(p,prior_x_likelihood,'l',
      ylim = c(0,0.025),ylab = "density",
      col = "violet", lty = 3, lwd = 2)
 m = c(10,25,50)
 for (k in 1:length(m)) {
-  lines(p,posterior.likelihood*m[k])
-  text(p[which.max(posterior.likelihood)],
-       max(posterior.likelihood*m[k]),
+  lines(p,prior_x_likelihood*m[k])
+  text(p[which.max(prior_x_likelihood)],
+       max(prior_x_likelihood*m[k]),
        paste0("* ",m[k]), pos = 3)
 }
-lines(p,posterior.likelihood*1/s,
+lines(p,prior_x_likelihood*1/s,
       col = "violet", lwd = 2)
-text(p[which.max(posterior.likelihood)],
+text(p[which.max(prior_x_likelihood)],
      max(posterior),
      paste0("* ",1/s), pos = 3)
 ```
