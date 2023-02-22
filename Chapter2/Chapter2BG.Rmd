@@ -415,6 +415,41 @@ This is Bayes Rule, which one uses to calculate the inverse conditional probabil
 
 A probability distribution is a function, that is an object that receives input and gives an output. This is very general, and so we can have functions that return always the same value ($f(x) = 0$), that square a value ($f(x) = x^2$), or that check if a certain condition is met ($f(x) = 1(X == 5)$. ^[Text due to Tomás Varnet, who suggested to also explain what a function is.]
 
+Probability distributions are a special form of functions. Here are some functions you have probably already encountered. 
+
+```{r, echo = F, fig.width=8, fig.height=8}
+par(mfrow = c(2,2))
+plot(seq(-3,3,.1), 
+     seq(-3,3,.1)^2,
+     type = "l", 
+     xlab = "x",
+     ylab = "f(x) = f(x)",
+     bty = "n", main = "Qudratic function")
+text(0,6,expression(f(x)~"="~x^2))
+plot(seq(0,pi*2,.1), 
+     sin(seq(0,pi*2,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "Sine function")
+text(5,.5,expression(f(x)~"="~sin(x)))
+plot(seq(0,10,.1), 
+     3 + 0.5 * seq(0,10,.1),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     bty = "n", main = "linear regression function")
+text(2,7,expression(f(x)~"="~a+b*x))
+plot(seq(-3,3,.1), 
+     dnorm(seq(-3,3,.1)),
+     type = "l", 
+     xlab = "x",
+     ylab = "y = f(x)",
+     main = "Normal distribution function",
+     bty = "n")
+text(0,.1, expression(f(x)~"="~frac(1,sigma~sqrt(2~pi))~e^{-frac(1,2)~(frac(x-mu,sigma))^2}))
+```
+
 In the context of Bayesian statistics analysis, we use probability distributions to describe a state of the world when we remain uncertain.
 
 ### Domain of distributions
@@ -733,8 +768,8 @@ However, usually one would not show distributions with vertical lines. Instead, 
 par(mar = c(5.1,4.1,1,2.1))
 plot(p_grid, n_prior, col = "blue", type = "l", 
      ylab = "normalized density", ylim = n_ylim)
-lines(p_grid+.005, n_likelihood, col = "red")
-lines(p_grid-.005, n_posterior, col = "violet")
+lines(p_grid, n_likelihood, col = "red")
+lines(p_grid, n_posterior, col = "violet")
 legend("topleft",col = c("blue","red","violet"),
        lty = 1, legend = c("Prior","Likelihood","Posterior"), 
        bty = "n")
@@ -756,8 +791,8 @@ f_ylim = c(0,max(c(f_likelihood,f_posterior,f_prior)))
 par(mar = c(5.1,4.1,1,2.1))
 plot(fp_grid, f_prior, type = "l", col = "blue",
      ylab = "normalized density", ylim = f_ylim)
-lines(fp_grid+.005, f_likelihood, col = "red")
-lines(fp_grid-.005, f_posterior, col = "violet")
+lines(fp_grid, f_likelihood, col = "red")
+lines(fp_grid, f_posterior, col = "violet")
 legend("topleft",col = c("blue","red","violet"),
        lty = 1, legend = c("Prior","Likelihood","Posterior"), 
        bty = "n")
