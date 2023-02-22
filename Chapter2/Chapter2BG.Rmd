@@ -584,6 +584,7 @@ c(1/s, sum(posterior))
 The following figure illustrates how we get from the the un-normalized posterior to the normalized posterior, which sums to 1, by multiplying with a constant, which is just `1/prior_x_likelihood`.
 
 ```{r, echo = F, out.width="75%"}
+par(mar = c(5.1,4.1,1,2.1))
 plot(p,prior_x_likelihood,'l',
      ylim = c(0,0.025),ylab = "density",
      col = "violet", lty = 3, lwd = 2)
@@ -605,6 +606,7 @@ text(p[which.max(prior_x_likelihood)],
 The next plot shows the posterior distribution together with the prior distribution and the likelihood. We are also adding a plot for the un-normalized posterior with a dotted line.
 
 ```{r, echo = F, out.width="75%"}
+par(mar = c(5.1,4.1,1,2.1))
 plot(p,
      posterior,
      type = 'l',
@@ -633,6 +635,7 @@ likelihood = dbinom(successes,size = trials, prob = p)
 likelihood = likelihood/sum(likelihood)
 posterior = prior * likelihood
 posterior = posterior/sum(posterior)
+par(mar = c(5.1,4.1,1,2.1))
 plot(p,
      posterior,
      ylab = "density",
@@ -656,55 +659,66 @@ So it is not so easy to "cheat" with priors to get what one wants, provided one 
 What is the posterior probability of land, given 10 W and 3 L tosses?
 
 First we defined a grid and plot a the prior probability values:
-```{r, fig.cap="Prior distribution. Vertical lines indicate prior probabilities at each point of the grid."}
-p_grid = seq(0,1,by = .025)
+
+```{r class.source = 'fold-show', out.width="75%"}
+p_grid = seq(0,1,by = .05)
 prior = dbeta(p_grid,2,1)
-plot(p_grid, prior, type = "h",
-     col = "blue", ylab = "density", main = "Prior")
+plot(p_grid, prior, type = "h", col = "blue",
+     ylab = "density", main = "Prior")
 ```
+
+Vertical lines indicate the prior plausibility for parameter values in the grid.
 
 Next we calculate the likelihood, i.e. the probability of the data given the model (a binomial distribution), the data (3 W, 3 L) and the parameter p (in p_grid):
 
-```{r}
+```{r class.source = 'fold-show', out.width="75%"}
 likelihood = dbinom(10,13,p_grid)
-plot(p_grid, likelihood, type = "h",
-     col = "red", ylab = "density", main = "Likelihood")
+plot(p_grid, likelihood, type = "h", col = "red",
+     ylab = "density", main = "Likelihood")
 ```
+
+Vertical lines indicate the plausibility of the data for the parameter values in the grid.
 
 And now we can calculate the un-normalized posterior as a product of prior and likelihood:
 
-```{r}
+```{r class.source = 'fold-show', out.width="75%"}
 posterior = prior * likelihood
-plot(p_grid, posterior, type = "h",
-     col = "violet", ylab = "density", main = "Posterior")
+plot(p_grid, posterior, type = "h", col = "violet", 
+     ylab = "density", main = "Posterior")
 ```
+
+Vertical lines indicate the posterior plausibility of the parameter values in the grid, given the data and the prior.
 
 Here is a plot with all three together:
 
-```{r}
+```{r, out.width="75%"}
+par(mar = c(5.1,4.1,1,2.1))
 ylim = c(0,max(c(likelihood,posterior,prior)))
-plot(p_grid, prior, type = "h",
-     col = "blue", ylab = "density", ylim = ylim)
-lines(p_grid+.005, likelihood, type = "h",
-     col = "red", ylab = "density")
-lines(p_grid-.005, posterior, type = "h",
-     col = "violet", ylab = "density")
+plot(p_grid, prior, type = "h",col = "blue", 
+     ylab = "density", ylim = ylim)
+lines(p_grid+.005, likelihood, type = "h", col = "red")
+lines(p_grid-.005, posterior, type = "h", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
 ```
 
 We can make the plot easier to view by normalizing all values so that they sum up to 1 for prior, likelihood and posterior.
-In each distribution, onbly the relative values at the different points of the grid are relevant!
+In each distribution, only the relative values at the different points of the grid are relevant!
 
-```{r}
+```{r class.source = 'fold-show', out.width="75%"}
 n_prior = prior/sum(prior)
 n_likelihood = likelihood/sum(likelihood)
 n_posterior = posterior/sum(posterior)
 n_ylim = c(0,max(c(n_likelihood,n_posterior,n_prior)))
-plot(p_grid, n_prior, type = "h",
-     col = "blue", ylab = "density", ylim = n_ylim)
-lines(p_grid+.005, n_likelihood, type = "h",
-     col = "red", ylab = "density")
-lines(p_grid-.005, n_posterior, type = "h",
-     col = "violet", ylab = "density")
+par(mar = c(5.1,4.1,1,2.1))
+plot(p_grid, n_prior, type = "h", col = "blue", 
+     ylab = "normalized density", ylim = n_ylim)
+lines(p_grid+.005, n_likelihood, type = "h", col = "red")
+lines(p_grid-.005, n_posterior, type = "h", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
 ```
 
 This plot helps to understand that for a grid search we take each point of the grid and:
@@ -715,35 +729,37 @@ This plot helps to understand that for a grid search we take each point of the g
 
 However, usually one would not show distributions with vertical lines. Instead, one just shows their outlines:
 
-```{r}
-plot(p_grid, n_prior, type = "l",
-     col = "blue", ylab = "density", ylim = ylim)
-lines(p_grid+.005, n_likelihood, type = "l",
-     col = "red", ylab = "density")
-lines(p_grid-.005, n_posterior, type = "l",
-     col = "violet", ylab = "density")
+```{r, out.width="75%"}
+par(mar = c(5.1,4.1,1,2.1))
+plot(p_grid, n_prior, col = "blue", type = "l", 
+     ylab = "normalized density", ylim = n_ylim)
+lines(p_grid+.005, n_likelihood, col = "red")
+lines(p_grid-.005, n_posterior, col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
 ```
 
 This distribution is not very smooth. We can simply make it smoother by increasing the gridsize:
 
-```{r}
+```{r, out.width="75%"}
 fp_grid = seq(0,1,by = .001)
 f_prior = dbeta(fp_grid,2,1)
 f_likelihood = dbinom(10,13,fp_grid)
 f_posterior = f_prior * f_likelihood
 
-plot(p_grid, prior, type = "l",
-     col = "blue", ylab = "density", ylim = ylim)
-lines(p_grid+.005, likelihood, type = "l",
-     col = "red", ylab = "density")
-lines(p_grid-.005, posterior, type = "l",
-     col = "violet", ylab = "density")
+f_prior = f_prior/sum(f_prior)
+f_posterior = f_posterior/sum(f_posterior)
+f_likelihood = f_likelihood/sum(f_likelihood)
+f_ylim = c(0,max(c(f_likelihood,f_posterior,f_prior)))
 
-lines(fp_grid, f_prior, type = "l",
-     col = "blue", ylab = "density", ylim = ylim)
-lines(fp_grid+.005, f_likelihood, type = "l",
-     col = "red", ylab = "density")
-lines(fp_grid-.005, f_posterior, type = "l",
-     col = "violet", ylab = "density")
+par(mar = c(5.1,4.1,1,2.1))
+plot(fp_grid, f_prior, type = "l", col = "blue",
+     ylab = "normalized density", ylim = f_ylim)
+lines(fp_grid+.005, f_likelihood, col = "red")
+lines(fp_grid-.005, f_posterior, col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
 ```
 
