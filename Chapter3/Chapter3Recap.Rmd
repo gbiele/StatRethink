@@ -82,22 +82,12 @@ library(rethinking)
 
 ## Probability concepts
 
-- Unconditional or marginal probability $P(A)$: The probability of an event independent of the state of related events
-- Joint probability $P(A,B)$ or $P(A \textrm{ and }  B)$ or  $P(A \cap B)$: The probability that two events co-occur
-- Conditional probability $P(A|B)$: The probability that one event occurs given that we have fixed a related event to a specific value
+- __Unconditional or marginal probability__ $P(A)$: The probability of an event independent of the state of related events
+- __Joint probability__ $P(A,B)$ or $P(A \textrm{ and }  B)$ or  $P(A \cap B)$: The probability that two events co-occur
+- __Conditional probability__ $P(A|B)$: The probability that one event occurs given that we have fixed a related event to a specific value
 
 
-Example: We want to make statements about winter days and snow days. This means that there are 4 possible event types:
-
-$$
-\begin{alignat}{2}
-\text{no winter} &\; \cap \;  \text{no snow} \\
-\text{winter}    &\; \cap \;  \text{no snow} \\
-\text{no winter} &\; \cap \;  \text{snow} \\
-\text{winter}    &\; \cap \;  \text{snow}
-\end{alignat}
-$$
-We can visualize the probability that any given day falls into one of these for classes as follows.
+Example: We want to make statements about winter days and snow days. This means that there are 4 possible event types. We can visualize the probability that any given day falls into one of these for classes as follows.
 
 ```{r, echo = F}
 draw_pie()
@@ -124,7 +114,7 @@ draw_ellipse()
 title("Unconditional probability\nP(snow)", line = -3)
 ```
 
-The joint probability can be visualized as the intersection of bot event types winter and snow:
+The joint probability can be visualized as the intersection of both event types winter and snow:
 
 ```{r, echo = F}
 par(mar = c(0,0,0,0))
@@ -143,14 +133,14 @@ Finally, the conditional probability fixes one event type to a specific value, a
 ```{r, echo = F}
 par(mar = c(0,0,0,0))
 pie(c(3,1), labels = "", border = "white")
+draw.circle(0,0,.8, col = NA, lty = 3, border = "grey")
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
 ```
 
-And the conditional probability is then just the joint probability  relative to (divided by) the probability of the first, fixed event type.
+The conditional probability is then just the joint probability  relative to (divided by) the probability of the first, fixed event type.
 
-```{r, echo = F}
 ```{r, echo = F}
 par(mar = c(0,0,0,0), mfrow = c(2,1))
 
@@ -278,7 +268,7 @@ $$
 \color{blue}{P(A|B)} = \frac{\color{red}{P(B|A) \cdot P(A)}}{\color{blue}{P(B)}}
 $$
 
-This is Bayes Rule, which one uses to calculate the inverse conditional probability, i.e. when we have information about the probability of $B$ given $A$ ($P(B|A)$) and want to calculate the probability of $A$ given $B$ ($P(A|B)$).
+This is Bayes rule, which one uses to calculate the inverse conditional probability, i.e. when we have information about the probability of $B$ given $A$ ($P(B|A)$) and want to calculate the probability of $A$ given $B$ ($P(A|B)$).
 
 
 Chapter 3 also introduces a diagnostic example. More generally we can ask the question about what is the probability of a disease given a positive test results $P(D|T+)$.
@@ -299,6 +289,26 @@ However, this is not so relevant for Bayesian inference.
 Because this last expression is so complicated, natural frequencies are popular with some
 
 ![](NatFreq.jpg)
+
+
+Visualizing the frequencies in a pie chart also helps to understand the issue:
+
+```{r}
+set.seed(123)
+par(mar = c(0,0,0,0))
+cols = c("violet","red","orange","green4")
+pie(c(1,9,89,901), labels = "", border = NA, col = cols )
+
+legend("topleft",
+       bty = "n",
+       fill = cols,
+       legend = c(
+         "False negatitve",
+         "True positive",
+         "False positive",
+         "True Negative"
+       ))
+```
 
 
 ## What are probability distribution, and where do we need them for Bayesian statistics?
@@ -496,16 +506,37 @@ The posterior distribution contains all our knowledge given the prior, model, an
 
 We walk through some concepts with the following posterior.
 
+We can display posterior distributions in different ways:
+
 ```{r, echo = F}
-samples1 = rbeta(500000,10,2.5)
-colored.hist(samples1, length.out = 250)
+colored.hist = function(data, lower = NULL, upper = NULL, length.out = 51, main = "", color1 = "blue", color2 = "grey", xlab = "parameter value") {
+  if(is.numeric(main)) main=round(main,4)
+  if(is.null(lower) & is.null(upper)) color1 = "grey"
+  h = hist(data, breaks = seq(0,1,length.out = length.out), plot = F)
+  cols = rep(color1,length(h$breaks))
+  if (!is.null(lower)) cols[h$breaks < lower] = color2
+  if (!is.null(upper)) cols[h$breaks > upper] = color2
+  plot(h, col = cols, main = main, xlab = xlab,border = NA)
+}
 ```
 
-I prefer histograms over density plots, because density plots can distort things
+
+```{r out.width="150%", warning=FALSE}
+samples1 = rbeta(2000,10,2.5)
+par(mfrow = c(2,2), bty = "n", mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+plot(1:length(samples1), samples1, main = "dot plot",
+     ylab = "parameter value", xlab  = "sample #")
+plot(1:length(samples1), samples1, type = "l", main = "trace plot",
+     ylab = "parameter value", xlab  = "sample #")
+colored.hist(samples1, length.out = 30)
+plot(density(samples1), main = "density", xlim = c(0,1))
+```
+
+I prefer histograms over density plots, because density plots can distort things.
 
 ### Mean, median, and mode
 ```{r, echo = F, messsage = FALSE, warning=FALSE, results='hide'}
-colored.hist(samples1, length.out = 250)
+colored.hist(samples1, length.out = 30)
 mode = mean(HPDI(samples1,.1))
 clrs = c("red","blue","black")
 abline(v = c(mean(samples1),median(samples1),mode), col = clrs, lwd = 2)
@@ -520,7 +551,7 @@ legend("topleft",
 
 ```{r}
 Q05 = quantile(samples1,.05)
-colored.hist(samples1, length.out = 250, upper = Q05)
+colored.hist(samples1, length.out = 30, upper = Q05)
 ```
 
 
@@ -533,7 +564,7 @@ Can also be called posterior intervals. This is what some people think confidenc
 
 ```{r}
 CI80 = PI(samples1, prob = .8)
-colored.hist(samples1, length.out = 250,
+colored.hist(samples1, length.out = 30,
              lower = CI80[1],
              upper = CI80[2])
 title(paste("Interval length = ",round(diff(CI80),3)))
@@ -549,7 +580,7 @@ An x% Highest density posterior interval (HDPI) is the shortest interval that co
 
 ```{r}
 HPDI80 = HPDI(samples1, prob = .8)
-colored.hist(samples1, length.out = 250, color1 = "violet",
+colored.hist(samples1, length.out = 30, color1 = "violet",
              lower = HPDI80[1],
              upper = HPDI80[2])
 title(paste("Interval length = ",round(diff(HPDI80),3)))
