@@ -650,3 +650,100 @@ legend("topleft",
 ```
 
 So it is not so easy to "cheat" with priors to get what one wants, provided one has collected sufficient data of course.
+
+# Grid search
+
+What is the posterior probability of land, given 10 W and 3 L tosses?
+
+First we defined a grid and plot a the prior probability values:
+```{r, fig.cap="Prior distribution. Vertical lines indicate prior probabilities at each point of the grid."}
+p_grid = seq(0,1,by = .025)
+prior = dbeta(p_grid,2,1)
+plot(p_grid, prior, type = "h",
+     col = "blue", ylab = "density", main = "Prior")
+```
+
+Next we calculate the likelihood, i.e. the probability of the data given the model (a binomial distribution), the data (3 W, 3 L) and the parameter p (in p_grid):
+
+```{r}
+likelihood = dbinom(10,13,p_grid)
+plot(p_grid, likelihood, type = "h",
+     col = "red", ylab = "density", main = "Likelihood")
+```
+
+And now we can calculate the un-normalized posterior as a product of prior and likelihood:
+
+```{r}
+posterior = prior * likelihood
+plot(p_grid, posterior, type = "h",
+     col = "violet", ylab = "density", main = "Posterior")
+```
+
+Here is a plot with all three together:
+
+```{r}
+ylim = c(0,max(c(likelihood,posterior,prior)))
+plot(p_grid, prior, type = "h",
+     col = "blue", ylab = "density", ylim = ylim)
+lines(p_grid+.005, likelihood, type = "h",
+     col = "red", ylab = "density")
+lines(p_grid-.005, posterior, type = "h",
+     col = "violet", ylab = "density")
+```
+
+We can make the plot easier to view by normalizing all values so that they sum up to 1 for prior, likelihood and posterior.
+In each distribution, onbly the relative values at the different points of the grid are relevant!
+
+```{r}
+n_prior = prior/sum(prior)
+n_likelihood = likelihood/sum(likelihood)
+n_posterior = posterior/sum(posterior)
+n_ylim = c(0,max(c(n_likelihood,n_posterior,n_prior)))
+plot(p_grid, n_prior, type = "h",
+     col = "blue", ylab = "density", ylim = n_ylim)
+lines(p_grid+.005, n_likelihood, type = "h",
+     col = "red", ylab = "density")
+lines(p_grid-.005, n_posterior, type = "h",
+     col = "violet", ylab = "density")
+```
+
+This plot helps to understand that for a grid search we take each point of the grid and:
+
+- determine the prior probability (we used a beta distribution)
+- calculate the likelihood, i.e. the conditional probability of the data (we used the binomial distribution)
+- calculate the posterior by multiplying the prior and the likelihood.
+
+However, usually one would not show distributions with vertical lines. Instead, one just shows their outlines:
+
+```{r}
+plot(p_grid, n_prior, type = "l",
+     col = "blue", ylab = "density", ylim = ylim)
+lines(p_grid+.005, n_likelihood, type = "l",
+     col = "red", ylab = "density")
+lines(p_grid-.005, n_posterior, type = "l",
+     col = "violet", ylab = "density")
+```
+
+This distribution is not very smooth. We can simply make it smoother by increasing the gridsize:
+
+```{r}
+fp_grid = seq(0,1,by = .001)
+f_prior = dbeta(fp_grid,2,1)
+f_likelihood = dbinom(10,13,fp_grid)
+f_posterior = f_prior * f_likelihood
+
+plot(p_grid, prior, type = "l",
+     col = "blue", ylab = "density", ylim = ylim)
+lines(p_grid+.005, likelihood, type = "l",
+     col = "red", ylab = "density")
+lines(p_grid-.005, posterior, type = "l",
+     col = "violet", ylab = "density")
+
+lines(fp_grid, f_prior, type = "l",
+     col = "blue", ylab = "density", ylim = ylim)
+lines(fp_grid+.005, f_likelihood, type = "l",
+     col = "red", ylab = "density")
+lines(fp_grid-.005, f_posterior, type = "l",
+     col = "violet", ylab = "density")
+```
+
