@@ -1,7 +1,7 @@
 ---
 title: "Chapter 3: Recap"
 author: "Guido Biele"
-date: "09.03.2022"
+date: "22.02.2023"
 output:
   html_document: 
     mathjax: default
@@ -45,8 +45,11 @@ h3,h4,h5,h6{
 }
 ```
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, fig.align = 'center')
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(plotrix)
 draw_pie = function() {
   par(mar = c(0,0,0,0))
@@ -80,7 +83,7 @@ library(rethinking)
 ## Probability concepts
 
 - Unconditional or marginal probability $P(A)$: The probability of an event independent of the state of related events
-- Joint probability $P(A,B)$ or $P(A \cap B)$: The probability that two events co-occur
+- Joint probability $P(A,B)$ or $P(A \textrm{ and }  B)$ or  $P(A \cap B)$: The probability that two events co-occur
 - Conditional probability $P(A|B)$: The probability that one event occurs given that we have fixed a related event to a specific value
 
 
@@ -148,17 +151,23 @@ rect(0,0,-.2,-.7, col = "white", border = NA)
 And the conditional probability is then just the joint probability  relative to (divided by) the probability of the first, fixed event type.
 
 ```{r, echo = F}
+```{r, echo = F}
 par(mar = c(0,0,0,0), mfrow = c(2,1))
-pie(c(3,1), labels = "")
-draw.circle(0,0,.9, col ="white", border = "white")
+
+
+pie(c(3,1), labels = "", ylim = c(0,-.5))
+draw.circle(0,0,.9, col ="white", lty = 3, border = "grey")
+draw.ellipse(h.e,k.e,a.e,b.e , col = "lightblue", angle = e.rot, border = "lightblue")
 draw_ellipse()
 rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
-lines(c(-1,1),c(-1,-1), lwd = 2)
-title("Conditional probability", line = -1)
-title(expression(P(snow~"|"~winter)~"="~frac(P(winter ~ intersect(snow)),P(winter))), line = -3)
-pie(c(3,1), labels = "", border = "white")
 
+title(expression(P(snow~"|"~winter)~"="~frac(P(winter ~ intersect(snow)),P(winter))), line = -3)
+
+
+pie(c(3,1), labels = "", border = "white")
+draw.circle(0,0,.8, lty = 3, border = "grey")
+lines(c(-1,1),c(1,1), lwd = 2)
 ```
 
 
@@ -231,7 +240,6 @@ legend(.75,.8,
 
 Here is the whole thing with A and B instead of snow and winter.
 
-
 $$
 \overset{\color{violet}{\text{conditional probability}}}{P(A|B)} = \frac{\overset{\color{red}{\text{joint probability}}}{P(A, B)}}{\overset{\color{blue}{\text{marginal probability}}}{P(B)}}
 $$
@@ -282,7 +290,7 @@ $$
 
 This tells us the that probability of disease also depends of the unconditional probability (base rate) of the disease and of positive tests.
 
-Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is $
+Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is 
 $$
 P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)
 $$
@@ -301,83 +309,34 @@ Probability distributions are a special form of functions. Here are some functio
 par(mfrow = c(2,2))
 plot(seq(-3,3,.1), 
      seq(-3,3,.1)^2,
-     type = "l", 
+     pch = ".", 
      xlab = "x",
      ylab = "f(x) = f(x)",
      bty = "n", main = "Qudratic function")
 text(0,6,expression(f(x)~"="~x^2))
 plot(seq(0,pi*2,.1), 
      sin(seq(0,pi*2,.1)),
-     type = "l", 
+     pch = ".", 
      xlab = "x",
      ylab = "y = f(x)",
      bty = "n", main = "Sine function")
 text(5,.5,expression(f(x)~"="~sin(x)))
 plot(seq(0,10,.1), 
      3 + 0.5 * seq(0,10,.1),
-     type = "l", 
+     pch = ".", 
      xlab = "x",
      ylab = "y = f(x)",
      bty = "n", main = "linear regression function")
 text(2,7,expression(f(x)~"="~a+b*x))
 plot(seq(-3,3,.1), 
      dnorm(seq(-3,3,.1)),
-     type = "l", 
+     pch = ".", 
      xlab = "x",
      ylab = "y = f(x)",
      main = "Normal distribution function",
      bty = "n")
 text(0,.1, expression(f(x)~"="~frac(1,sigma~sqrt(2~pi))~e^{-frac(1,2)~(frac(x-mu,sigma))^2}))
 ```
-
-In Bayesian statistics, we use probability distribution functions to represent uncertainty.
-
-Before we display uncertainty, let's look at how it function looks if we are certain to land on water. The x axis of the function goes from 0 to 1, because proportions are limited to this range of numbers.
-
-```{r, echo = F}
-curve(dbeta(x,100000,1),
-      n = 1000,
-      ylab = "density",
-      xlab = "p",
-      col = "blue",
-      bty = "n")
-```
-
-If we are certain to land on water, $P(water)$ = 1^[The figure shows density, not probability] and all other probabilities have the value zero. Note that density is not the same as probability.
-
-If we want to express uncertainty, our function has to allow all possible values (and forbid all impossible values) on the x-axis. If we had no information whatsoever to say something about the probability to land on water, all probabilities p get the same value.
-
-```{r, echo = F}
-curve(dbeta(x,1,1),
-      ylab = "density", 
-      xlab = "p", 
-      bty = "n",
-      col = "blue")
-```
-
-For this function to be a probability distribution, the area under the function (the integral) must sum up to 1.
-
-To see this, we can observe in the next plot that the area under the probability function remains constant while we go from believing weakly (left) to more strongly (right) that the probability to land on water is larger than 0.5.
-
-```{r, echo = F}
-filled.beta = function(a = 1, b = 1, col = "blue", border = NA, ylim = NULL, add = F) {
-  x = seq(0,1,.01)
-  y = dbeta(x,a,b)
-  x.poly <- c(x, tail(x,1), head(x,1))
-  y.poly <- c(y, 0, 0)
-  if (is.null(ylim)) ylim = c(0,max(y))
-  if (add == FALSE)
-    plot(0,type = "n", ylim = ylim, xlab = "p", ylab = "density", xlim = c(0,1), bty = "n")
-  polygon(x.poly, y.poly, col=col, border=border)
-}
-par(mfrow = c(1,2))
-filled.beta(1.3,1.1, col = adjustcolor("blue", alpha = .5), ylim = c(0,2))
-curve(dbeta(x,1.3*2,1.1*1.5), col = adjustcolor("blue", alpha = .5), add = T)
-filled.beta(1.3*2,1.1*1.5, col = adjustcolor("blue", alpha = .5), ylim = c(0,2))
-curve(dbeta(x,1.3,1.1), col = adjustcolor("blue", alpha = .5), add = T)
-```
-
-To summarize, one can think of a probability distribution as a function that expresses how likely different values of a parameter (here p) are and whose area under the curve (or integral) is 1.
 
 
 In Bayesian statistics, we use such distributions to express three things:
@@ -388,152 +347,120 @@ In Bayesian statistics, we use such distributions to express three things:
 
 Let's walk through a simple example. We start by describing our prior judgement, that we are slightly confident that that index finger touches water rather than land, with the beta distribution.
 
-First the prior.
+What is the posterior probability of land, given 10 W and 3 L tosses?
 
-```{r, echo = F}
-p = seq(0,1,length.out = 100)
-prior = dbeta(p,2,1.5)
-prior = prior/sum(prior)
-plot(p,
-     prior,
-     type = 'l',
-     xlab = "p",
-     bty = "n",
-     col = "blue")
+First we define a grid and plot a the prior "probability" values:
+
+```{r class.source = 'fold-show', out.width="75%"}
+p_grid = seq(0,1,by = .05)
+prior = dbeta(p_grid,2,1)
+plot(p_grid, prior, type = "h", col = "blue",
+     ylab = "density", main = "Prior")
 ```
 
-Next the likelihood. For the globe tossing example we use the binomial distribution to calculate the likelihood. Let us assume we had 4 trials and 3 successes.
+Vertical lines indicate the prior plausibility for parameter values in the grid.
 
-```{r, echo = F}
-trials = 4
-successes = 3
-likelihood = dbinom(successes,size = trials, prob = p)
-likelihood = likelihood/sum(likelihood)
-plot(p,
-     likelihood,
-     type = 'l',
-     xlab = "p",
-     ylab = "likelihood = P(data|p)",
-     bty = "n",
-     col = "red")
+Next we calculate the likelihood, i.e. the probability of the data given the model (a binomial distribution), the data (3 W, 3 L) and the parameter p (in p_grid):
+
+```{r class.source = 'fold-show', out.width="75%"}
+likelihood = dbinom(10,13,p_grid)
+plot(p_grid, likelihood, type = "h", col = "red",
+     ylab = "density", main = "Likelihood")
 ```
 
-Now Let us re-introduce Bayes rule, which we described above as:
+Vertical lines indicate the plausibility of the data for the parameter values in the grid.
 
-$$
-P(A|B) = \frac{P(B|A) \cdot P(A)}{P(B)}
-$$
+And now we can calculate the un-normalized posterior as a product of prior and likelihood:
 
-If we just replace $A$ with $parameter$ and $B$ with $data$ and annotate the different terms we get
-
-$$
-\overset{\color{violet}{\text{posterior probability}}}{P(parameter|data)} = \frac{\overset{\color{red}{\text{likelihood}}}{P(data|parameter)} \cdot \overset{\color{blue}{\text{prior probability}}}{P(parameter)}}{\overset{\color{orange}{\text{evidence}}}{P(data)}}
-$$
-
-This shows us that if we just multiply the likelihood with the prior, we get something that is proportional to the posterior. This is what is meant if you see this expression:
-
-$$
-posterior \propto likelihood \cdot prior
-$$
-
-Let us just calculate and plot this: 
-
-```{r}
-posterior.likelihood = prior * likelihood
-```
-
-
-```{r, echo = F}
-plot(p,
-     posterior.likelihood,
-     type = 'l',
-     xlab = "p",
-     ylab = "density",
-     bty = "n",
-     col = "violet",
-     lty = 3,
-     main = "prior * likelihood",
-     lwd = 2)
-```
-
-
-This distribution is only proportional to the posterior distribution, because the product of posterior and likelihood does not sum up to 1. We can calculate the posterior probability distribution by dividing by the sum. 
-
-```{r}
-s = sum(posterior.likelihood)
-posterior = posterior.likelihood/s
-c(1/s, sum(posterior))
-```
-
-The following figure illustrates how we get from the the un-normalized posterior to the normalized posterior, which sums to 1, by multiplying with a constant, which is just `1/posterior.likelihood`.
-
-```{r, echo = F}
-plot(p,posterior.likelihood,'l',
-     ylim = c(0,0.025),ylab = "density",
-     col = "violet", lty = 3, lwd = 2)
-m = c(10,25,50)
-for (k in 1:length(m)) {
-  lines(p,posterior.likelihood*m[k])
-  text(p[which.max(posterior.likelihood)],
-       max(posterior.likelihood*m[k]),
-       paste0("* ",m[k]), pos = 3)
-}
-lines(p,posterior.likelihood*1/s,
-      col = "violet", lwd = 2)
-text(p[which.max(posterior.likelihood)],
-     max(posterior),
-     paste0("* ",1/s), pos = 3)
-```
-
-
-The next plot shows the posterior distribution together with the prior distribution and the likelihood. We are also adding a plot for the un-normalized posterior with a dotted line.
-
-```{r, echo = F}
-plot(p,
-     posterior,
-     type = 'l',
-     xlab = "p",
-     ylab = "density",
-     col = "violet",
-     lwd = 2)
-lines(p,prior * likelihood,col = "violet", lty = 3)
-lines(p,prior,col = "blue")
-lines(p,likelihood,col = "red")
-legend("topleft",
-       col = c("blue","red","violet"),
-       lty = 1,
-       legend = c("Prior","Likelihood","Posterior"), 
-       bty = "n")
-```
-
-The figure shows that the posterior is a compromise between the prior distribution and the likelihood. 
-
-If we collect five times the data, we become more certain (the posterior distribution is narrower) and the influence of the prior is diminished so that the posterior will be very similar to the likelihood:
-
-```{r, echo = F}
-trials = 20
-successes = 15
-likelihood = dbinom(successes,size = trials, prob = p)
-likelihood = likelihood/sum(likelihood)
+```{r class.source = 'fold-show', out.width="75%"}
 posterior = prior * likelihood
-posterior = posterior/sum(posterior)
-plot(p,
-     posterior,
-     ylab = "density",
-     type = 'l',
-     xlab = "p",
-     col = "violet",
-     lwd = 2)
-lines(p,prior,col = "blue")
-lines(p,likelihood,col = "red")
-legend("topleft",
-       col = c("blue","red","violet"),
-       lty = 1,
-       legend = c("Prior","Likelihood","Posterior"), 
+plot(p_grid, posterior, type = "h", col = "violet", 
+     ylab = "density", main = "Posterior")
+```
+
+Vertical lines indicate the posterior plausibility of the parameter values in the grid, given the data and the prior.
+
+Here is a plot with all three together:
+
+```{r, out.width="75%"}
+par(mar = c(5.1,4.1,1,2.1))
+ylim = c(0,max(c(likelihood,posterior,prior)))
+plot(p_grid, prior, type = "h",col = "blue", 
+     ylab = "density", ylim = ylim)
+lines(p_grid+.01, likelihood, type = "h", col = "red")
+lines(p_grid-.01, posterior, type = "h", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
        bty = "n")
 ```
 
-So it is not so easy to "cheat" with priors to get what one wants, provided one has collected sufficient data of course.
+We can make the plot easier to view by normalizing all values so that they sum up to 1 for prior, likelihood and posterior.
+In each distribution, only the relative values at the different points of the grid are relevant!
+
+```{r class.source = 'fold-show', out.width="75%"}
+n_prior = prior/sum(prior)
+n_likelihood = likelihood/sum(likelihood)
+n_posterior = posterior/sum(posterior)
+```
+
+```{r out.width="75%", echo = FALSE}
+n_ylim = c(0,max(c(n_likelihood,n_posterior,n_prior)))
+par(mar = c(5.1,4.1,1,2.1))
+plot(p_grid, n_prior, type = "h", col = "blue", 
+     ylab = "normalized density", ylim = n_ylim)
+lines(p_grid+.01, n_likelihood, type = "h", col = "red")
+lines(p_grid-.01, n_posterior, type = "h", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
+```
+
+
+Here, we have information about priors only at relatively few points. Lets increase the resolution of the grid:
+
+```{r out.width="75%"}
+fp_grid = seq(0,1,by = .02)
+f_prior = dbeta(fp_grid,2,1)
+f_likelihood = dbinom(10,13,fp_grid)
+f_posterior = f_prior * f_likelihood
+
+f_prior = f_prior/sum(f_prior)
+f_posterior = f_posterior/sum(f_posterior)
+f_likelihood = f_likelihood/sum(f_likelihood)
+f_ylim = c(0,max(c(f_likelihood,f_posterior,f_prior)))
+
+par(mar = c(5.1,4.1,1,2.1))
+plot(fp_grid, f_prior, type = "h", col = "blue",
+     ylab = "normalized density", ylim = f_ylim)
+lines(fp_grid+.005, f_likelihood, type = "h",col = "red")
+lines(fp_grid-.005, f_posterior, type = "h", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
+```
+
+This display gets quickly hard to read. Because we also know that the plausibility of parameter values is similar to the plausibility of adjacent parameter values, we can draw an outline instead of many vertical lines:
+
+```{r out.width="75%"}
+fp_grid = seq(0,1,by = .01)
+f_prior = dbeta(fp_grid,2,1)
+f_likelihood = dbinom(10,13,fp_grid)
+f_posterior = f_prior * f_likelihood
+
+f_prior = f_prior/sum(f_prior)
+f_posterior = f_posterior/sum(f_posterior)
+f_likelihood = f_likelihood/sum(f_likelihood)
+f_ylim = c(0,max(c(f_likelihood,f_posterior,f_prior)))
+
+par(mar = c(5.1,4.1,1,2.1))
+plot(fp_grid, f_prior, type = "l", col = "blue",
+     ylab = "normalized density", ylim = f_ylim)
+lines(fp_grid, f_likelihood, type = "l",col = "red")
+lines(fp_grid, f_posterior, type = "l", col = "violet")
+legend("topleft",col = c("blue","red","violet"),
+       lty = 1, legend = c("Prior","Likelihood","Posterior"), 
+       bty = "n")
+```
 
 
 ## Ways to calculate the posterior
@@ -589,7 +516,7 @@ legend("topleft",
        bty = "n")
 ```
 
-### Qunitiles
+### Quintiles
 
 ```{r}
 Q05 = quantile(samples1,.05)
@@ -610,8 +537,8 @@ colored.hist(samples1, length.out = 250,
              lower = CI80[1],
              upper = CI80[2])
 title(paste("Interval length = ",round(diff(CI80),3)))
-abline(v = CI80, lwd = 2)
-text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4))
+abline(v = CI80, lwd = 2, col  = "blue")
+text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4), col = "blue")
 ```
 
 Credible intervals are calculated with quintiles. For instance, if the 80% credible intervals goes from the 10% ((100-80)/2) quintile to the 90% quintile.
@@ -622,13 +549,14 @@ An x% Highest density posterior interval (HDPI) is the shortest interval that co
 
 ```{r}
 HPDI80 = HPDI(samples1, prob = .8)
-colored.hist(samples1, length.out = 250,
+colored.hist(samples1, length.out = 250, color1 = "violet",
              lower = HPDI80[1],
              upper = HPDI80[2])
 title(paste("Interval length = ",round(diff(HPDI80),3)))
-abline(v = HPDI80, col = "blue", lwd = 2)
-abline(v = CI80, col = "lightblue", lwd = 2, lty = 3)
-text(HPDI80, c(4000,4000), labels = round(HPDI80,2), pos = c(2,4), col = "blue")
+abline(v = HPDI80, col = "violet", lwd = 2)
+abline(v = CI80, col = "blue", lwd = 2, lty = 3)
+text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4), col = "blue")
+text(HPDI80, c(4000,4000), labels = round(HPDI80,2), pos = c(2,4), col = "violet")
 ```
 
 ### Posterior predictions
@@ -640,3 +568,86 @@ In the workflow of Bayesian data analysis, we check "model fit" visually, by com
 We do this by taking parameters from the posterior distribution, and then simulate data from the model with these parameters.
 
 If the model and parameters are good, the simulated data should look similar to the observed data.
+
+Lets look at some more globe tosses: We get 13 out of 20 tosses water.
+```{r class.source = 'fold-show'}
+n_water = 13
+n_total = 20
+p_grid = seq(0,1,.01)
+prior = rep(1,length(p_grid))
+likelihood = dbinom(n_water, n_total, prob = p_grid)
+posterior = prior*likelihood
+posterior = posterior / sum(posterior)
+plot(p_grid,posterior,'l',
+     main = "Posterior distribution for the proportion of water")
+```
+
+To simulate data from our posterior distribution, we have to use the posterior probabilities of the parameter values. Lets first simulate 1000 simulated data sets, i.e. number of water tosses, using the median of the posterior:
+
+```{r class.source = 'fold-show'}
+# generate samples from the posterior distribution
+posterior_samples = sample(p_grid,1000, prob = posterior, replace = TRUE)
+# simulate data given the median of the 
+# posterior distribution for proportion of water
+predictions.point = rbinom(1000,n_total, prob = median(posterior_samples))
+simplehist(
+  predictions.point, 
+  xlab = "# predicted water tosses",
+  main = "Posterior predictive distribution from median")
+points(n_water,0, col = "red", pch = 16, cex = 2)
+```
+
+The random process involved in simulating the data (we repeatedly toss 10 biased coins) makes that our posterior predictions are variable even if we always use the same (median) probability.
+
+However, in a Bayesian approach, we do use a point estimates of parameters to generate posterior predictions, but the full posterior distribution.
+
+```{r}
+predictions.dist = rbinom(1000,n_total, prob = posterior_samples)
+simplehist(
+  predictions.dist,
+  ylim = c(0, max(table(predictions.point))),
+  col = "blue",
+  xlab = "# predicted water tosses",
+  main = "Posterior predictive distribution")
+lines(as.numeric(names(table(predictions.point)))+.1,
+      table(predictions.point), type ="h", lwd = 3)
+points(n_water,0, col = "red", pch = 16, cex = 2)
+legend("topleft",
+       bty = "n",
+       col = c("blue","black"), lty = 1, lwd = 3,
+       title = "Predictions from posterior",
+       legend = c("distribution",
+                  "median"))
+```
+
+The uncertainty described by the full posterior distribution is reflected in a somewhat wider posterior predictive distribution.
+
+Now lets redo the analysis, but instead of using the binomial distribution we use another distribution for integer data, the poisson distribution. The sole parameter of the poisson distribution is the mean number of expected counts.
+
+```{r class.source = 'fold-show'}
+m_grid = seq(0,40,.1)
+prior = rep(1,length(m_grid))
+likelihood = dpois(n_water, lambda = m_grid)
+posterior = prior*likelihood
+posterior = posterior / sum(posterior)
+plot(m_grid,posterior,'l',
+     main = "Posterior distribution for expected water tosses.")
+```
+
+We can already see that something is not right here. Lets generate posterior predictions:
+
+```{r class.source = 'fold-show'}
+# generate samples from the posterior distribution
+posterior_samples = sample(m_grid,1000, prob = posterior, replace = TRUE)
+# simulate data given the median of the 
+# posterior distribution for proportion of water
+predictions.dist = rpois(1000,posterior_samples)
+simplehist(
+  predictions.dist, xlab = "# predicted water tosses",
+  main = "Posterior predictive distribution from 'wrong' model.")
+points(n_water,0, col = "red", pch = 16, cex = 2)
+abline(v = 20.5, lty = 3, col = "magenta")
+```
+
+These posterior predictions are clearly incompatible with the data, because they allow for impossible values of 11 or more water tosses, even though our sample size is only 10.
+
