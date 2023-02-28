@@ -8,5 +8,9 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 ## Background material and lectures
 
-1. [Bayesian updating](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter1/ExplainBayes.html?token=GHSAT0AAAAAABQGBEQA3DXJNLRBN4SSIWY4YQUSWBQ)
+1. [Bayesian updating](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter1/ExplainBayes.html)
+
+2. [Conditional probability & Bayes rule](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter2/Chapter2BG.html)
+
+3. [Conditional probability & posterior samples](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter3/Chapter3Recap.html)
 
