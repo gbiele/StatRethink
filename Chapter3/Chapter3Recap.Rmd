@@ -311,17 +311,17 @@ legend("topleft",
 ```
 
 
-## What are probability distribution, and where do we need them for Bayesian statistics?
+## What are probability distributions, and where do we need them for Bayesian statistics?
 
 Probability distributions are a special form of functions. Here are some functions you have probably already encountered. 
 
-```{r, echo = F, fig.width=8, fig.height=8}
-par(mfrow = c(2,2))
+```{r, echo = F, out.width="125%", out.height="150%"}
+par(mfrow = c(2,2), mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 plot(seq(-3,3,.1), 
      seq(-3,3,.1)^2,
      pch = ".", 
      xlab = "x",
-     ylab = "f(x) = f(x)",
+     ylab = "y = f(x)",
      bty = "n", main = "Qudratic function")
 text(0,6,expression(f(x)~"="~x^2))
 plot(seq(0,pi*2,.1), 
@@ -426,7 +426,7 @@ legend("topleft",col = c("blue","red","violet"),
 ```
 
 
-Here, we have information about priors only at relatively few points. Lets increase the resolution of the grid:
+Above, we have information about priors only at relatively few points. Lets increase the resolution of the grid:
 
 ```{r out.width="75%"}
 fp_grid = seq(0,1,by = .02)
@@ -529,7 +529,7 @@ plot(1:length(samples1), samples1, main = "dot plot",
 plot(1:length(samples1), samples1, type = "l", main = "trace plot",
      ylab = "parameter value", xlab  = "sample #")
 colored.hist(samples1, length.out = 30)
-plot(density(samples1), main = "density", xlim = c(0,1))
+plot(density(samples1), main = "density", xlim = c(0,1), xlab = "parameter value")
 ```
 
 I prefer histograms over density plots, because density plots can distort things.
@@ -548,6 +548,8 @@ legend("topleft",
 ```
 
 ### Quintiles
+
+What is the value below which x% of the posterior distribution falls.
 
 ```{r}
 Q05 = quantile(samples1,.05)
@@ -586,8 +588,8 @@ colored.hist(samples1, length.out = 30, color1 = "violet",
 title(paste("Interval length = ",round(diff(HPDI80),3)))
 abline(v = HPDI80, col = "violet", lwd = 2)
 abline(v = CI80, col = "blue", lwd = 2, lty = 3)
-text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4), col = "blue")
-text(HPDI80, c(4000,4000), labels = round(HPDI80,2), pos = c(2,4), col = "violet")
+text(CI80, c(100,100), labels = round(CI80,2), pos = c(2,4), col = "blue")
+text(HPDI80, c(150,150), labels = round(HPDI80,2), pos = c(2,4), col = "violet")
 ```
 
 ### Posterior predictions
@@ -600,7 +602,7 @@ We do this by taking parameters from the posterior distribution, and then simula
 
 If the model and parameters are good, the simulated data should look similar to the observed data.
 
-Lets look at some more globe tosses: We get 13 out of 20 tosses water.
+Lets look at some more globe tosses: We get 13 out of 20 tosses water and calculate the posterior distributio for proportion water with a flat prior.
 ```{r class.source = 'fold-show'}
 n_water = 13
 n_total = 20
