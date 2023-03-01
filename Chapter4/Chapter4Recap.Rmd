@@ -1,7 +1,7 @@
 ---
 title: "Chapter 4: Recap"
 author: "Guido Biele"
-date: "24.03.2022"
+date: "01.03.2023"
 output:
   html_document: 
     mathjax: default
@@ -46,8 +46,24 @@ h3,h4,h5,h6{
 }
 ```
 
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
+
+
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, out.width = "75%", fig.align='center')
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 library(plotrix)
 library(DescTools)
@@ -67,6 +83,7 @@ library(png)
 The density function starts with __d__ and shows the "likelihood of different values x given the distribution parameters. For instance `dnorm(1.85, 1.7, 0.1)` gives the likelihood of the value 1.85 given a normal distribution with a mean of `1.7` and a standard deviation of 0.5.
 
 ```{r, eval = F, echo = T}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 curve(dnorm(x,1.7,.1),  # function y = f(x) for value on y axis
       1.3,              # minimum x
       2.1,              # maximum x
@@ -74,6 +91,7 @@ curve(dnorm(x,1.7,.1),  # function y = f(x) for value on y axis
 ```
 
 ```{r, echo=F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 curve(dnorm(x,1.7,.1),  # function y = f(x) for value on y axis
       1.3,              # minimum x
       2.1,              # maximum x
@@ -89,6 +107,7 @@ text(1.8,d1.8,paste0("dnorm(1.85, 1.7, 0.1) = ",round(d1.8,3)),pos = 4, col = "r
 The random generation function (cdf) starts with __r__ and and generates random values x given the distribution parameters. 
 
 ```{r, echo = F, message=FALSE, warning=FALSE}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 library(plotrix)
 library(data.table)
 lb.x = qnorm(.001,1.7,.1)
@@ -132,33 +151,134 @@ while (j < 750) {
 For instance `rnorm(500, 1.7, 0.1)` will produce 500 random values that have a mean of 1.7 and a standard deviation of 1. We can call these 500 values samples from the distribution.
 
 ```{r}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 samples = rnorm(500, 1.7, 0.1)
 plot(samples, ylab = "value", xlab = "sample #")
 ```
 
 If we have samples and want to see how they are distributed, we can use a histogram or a density plot. It is better to use histograms than density plots, because the latter involve estimation of the smoothness of the density, which can lead to artefacts.
 
-```{r, fig.width=8}
+```{r, fig.width=8, fig.height=4}
+par(mar=c(3,3,3,1), mgp=c(1.5,.5,0), tck=-.01)
 par(mfrow = c(1,2))
 hist(samples, main = "Histogram")
 plot(density(samples), main = "Density plot")
 ```
 
+
+# Normal distribution & central limit theorem
+
+Lets assume the monthly growth rate follows following distribution:
+
+```{r, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+curve(dlnorm(x,log(.4),.85),
+      0,2.5,
+      ylab = "density",
+      xlab = "growth in cm per month",
+      n = 500)
+```
+
+What is the distribution of heights of 10000 children at different ages?
+
+```{r, echo = F}
+set.seed(3)
+par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
+par(mfrow = c(2,2))
+for (age in c(1,5,10,15)) {
+  heights = 
+    rlnorm(12*age*10000,log(.4),.85) %>% 
+    matrix(nrow = 10000) %>% 
+    rowSums()
+  heights = heights + 60
+  heights %>% 
+    hist(main = age, 
+         xlab = "height in cm",
+         breaks = 30)
+}
+
+
+```
+
+This example illustrates the central limit theorem, which states that the result of processes that manifest as the sum of many small identical and independently distributed events are normally distributed.
+
+One way to explain why this is the case is to see that there are more possible combinations of events that lead to average outcomes than possible combination of events that lead to extreme events. 
+
+For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you loos a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
+
+```{r CLTtable, echo = F}
+combs = 
+  CombSet(
+  c(-1,1),
+  4,
+  rep = T,
+  ord = T)
+
+colnames(combs) = paste("event",1:4)
+
+combs = cbind(Permutation = 1:nrow(combs),
+              combs,
+              sum = rowSums(combs))
+
+combs %>% 
+  kable() %>% 
+  kable_styling()
+```
+
+Now lets do the same experiment again, except that we are not looking at 4, but 16 tosses, which leads to $2^{16}$ or `r 2^16` possible sequences. Here is the distribution of credit points.
+
+<div class="marginnote"> 
+If the number of "trials" is large and the success probability is close to 0.5, the binomial distribution "looks" like a normal distribution.
+</div>
+
+```{r CLTdist, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+combs = CombSet(
+  c(-1,1),
+  16,
+  rep = T,
+  ord = T
+)
+
+combs.sum = 
+  combs %>% 
+  rowSums()
+
+h.breaks = seq(-16.01,16.01, length.out = 1+length(unique(combs.sum)))
+h = 
+  combs.sum %>% 
+  hist(breaks = h.breaks, plot = F)
+
+plot(h$mids, h$counts, type = 'h',
+     ylab = "density",
+     xlab = "number of credit points")
+x = seq(-16,16, .005)
+y = dnorm(x, sd = 4)
+y = y/max(y)*max(h$counts)
+lines(x,y, col = "grey", lty = 3)
+
+```
+
+One popular device to display such a process is a Galton^[Who certainly was clever, but is nowadays also infamous for his views on eugenics and race.] board:
+
+![Galton Board](galton1.mp4){width=75%}
+
 ## Multivariate distributions
 
 It is possible to observe multiple variables as outcome of a process. For instance, we might record the length and the weight of a newborn baby. To show how these variables are related, we plot them together.
 
-```{r, fig.width=8}
-dt = data.frame(length = rnorm(1000,50,5))
+```{r, fig.width=8, fig.height=4}
+dt = data.frame(length = rnorm(5000,50,5))
 expected_weight = 3.5 + scale(dt$length)*.5
-dt$weight = rnorm(1000,expected_weight,.5)
+dt$weight = rnorm(5000,expected_weight,.5)
 
 par(mfrow = c(1,2))
-with(dt,plot(length,weight, pch = 16, cex = .5, main = "Scatter plot"))
+par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
+with(dt,plot(length,weight, pch = 16, cex = .25, main = "Scatter plot"))
 with(dt,smoothScatter(length,weight, main = "Smooth scatter plot"))
 ```
 
-Another type of process that also leads to jointly distributed variables is Bayesian data analysis. If an analysis estimates several parameters, we can look at posterior distribution of these parameters individually-- we look at their marginal distributions--or we can look at the joint posterior distribution of the parameters. Even if I am just referring to posterior distributions of parameters here, we typically look at _samples_ from this posterior distribution.
+Another type of process that also leads to jointly distributed variables is Bayesian data analysis. If an analysis estimates several parameters, we can look at the posterior distribution of these parameters individually-- we look at their marginal distributions--or we can look at the joint posterior distribution of the parameters. 
 
 The typical way to describe such variables that are jointly and normally distributed is to use a multivariate normal distribution. A multivariate normal distribution has parameters you already know, and one additional parameter:
 
@@ -188,95 +308,33 @@ cbind(correlation.R,
       correlation.manual)
 ```
 
-# Normal distribution & central limit theorem
+# What is marginalization?
 
-Lets assume the monthly growth rate follows following distribution:
+Sometimes, we want information about only one dimension of the data. This information is shown in the _marginal_ distribution.
 
-```{r, echo = F}
-curve(dlnorm(x,log(.4),.85),
-      0,2.5,
-      ylab = "density",
-      xlab = "growth in cm per month",
-      n = 500)
+One way to view how the marginal distribution is calculate is to imagine that data point (or samples from a p posterior) are collapsed over one variable. Like this:
+
+![Marginalization](margins1.mp4){width=75%}
+
+This is only a visualization to give you an intuition. We won't cover here how one calculates marginal integrals. When we dealing with samples from posterior distributions, we also do not calculate integrals. In fact, just showing the histogram for one parameter of the posterior is already the display of this variables marginal distribution.
+
+
+Here is a more traditional way to show two marginal distributions.
+
+```{r marginal, echo = F, fig.width=6, fig.height=6}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+scatter.hist( weight ~ length,
+              data = dt[1:1000,],
+              density = FALSE, ellipse = FALSE, smooth = F, correl = F,
+              ylab = "weight",
+              xlab = "length",
+              col = "black", pch = 0)
 ```
 
-What is the distribution of heights of 10000 children at different ages?
 
-```{r, echo = F}
-set.seed(3)
-par(mfrow = c(2,2))
-for (age in c(1,5,10,15)) {
-  heights = 
-    rlnorm(12*age*10000,log(.4),.85) %>% 
-    matrix(nrow = 10000) %>% 
-    rowSums()
-  heights = heights + 60
-  heights %>% 
-    hist(main = age, 
-         xlab = "height in cm",
-         breaks = 30)
-}
+In this plot, each histogram shows the marginal distribution of length and weight, respectively.
+E.g. to get the frequency of length = 50cm, we sum all individuals with the eight, regardless of their weight.
 
-
-```
-
-This is an example the displays the central limit theorem, which states that the result of processes that manifest as the sum of many small identical and independently distributed events are normally distributed.
-
-One way to explain why this is the case is to see that there are more possible combinations of events that lead to average outcomes than possible combination of events that lead to extreme events. 
-
-For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you loos a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
-
-```{r CLTtable, echo = F}
-combs = 
-  CombSet(
-  c(-1,1),
-  4,
-  rep = T,
-  ord = T)
-
-colnames(combs) = paste("event",1:4)
-
-combs = cbind(Permutation = 1:nrow(combs),
-              combs,
-              sum = rowSums(combs))
-
-combs %>% 
-  kable() %>% 
-  kable_styling()
-```
-
-Now lets do the same experiment again, except that we are not looking at 4, but 16 tosses, which leads to $2^{16}$ or `r 2^16` possible sequences. Here is the distribution of credit points.
-
-```{r CLTdist, echo = F}
-combs = CombSet(
-  c(-1,1),
-  16,
-  rep = T,
-  ord = T
-)
-
-combs.sum = 
-  combs %>% 
-  rowSums()
-
-h.breaks = seq(-16.01,16.01, length.out = 1+length(unique(combs.sum)))
-h = 
-  combs.sum %>% 
-  hist(breaks = h.breaks, plot = F)
-
-plot(h$mids, h$counts, type = 'h',
-     ylab = "density",
-     xlab = "number of credit points")
-x = seq(-16,16, .005)
-y = dnorm(x, sd = 4)
-y = y/max(y)*max(h$counts)
-lines(x,y, col = "grey", lty = 3)
-
-```
-
-One popular device to display such a process is a Galton^[Who certainly was clever, but is nowadays also infamous for his views on eugenics and race.] board:
-
-![Galton Board](galton1.mp4)
 
 # Linear regression model
 
@@ -300,44 +358,19 @@ plot(0,type = "n", xaxt = "n", yaxt = "n", bty = "n",
 Picture<-readPNG("newborn.png")
 rasterImage(Picture,0,0,1,1)
 
-par(mar=c(3,3,1,1), mgp=c(1.5,.5,0), tck=-.01)
+par(mar=c(3,3,0,0), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt,
      ylab = "weight",
      xlab = "length")
 ```
 
 
-## What is marginalization?
-
-Sometimes, we want information about only one dimension of the data. This information is shown in the _marginal_ distribution.
-
-One way to view how the marginal distribution is calculate is to imagine that data point (or samples from a p posterior) are collapsed over one variable. Like this:
-
-![Galton Board](margins1.mp4)
-
-This is only a visualization to give you an intuition. We won't cover here how one calculates marginal integrals. When we dealing with samples from posterior distributions, we also do not calculate integrals. In fact, just showing the histogram for one parameter of the posterior is already the display of this variables marginal distribution.
-
-
-Here is a more traditional way to show two marginal distributions.
-
-```{r marginal, echo = F, fig.width=8, fig.height=8}
-scatter.hist( weight ~ length,
-              data = dt,
-              density = FALSE, ellipse = FALSE, smooth = F, correl = F,
-              ylab = "weight",
-              xlab = "length",
-              col = "black", pch = 0)
-```
-
-
-In this plot, each histogram shows the marginal distribution of length and weight, respectively.
-E.g. to get the frequency of length = 50cm, we sum all individuals with the eight, regardless of their weight.
 
 # Modeling the mean
 
 ## Describing the model
 
-```{r alphaModel , echo = F}
+```{r alphaModel , echo = F, fig.height=5, fig.width=8}
 layout(matrix(c(1,1,2), nrow=1))
 par(mar=c(5,5,0,0))
 A = hist(dt$weight, plot = F)
@@ -390,12 +423,12 @@ And if we want to impress (or scare off) a colleague, we can write down the full
 
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
-\frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(\mu|3.5,1.5) Uniform(\sigma|0,1.5)}}
-{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(\mu|3.5,1.5) Uniform(\sigma|0,1.5)d\mu d\sigma}}
+\frac{\prod_i \overset{Likelihood}{Normal(w_i|\mu,\sigma)} \cdot \overset{Prior}{Normal(\mu|3.5,1.5)  \cdot Uniform(\sigma|0,1.5)}}
+{\overset{Evidence}{\int\int \prod_i Normal(w_i|\mu,\sigma) \cdot Normal(\mu|3.5,1.5)  \cdot Uniform(\sigma|0,1.5) \cdot d\mu \cdot d\sigma}}
 $$
 <br />
 
-This looks scarier than it is. $\prod_if$ just means that we calculate for each (individual) $i$ the quantity the product behind the product sign $\prod$ and than calculate the product of all these quantities.
+This looks scarier than it is.$\prod_if$ just means that we calculate for each (individual) $i$ the quantity behind the product sign $\prod$ and then multiply of all these quantities.
 
 The numerator just means to calculate the following for each combination of $\mu$ and $\sigma$
 
@@ -408,26 +441,34 @@ This is not how the calculation is performed in Bayesian analysis software (expe
 
 The denominator is what is called the evidence, and it's main purpose is to insure that the posterior sums to 1. If we are mainly interested in the relative plausibility of parameter values, we do not calculate the denominator because the product of likelihood and prior is already proportional to the posterior distribution. Only if we wan to do different types of analysis, like Bayes factors, is it necessary to calculate the denominator/evidence. 
 
+If you still want to understand more what the symbols in the numerator mean:
+
+- $\int\int ... d\mu d\sigma$ means that we are integrating over to parameters, here $\mu$ and $\sigma$
+- roughly speaking, we are 
+  - dividing the the 2 dimensional parameter space in cells of dimensions $d\mu$ and $d\sigma$
+  - for each cell we calculate $\prod_i Normal(w_i|\mu,\sigma) \cdot Normal(\mu|3.5,1.5)  \cdot Uniform(\sigma|0,1.5)$ and multiply it with the size of the cell $d\mu \cdot d\sigma$
+  - an finally we sum all these quantities
+
 ## Prior predictive check
 
-It is good predictive to check if the model with priors make sensible predictions, before one estimates the model parameters.
+__Before one estimates the model parameters one should check if the model with priors make sensible predictions.__
 The goal is not to prior-predict data that are very similar to observed data, but to prior-predict data that pass plausibility checks and are in the same ball park as the observed data.
-Plausibility checks are simple things like that there are not negative weights. With "in the same ball park" one means that the values should ave approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
+Plausibility checks are simple things like that there are not negative birth-weights. "In the same ball park" means that the values should have approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
 
 ```{r PriorPredictiveAlpha}
 my_blue = adjustcolor("blue",alpha = .5) # for model predictions
 my_gray = adjustcolor("black",alpha = .5) # for data
-
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 prior.pedictive.weights = 
   rnorm(
     10000,
-    rnorm(10000, 3.5, 1.5),
-    runif(10000, 0, 1.5))
+    rnorm(10000, 3.5, 1.5), # prior mean
+    runif(10000, 0, 1.5))   # prior standard deviation
 hist(prior.pedictive.weights,
      main = "", xlab = "prior predictive weights",
      col = my_blue)
-text(-2,2000,expression(mu~"="~Normal(3.5,1.5)), pos = 4)
-text(-2,1850,expression(sigma~"="~Uniform(3.5,1.5)), pos = 4)
+text(-3.5,2000,expression(mu~"="~Normal(3.5,1.5)), pos = 4)
+text(-3.5,1850,expression(sigma~"="~Uniform(3.5,1.5)), pos = 4)
 ```
 
 
@@ -439,6 +480,7 @@ How does it look if we use non-informative priors?
 
 ```{r PriorPredictiveAlphaNonInformative, echo = F}
 set.seed(1)
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 prior.pedictive.weights = rnorm(
   10000,
   rnorm(10000, 0, 1000),
@@ -447,8 +489,8 @@ prior.pedictive.weights = rnorm(
 hist(prior.pedictive.weights, main = "",
      xlab = "prior predictive weights",
      col = my_blue)
-text(-4500,1500,expression(mu~"="~Normal(0,10000)), pos = 4)
-text(-4500,1350,expression(sigma~"="~Uniform(0,10000)), pos = 4)
+text(-5000,1500,expression(mu~"="~Normal(0,10000)), pos = 4)
+text(-5000,1350,expression(sigma~"="~Uniform(0,10000)), pos = 4)
 ```
 
 It seems obvious that the first set of parameters makes more sense.
@@ -463,7 +505,7 @@ head(dt)
 
 Based on the quap code in the table above, we can also put the quap model. `alist` is a command that creates a list that holds our model.
 
-```{r alphaquapmpodel}
+```{r , class.source = 'fold-show', alphaquapmpodel}
 alpha.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
@@ -477,25 +519,29 @@ For reasons that will be clear soon, we are using a parameter $\alpha$ as a dete
 
 Now we can use `quap` to calculate the posterior distribution.
 
-```{r alphafit}
+```{r , class.source = 'fold-show', alphafit}
 alpha.model.fit = quap(alpha.model.list, data=dt)
 ```
 
 
 And we can have a first glimpse of the results with the `precis` function from the `rethinking package`:
 
-```{r alphaprecis}
+```{r , class.source = 'fold-show', alphaprecis}
 precis(alpha.model.fit)
 ```
 
 ## Posterior predictive check
 
-Before we start interpreting our modeling results, it is always a good idea to see if the model is any good at describing the data.
+__Before we start interpreting our modeling results, it is always a good idea to see if the model is any good at describing the data.__
 
 To do this, we first extract the posterior from the prior:
 
-```{r alphaposterpred1}
+```{r , class.source = 'fold-show', alphaposterextract}
 alpha.model.post = extract.samples(alpha.model.fit,n=1e4)
+```
+
+
+```{r alphaposterpred1}
 # calculate mu, because quap does not return it automtically
 alpha.model.post$mu = alpha.model.post$alpha
 head(alpha.model.post)
@@ -504,6 +550,7 @@ head(alpha.model.post)
 One thing we would like to check is if the observed mean is within the credible interval of the posterior for $\mu$:
 
 ```{r alphaposterpred2}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 hist(alpha.model.post$mu, main = "",
      xlab = expression(mu), col = my_blue )
 abline(v = HPDI(alpha.model.post$mu), col = "blue")
@@ -513,6 +560,7 @@ abline(v = mean(dt$weight), lwd = 2)
 We also expect that most of the data lies within the posterior predicted values. First we calculate the posterior predictions, which depend on $\mu$ and $\sigma$:
 
 ```{r alphaposterpred5}
+par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
 posterior.predictions = 
   rnorm(nrow(alpha.model.post),
         alpha.model.post$mu,
@@ -529,8 +577,9 @@ title(paste0(round(in.hdpi*100),"% of weights are in the 89% HDPI"))
 
 Now let's simulate 200 weights and see if they are associated with length:
 
-```{r alphaposterpred3, fig.width=8, echo = F}
+```{r alphaposterpred3, fig.width=8, fig.height=4, echo = F}
 par(mfrow = c(1,2))
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt,
      ylab = "weight",
      xlab = "length")
@@ -544,15 +593,16 @@ plot(dt$length,pp.weight,
      col = "blue")
 ```
 
-Differently than in the observed data, the predicted data do not show an association between length and weight. This is obviously because we did not use length to predict weight.
+Differently than in the observed data, the predicted data do not show an association between length and weight. This is not surprising, because we did not use length to predict weight.
 
 # Linear regression
 
 Instead of the previous model, where each individuals weight depends only on the group mean, we want a model in which individual weights also depend on birth length.
 
 
-```{r alphaposterpred4, fig.width=8, echo = F}
+```{r alphaposterpred4, fig.width=8, fig.height=4, echo = F}
 par(mfrow = c(1,2))
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt,
      ylab = "weight",
      xlab = "length",
@@ -593,8 +643,8 @@ Next we "build" the new model, which also takes birth length into account.
 The key difference of the new analysis is that we describe the expected weight as a function of an additional predictor, here $X$. $\beta$ is the _slope_ of the regression model, which indicates how important the variable $X$ is to predict the outcome. This linear regression model can be visualized as follows.
 
 
-```{r moModelPlot1, fig.width=6, fig.height=6, echo = F}
-
+```{r moModelPlot1, fig.width=6, fig.height=5, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 slope <- cor(dt$length, dt$weight) * (sd(dt$weight) / sd(dt$length))
 intercept <- mean(dt$weight) - (slope * mean(dt$length))
 
@@ -627,25 +677,25 @@ delta.l = max.l - min.l
 min.w = min(round(dt$weight))
 max.w = max(ceiling(dt$weight))
 delta.w = max.w - min.w
-
 ```
 
 
-Generally, birthlength varies roughly between around `r min.l` and `r max.l` and weight varies roughly between `r min.w` and `r max.w`.^[I made this up, in a real analysis one might consult some statistics that are available.] Then we can see that for length `r max.l` - `r min.l` = `r delta.l` and for weigh `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
+Generally, birthlength varies roughly between around `r min.l` and `r max.l` cm and weight varies roughly between `r min.w` and `r max.w` kg.^[I made this up, in a real analysis one might consult some statistics that are available.] Then we can see that for length `r max.l` - `r min.l` = `r delta.l` and for weight `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
 
-We can use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
+We c    an use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
 
-It is much harder to make a guess about the intercept (the predicted weight when length = 0), because length = 0 is so car out of the data range.
+It is much harder to make a guess about the intercept (the predicted weight when length = 0), because length = 0 is so far out of the data range.
 
 We plot some prior predictions.
 
 
-```{r}
-plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
+```{r , class.source = 'fold-show', fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
+plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-2,9))
 clr = adjustcolor("blue",alpha = .5)
 for (k in 1:50) {
-  abline(a = rnorm(1,-1.5,3),
-         b = rnorm(1,.1,.2),
+  abline(a = rnorm(1,-1,1),
+         b = rnorm(1,.1,.1),
          col = clr)
   }
 ```
@@ -676,23 +726,25 @@ One peculiar characteristic of this analysis is that the parameter values for $\
 
 Here is a scatter plot (in blue) of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored (in green). Remember, Bayesian analysis tried to find parameter combinations are configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
 
-```{r, echo = F}
+```{r, echo = F, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 post = extract.samples(mu.model.fit)
 smoothScatter(
-  rnorm(100000,-1.5,3),
-  rnorm(100000,0.1,.1),
-  xlim = c(-1.5-3*3,-1.5+3*3),
-  ylim = c(0.1-3*.1,0.1+3*.1),
-  ylab = "b", xlab = "a",
+  rnorm(1000000,-1.5,3),
+  rnorm(1000000,0.1,.1),
+  xlim = c(-1.5-3*3.5,-1.5+3*3.5),
+  ylim = c(0.1-3.5*.1,0.1+3.5*.1),
+  ylab = "b", xlab = "a", nrpoints = 0,
   colramp = colorRampPalette(c("white", "green4")))
 points(post$a,post$b, col = adjustcolor(tail(blues9,1),alpha = .5), pch = 16, cex = 0.5)
 ```
 
 We can't see a lot here. Let us zoom in and highlight the samples in the posterior distribution with extreme values for $\alpha$ and $\beta$. 
 
-```{r}
+```{r fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 post = extract.samples(mu.model.fit)
-smoothScatter(post$a,post$b,
+smoothScatter(post$a,post$b,nrpoints = 0,
               ylab = "b", xlab = "a")
 small_a.idx = which(post$a <= sort(post$a)[25])
 large_a.idx = which(post$a >= sort(post$a,decreasing = T)[50])
@@ -721,7 +773,7 @@ for (k in 1:nrow(post)) {
       dnorm(b,0.1,.1,log = T) +                  # prior b
       dunif(sigma,0,1.5,log = T)                 # prior sigma
 }
-
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(post$a,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 plot(post$b,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 plot(post$sigma,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
@@ -729,7 +781,8 @@ plot(post$sigma,post$lp__,pch = 16, col = adjustcolor("blue",alpha = .1))
 
 How is it possible that we see parameter combinations that have a similar posterior probability, and yet have very different parameter values? To understand this, we can plot predictions, i.e. regression lines, from such parameter values.
 
-```{r, echo = F}
+```{r, echo = F, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt$length,dt$weight, xlim = c(0,65), ylim = c(-3,9))
 abline(a = mean(post$a), b = mean(post$b), lwd = 2, col = "green4")
 for (k in 1:length(small_a.a)) 
@@ -742,7 +795,7 @@ for (k in 1:length(large_a.a))
          col = adjustcolor("blue",alpha = .125))
 ```
 
-A linear regression tries to minimize the distance between the regression line and data points on the y axis. What this plot shows us is that different parameter combinations (low $\alpha$ with large $\beta$ vs. high $\alpha$ with small $\beta$) can lead to similar distances (likelihood values).
+A linear regression tries to minimize the __vertical__ distance between the regression line and data points on the y axis. What this plot shows us is that different parameter combinations (low $\alpha$ with large $\beta$ vs. high $\alpha$ with small $\beta$) can lead to similar distances (likelihood values).
 
 The correlation in the posterior can make it hard to fit more complex models. In addition, the parameters of the model we just fit are are hard to interpret: What do intercept $\alpha$ and slope $\beta$ mean intuitively?
 
@@ -762,29 +815,31 @@ If we want to change the slope and still stay in the middle of the point cloud, 
 
 With centering means to subtract the mean of the predictor variable from all values. In order to standardize, one could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive for domain experts.
 
-```{r scaledata, fig.width=6, fig.height=6}
+```{r scaledata, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 dt$length.s = 
   scale(dt$length, center = TRUE, scale = FALSE) # centering
 plot(dt$length.s,
      dt$weight,
      ylab = "weight",
-     xlab = "length",
+     xlab = "centered length",
      ylim = ylim)
 ```
 
 
-Now it is easier to see that the when length = 0 (the average) weight should be around 3.5 kg, and that when the length goes up by 20 units (-10 to 10), length goes up by 3.5 units (2 to 5.5), that is `r 3.5/20`kg per cm length.
+Now it is easier to see that for the centered length, the intercept is actually just the weight at the average length. Therefore we can specify a prior based on our domain knowledge about average birth weights.
 
 ## The linear regression model (centered predictor)
 
 Next we "build" the new model, which can be visualized as follows:
 
-```{r moModelPlot, fig.width=6, fig.height=6, echo = F}
+```{r moModelPlot, fig.width=6, fig.height=5, echo = F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt$length.s,
      dt$weight,
      col = "grey",
      ylab = "weight",
-     xlab = "scaled length",
+     xlab = "centered length",
      ylim = ylim,
      xlim = c(-11,11))
 coeffs = coef(lm(dt$weight~dt$length.s))
@@ -819,7 +874,8 @@ We do again a prior predictive check to see if model and prior are broadly in li
 
 We are using the abline function for this. See the [documentation](https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/abline)!!!
 
-```{r mupriorpredicttive1, fig.width=7, fig.height=7}
+```{r mupriorpredicttive1, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(0,
      ylab = "weight",
      xlab = "scaled length",
@@ -837,7 +893,8 @@ This looks pretty wild. It is implausible that we have a negative association be
 
 A good rule to keep in mind is that for a prior $Normal(\mu,\sigma))$ 95% of the prior mass lies between $\mu + 2\sigma$ and $\mu - 2\sigma$.
 
-```{r mupriorpredicttive2, fig.width=7, fig.height=7}
+```{r mupriorpredicttive2, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(0,
      ylab = "weight",
      xlab = "scaled length",
@@ -862,7 +919,7 @@ This looks much more reasonable. Here is the model with new priors:
 
 And here is the `quap` model:
 
-```{r muquap}
+```{r class.source = 'fold-show', muquap}
 mu.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
@@ -925,8 +982,9 @@ dim(mu.model.pp)
 ```
 
 And we check if the predicted weights are consistent with the observed means.
-```{r muposterpred1, fig.width=8, fig.height=8, echo = F}
+```{r muposterpred1, fig.width=7, fig.height=7, echo = F}
 par(mfrow = c(2,2))
+par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
 for (p in c(.1, .25, .5, .9)) {
   hist(dt$weight, col = my_gray, main = "", xlab = "predicted weight")
   hdpi = HPDI(as.vector(mu.model.pp),prob = p)
@@ -939,9 +997,9 @@ for (p in c(.1, .25, .5, .9)) {
 
 Posterior predictive checks do not need to be limited to simlpy the outcome variable. We can check if any aspect of the data we care about works out. Here we check if mean and sd of the predicted data lie within the credible interval of the posterior.
 
-```{r muposterpred2, fig.width=8 }
+```{r muposterpred2, fig.width=8, fig.height=4}
 par(mfrow = c(1,2))
-
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 pp.mu = apply(mu.model.pp, 1, mean)
 pp.sd = apply(mu.model.pp, 1 , sd)
 
@@ -956,8 +1014,9 @@ abline(v = c(HPDI(pp.sd),sd(dt$weight)),
 
 We can also check if we see the co-variation of birth length and birth weight of we use predicted weights.
 
-```{r mupostpredcorr, fig.width=8, fig.height=8, echo = F}
+```{r mupostpredcorr, fig.width=7, fig.height=6.5, echo = F}
 par(mfrow = c(2,2))
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 for (k in 1:4) {
   plot(dt$length, mu.model.pp[k,], col = "blue",
        xlab = "length", ylab = "predicted weight",
@@ -973,7 +1032,8 @@ Now that we have convinced of the that the model describes the data well enough 
 
 As a visual presentation we can e.g. just show the slope:
 
-```{r muresultsfigure1, fig.width=5}
+```{r muresultsfigure1, fig.width=6, fig.height=5}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt$length.s,
      dt$weight,
      col = "grey", 
@@ -992,7 +1052,13 @@ for(k in 1:25)
 
 I like spaghetti plots, but confidence bands are more typically used:
 
-```{r muresultsfigures2, fig.width=8, echo = F}
+
+<div class="marginnote"> 
+`link`: posterior expecation, i.e. the best guess for a given x.
+
+`sim`: posterior prediction, i.e. the best guess plus a random error.
+</div>
+```{r muresultsfigures2, fig.height=4, fig.width=8, echo = F}
 length.s.new = seq(min(dt$length.s),max(dt$length.s),.1)
 mu.model.pp.nd = 
   get_mu.model.pp(length.s.new,
@@ -1013,6 +1079,7 @@ conf_band = function(x,y) {
 }
 
 par(mfrow = c(1,2))
+par(mar=c(3,3,3,1), mgp=c(1.5,.5,0), tck=-.01)
 plot(dt$length.s,
      dt$weight,
      col = "grey", 
@@ -1150,7 +1217,20 @@ quap.spline.model =
 
 And we plot pior predictions for a handful of randomly choose parameters $\omega$
 
-```{r}
+<div class="marginnote"> 
+```
+quap.spline.model = 
+  alist(
+    y ~ dnorm(mu,sigma),
+    mu <- B %*% omega ,
+    omega ~ dnorm(0,[0.1,1]),
+    sigma ~ dexp(1)
+  )
+```
+</div>
+
+```{r echo = F}
+par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 B %*% matrix(rnorm(ncol(B)*5,sd = 1),nrow = ncol(B)) %>% 
   matplot(df$x,.,type = 'l', col = "red", lty = 1)
 B %*% matrix(rnorm(ncol(B)*5,sd = .1),nrow = ncol(B)) %>% 
