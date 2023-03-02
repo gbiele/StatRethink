@@ -1,7 +1,7 @@
 ---
 title: "BayesGrid"
-author: "GB & NC"
-date: "24.03.2022"
+author: "GB"
+date: "02.03.2023"
 output: html_document
 ---
 
@@ -36,22 +36,30 @@ with(my_data,
 ```
 
 ```{r}
-age = my_data$age
-hist(age)
+hist(my_data$age)
+```
+
+Now add the centered age as a variable to `my_data` plot its histogram:
+
+```{r}
+my_data$age.c = my_data$age-mean(my_data$age)
+hist(my_data$age.c)
 ```
 
 
 # The Model
 
-For now, we are only interested in estimating the mean age (`age`) using the following model.
+We want to estimate the effect of age on arrival time.
 The table shows the incomplete model expressed with equations, `quap` code fragments, and how one would calculate quantities directly in R.
 
 <br/>
 
 | What | Notation | quap code | R code |
 |---|---|---|---|
-|Likelihood | $a_i \sim Normal(\mu,\sigma)$ | `age ~ dnorm(mu, sigma)` | `L[i] = dnorm(age[i], mu, sigma)` |
-|Prior | $\mu \sim Normal(.,.)$ | `mu ~ dnorm(. , .)` | `p_mu = dnorm(. , ., .)` |
+|Likelihood | $t_i \sim Normal(\mu_i,\sigma)$ | `time ~ dnorm(mu, sigma)` | `L[i] = dnorm(time[i], mu[i], sigma)` |
+|linear model | $\mu = \alpha + \beta\textrm{age}$ | `mu[i] <- b*age[i]` | `mu[i] <- b*age[i]` |
+|Prior | $\alpha \sim Normal(.,.)$ | `alpha ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
+|Prior | $\beta \sim Normal(.,.)$ | `beta ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
 |Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma = ...` |
 
 <br/>
@@ -64,9 +72,9 @@ The posterior distribution is calculated as follows:
 
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
-\frac{\prod_i \overset{Likelihood}{Normal(a_i|\mu,\sigma)} \cdot 
-              \overset{Prior}{Normal(\mu|...,...)YourDist(\sigma|...)}}
-{\overset{Evidence}{\int\int \prod_i Normal(a_i|\mu,\sigma) \cdot Normal(\mu|...,...)YourDist(\sigma|...)d\mu d\sigma}}
+\frac{\prod_i \overset{Likelihood}{Normal(t_i|\alpha,\sigma)} \cdot 
+              \overset{Prior}{Normal(\alpha|...,...)Normal(\beta|...,...)YourDist(\sigma|...)}}
+{\overset{Evidence}{\int\int\int \prod_i Normal(a_i|\alpha,\sigma) \cdot Normal(\mu|...,...)Normal(\beta|...,...)YourDist(\sigma|...)d\alpha d\beta d\sigma}}
 $$
 
 <br/>
@@ -77,11 +85,12 @@ Please add the missing information, using what you just added to the table, wher
 
 Let's assume these parameter values
 
-- `mu = 22`
-- `sd = 3`
+- `alpha = -1`
+- `beta = .1`
+- `sigma = 2`
 
-Please calculate the likelihood for the first data point in the vector `age` in the next code block.
-If you are uncertain about how to proceed, check the table above
+Please calculate the likelihood for the first data point in the vector `time` in the next code block by using a centered version of the variable age (add this centered variable to the data.frame `my_data`.).
+If you are uncertain about how to proceed, check the table above.
 
 ```{r}
 # Likelihood for the first data point
@@ -89,7 +98,7 @@ If you are uncertain about how to proceed, check the table above
 ```
 
 
-Now calculate the probability of the data point given the parameter values for each recorded age You do not need a loop to do this!
+Now calculate the probability of time given age and the parameter values for each recorded individual. You do not need a loop to do this!
 
 ```{r}
 # Likelihoods for all individual data points
@@ -104,46 +113,49 @@ And now calculate the joint probability of all recorded ages. (Read the help for
 ```
 
 
-Now calculate the prior probability of the the parameters `mu = 22` and `sd = 3`. You should use the prior distributions you specified above for this.
+Now calculate the prior probability of the the parameters `alpha = -1`, `beta = .1` and `sigma = 3`. You should use the prior distributions you specified above for this.
 
 ```{r}
-# Prior probability for mu = 22
+# Prior probability for alpha = 1
 
-# Prior probability for sd = 3
+# Prior probability for beta = .1
+
+# Prior probability for sigma = 3
 
 ```
 
-And the joint prior probability for `mu = 22` and `sd = 2`.
+And the joint prior probability for `alpha = -1`, `beta = .1` and `sigma = 3`.
 ```{r}
-# Joint prior probability for mu = 22 and sd = 3
+# Joint prior probability for alpha = -1, beta = .1 and sigma = 3
 
 ```
 
-By putting the code you wrote until now, you should be able to calculate the numerator of the equation above, i.e. likelihood times prior probability (density), for parameters `mu = 22` and `sd = 3`. 
+By putting the code you wrote until now, you should be able to calculate the numerator of the equation above, i.e. likelihood times prior probability (density), for parameters `alpha = -1`, `beta = .1` and `sigma = 3`.
 
 ```{r}
-# Joint probability of data and parameters for  mu = 22 and sd = 3 
-# given the prior distributions for mu and sd
+# Joint probability of data and parameters for alpha = -1, beta = .1 and sigma = 3.
+# given the prior distributions for alpha, beta and sigma
 
 ```
 
 # Grid approximation
 
-Now that you have calculated the joint likelihood of data and parameters given the prior distributions for `mu` and `sd` for one set of parameters, you can do this for a larger number of parameters combinations, which we can generate by constructing a grid where each point is a combination of one `mu` and one `sd` parameter value. Continue either with __Grid approximation, version 1__ or __Grid approximation, version 2__.
+Now that you have calculated the relative plausibility of data and parameters given the prior distributions for one set of parameters, you can do this for a larger number of parameters combinations, which we can generate by constructing a grid where each point is a combination of one `alpha`, `beta` and `sigma` parameter value. 
 
-## Grid approximation, version 1
 
 First set up the grid. You can use the the code example below. Feel free to change the range of the parameters you explore by changing the first and second number in the `seq` commands 
 
 ```{r}
 # Here we are making our grid
 # expand.grid produces all combinations 
-# of the N (here 2) variables submitted
-# and punts them in a matrix with N columns
+# of the N (here 3) variables submitted
+# and puts them in a matrix with N columns
+grid_resolution = 30
 params = 
   expand.grid(
-    mu = seq(20,30,.1),
-    sd = seq(2.5,4.5, .025)
+    alpha = seq(-3, 3, length.out = grid_resolution),
+    beta = seq(-1, 1, length.out = grid_resolution),
+    sigma = seq(.01, 3, length.out = grid_resolution)
   )
 params = data.frame(params)
 head(params)
@@ -155,11 +167,13 @@ Now you can calculate the unnormalized posterior for all parameter combinations.
 
 Store the result for each parameter combination in the the variable `UP`. Set "eval = TRUE" at the beginning of the code block, so tha the code is executed when you knit the document!
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 # Here comes your code in which you calculate the 'likelihood * prior expression'
 # (see the formula or your code above) for each combination of parameter values.
 params$UP = NA
 for (k in 1:nrow(params)) {
+  # here come your code #
+  # probably more than one line #
   params$UP[k] = 
 }
 ```
@@ -169,79 +183,59 @@ for (k in 1:nrow(params)) {
 
 Use the data.frame `params` that you just created, specifically one column in it, to calculate the _evidence_. If you are uncertain, check the equation above
 
-```{r}
+```{r, eval = TRUE}
 # Calculate the evidence from the unnormalized posterior
-
+evidence = 
 ```
 
 
 ### Normalize to get a proper posterior distribution.
 
 Now you can use the evidence to add a one more column to the `params` data frame, let's call it `PP`, which has the posterior probability for each parameter combination.
-```{r}
+```{r eval = TRUE}
 # Calculate posterior probabilities
+params$PP = 
+```
 
+### Sample the posterior
+
+```{r}
+# We are sampling indexes and then 
+# use indexes to get samples
+post.idx = sample(1:nrow(params), 10000, prob = params$PP, replace = TRUE)
+posterior = params[post.idx, c("alpha","beta","sigma")]
 ```
 
 
 ### Plot the posterior
-Make a plot of the posterior
+
+Next we plot the marginal posterior distributions of the parameters with a histogram or density plot.
+
 ```{r}
-# Plot posterior probabilities
-# The easiest is to use ggplot here, following this pattern
-# ggplot(params, aes(x = mu, y = sd, z = PP)) + geom_contour_filled()
-# which assumes that you have called you column for posterior
-# probabilities "PP"
-library(ggplot2)
+## marginal posterior distribution for alpha
+
+## marginal posterior distribution for beta
+
+## marginal posterior distribution for sigma
 
 ```
 
 
-## Grid approximation, version 2
+If you find that these posteriors look very coarse, you can go back and increase 
+the value for `grid_resolution` but things might get very slow if you go above 50.
 
-Here is a template to generate a grid of parameters. Your main task here is to add
+Add some code here to get the means and 95% HDPIs for the three parameters.
+```{r}
 
-- the upper and lower boundaries for the parameter values you want to explore in the grid
-- the code to calculate the unormalized (or standardized) posterior.
-
-You have to set `eval = TRUE` at the beginning of the code block so that the code is run when you knit the document.
-
-```{r, eval = FALSE}
-N_grid_points <-100
-
-# Make a set of grid values for the two parameters
-# replace the __ with values of your choice
-my_mu<-seq(from=__, to=__, length.out=N_grid_points)
-my_sigma<-seq(from=0, to=__, length.out=N_grid_points)
-
-# Make an empty placeholder for the posterior
-posterior_unstandardized<-matrix(NA,ncol=N_grid_points, nrow=N_grid_points)
-
-# Calculate the posterior in each grid point
-for (i in 1:N_grid_points)
-  for (j in 1:N_grid_points)
-  {
-    posterior_unstandardized[i,j]<- # your code comes here
-  }
 ```
 
-Next, you need to calculate the evidence and standardize the posterior. Don't forget to change "eval = FALSE" to "eval = TRUE".
 
-```{r, eval = FALSE}
-posterior = 
+Now make a 2-D plots of the posterior. Do you see if some of the parameters are correlated?
+
+```{r}
+# use smoothScatter to plot the joint distribution
+
+
 ```
 
-And here is some code to plot the results
-
-Plot the results. Don't forget to change "eval = FALSE" to "eval = TRUE".
-```{r, eval = FALSE}
-# Plot (2D) image of the posterior
-image(my_mu,my_sigma,posterior,  axes=FALSE);
-axis(1, at = seq(20, 30, by = 2))
-axis(2, at = seq(0, 5, by = 1))
-
-# Plot (3D) histogram
-library(plot3D)
-hist3D(z=posterior, border="black")
-```
 
