@@ -14,7 +14,7 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 3. [Conditional probability & posterior samples](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter3/Chapter3Recap.html)
 
-4a. [Linear regression and splines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/Chapter4Recap.html)
+4. A: [Linear regression and splines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/Chapter4Recap.html)
 
-4b. [Linear regression grid search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGrid+.html)
+4. B: [Linear regression grid search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter4/BayesGrid+.html)
 
