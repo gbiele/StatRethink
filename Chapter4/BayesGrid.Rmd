@@ -58,8 +58,8 @@ The table shows the incomplete model expressed with equations, `quap` code fragm
 |---|---|---|---|
 |Likelihood | $t_i \sim Normal(\mu_i,\sigma)$ | `time ~ dnorm(mu, sigma)` | `L[i] = dnorm(time[i], mu[i], sigma)` |
 |linear model | $\mu = \alpha + \beta\textrm{age}$ | `mu[i] <- b*age[i]` | `mu[i] <- b*age[i]` |
-|Prior | $\alpha \sim Normal(.,.)$ | `alpha ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
-|Prior | $\beta \sim Normal(.,.)$ | `beta ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
+|Prior | $\alpha \sim Normal(.,.)$ | `alpha ~ dnorm(. , .)` | `p_alpha = dnorm(. , .)` |
+|Prior | $\beta \sim Normal(.,.)$ | `beta ~ dnorm(. , .)` | `p_beta = dnorm(. , .)` |
 |Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma = ...` |
 
 <br/>
@@ -72,9 +72,9 @@ The posterior distribution is calculated as follows:
 
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
-\frac{\prod_i \overset{Likelihood}{Normal(t_i|\alpha,\sigma)} \cdot 
+\frac{\prod_i \overset{Likelihood}{Normal(t_i|\mu_i,\sigma)} \cdot 
               \overset{Prior}{Normal(\alpha|...,...)Normal(\beta|...,...)YourDist(\sigma|...)}}
-{\overset{Evidence}{\int\int\int \prod_i Normal(a_i|\alpha,\sigma) \cdot Normal(\mu|...,...)Normal(\beta|...,...)YourDist(\sigma|...)d\alpha d\beta d\sigma}}
+{\overset{Evidence}{\int\int\int \prod_i Normal(t_i|\mu_i,\sigma) \cdot Normal(\alpha|...,...)Normal(\beta|...,...)YourDist(\sigma|...)d\alpha d\beta d\sigma}}
 $$
 
 <br/>
@@ -116,7 +116,7 @@ And now calculate the joint probability of all recorded ages. (Read the help for
 Now calculate the prior probability of the the parameters `alpha = -1`, `beta = .1` and `sigma = 3`. You should use the prior distributions you specified above for this.
 
 ```{r}
-# Prior probability for alpha = 1
+# Prior probability for alpha = -1
 
 # Prior probability for beta = .1
 

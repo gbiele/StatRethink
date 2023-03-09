@@ -1,7 +1,7 @@
 ---
 title: "BayesGrid"
 author: "GB"
-date: "02.03.2023"
+date: "06.03.2023"
 output: html_document
 ---
 
@@ -56,15 +56,45 @@ The table shows the incomplete model expressed with equations, `quap` code fragm
 
 | What | Notation | quap code | R code |
 |---|---|---|---|
-|Likelihood | $t_i \sim Normal(\mu_i,\sigma)$ | `time ~ dnorm(mu, sigma)` | `L[i] = dnorm(time[i], mu[i], sigma)` |
-|linear model | $\mu = \alpha + \beta\textrm{age}$ | `mu[i] <- b*age[i]` | `mu[i] <- b*age[i]` |
-|Prior | $\alpha \sim Normal(.,.)$ | `alpha ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
-|Prior | $\beta \sim Normal(.,.)$ | `beta ~ dnorm(. , .)` | `p_beta = dnorm(. , ., .)` |
-|Prior | $\sigma \sim \dots$ | `sigma ~ ...` | `p_sigma = ...` |
+|Likelihood | $t_i \sim Normal(\mu_i,\sigma)$ | `time ~ dnorm(mu, sigma)` | `L = prod(dnorm(time, mu, sigma))` |
+|linear model | $\mu = \alpha + \beta\textrm{age.c}$ | `mu[i] <- alpha + beta*age.c[i]` | `mu[i] <- alpha + b*age.c[i]` |
+|Prior | $\alpha \sim Normal(0,3)$ | `alpha ~ dnorm(0, 3)` | `p_alpha = dnorm(alpha, 0, 3)` |
+|Prior | $\beta \sim Normal(0,2)$ | `beta ~ dnorm(0, 2)` | `p_beta = dnorm(beta, 0, 2)` |
+|Prior | $\sigma \sim halfNormal(0,2)$ | `sigma ~ dnorm(0, 2)` | `p_sigma = dnorm(sigma, 0, 2)` |
+
+Because `quap` knows that sigma has to be positive, specifying `sigma ~ dnorm(0, 2)` implicitly means that a half-Normal distribution is used.
 
 <br/>
 
 Your first task is to complete the model to do this. Please add the missing information in the table above. You need to add the parameter values to the prior for $\mu$ and you have to choose a distribution and parameter(s) for the standard deviation $\sigma$.
+
+### The prior predictive distribution
+
+To understand the implications of our priors, we simulate arrival times given the observed ages and paramter values drawn from the pior:
+
+```{r}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+for (k in 1:50) {
+  alpha = rnorm(1,0,3)
+  beta = rnorm(1,0,2)
+  sigma = abs(rnorm(1,0,2))
+  
+  mu = alpha + my_data$age.c*beta
+  predicted = rnorm(
+    n = nrow(my_data),
+    mean = mu,
+    sd = sigma)
+  hist(predicted, 
+       breaks = seq(-60,60,2),
+       ylim = c(0,35),
+       xlim = c(-50,50),
+       add = ifelse(k==1,FALSE,TRUE),
+       col = adjustcolor("grey",alpha = .15), border = NA,
+       main = "Posterior predictions")
+}
+```
+
+It is OK that the prior predictive distribution allows people to come very early or very late. What is important is that the arrival times at the start of the lecture have the highest probability and that people come minutes early or late and not hours or days.
 
 ### The posterior disribution
 
@@ -72,9 +102,9 @@ The posterior distribution is calculated as follows:
 
 $$
 \overset{Posterior}{P(\mu,\sigma|w)} = 
-\frac{\prod_i \overset{Likelihood}{Normal(t_i|\alpha,\sigma)} \cdot 
-              \overset{Prior}{Normal(\alpha|...,...)Normal(\beta|...,...)YourDist(\sigma|...)}}
-{\overset{Evidence}{\int\int\int \prod_i Normal(a_i|\alpha,\sigma) \cdot Normal(\mu|...,...)Normal(\beta|...,...)YourDist(\sigma|...)d\alpha d\beta d\sigma}}
+\frac{\prod_i \overset{Likelihood}{Normal(t_i|\mu_i,\sigma)} \cdot 
+              \overset{Prior}{Normal(\alpha|0,3)Normal(\beta|0,2)Normal(\sigma|0,2)}}
+{\overset{Evidence}{\int\int\int \prod_i Normal(t_i|\mu_i,\sigma) \cdot Normal(\alpha|0,3)Normal(\beta|0,2)Normal(\sigma|0,2)d\alpha d\beta d\sigma}}
 $$
 
 <br/>
@@ -94,7 +124,9 @@ If you are uncertain about how to proceed, check the table above.
 
 ```{r}
 # Likelihood for the first data point
-
+my_data$age.c = my_data$age - mean(my_data$age)
+mu = -1 + my_data$age.c[1]*.1
+dnorm(my_data$time[1],mu,2)
 ```
 
 
@@ -102,40 +134,43 @@ Now calculate the probability of time given age and the parameter values for eac
 
 ```{r}
 # Likelihoods for all individual data points
-
+mu = -1 + my_data$age.c*.1
+L = dnorm(my_data$time,mu,2)
+L
 ```
 
 And now calculate the joint probability of all recorded ages. (Read the help for the `prod` function, i.e. type `?prod`in the console)
 
 ```{r}
 # Joint likelihood for all individual data points
-
+L = prod(L)
+L
 ```
 
 
 Now calculate the prior probability of the the parameters `alpha = -1`, `beta = .1` and `sigma = 3`. You should use the prior distributions you specified above for this.
 
 ```{r}
-# Prior probability for alpha = 1
-
+# Prior probability for alpha = -1
+dnorm(1,0,3)
 # Prior probability for beta = .1
-
+dnorm(.1,0,2)
 # Prior probability for sigma = 3
-
+dnorm(3,0,2)
 ```
 
 And the joint prior probability for `alpha = -1`, `beta = .1` and `sigma = 3`.
 ```{r}
 # Joint prior probability for alpha = -1, beta = .1 and sigma = 3
-
+P = dnorm(1,0,3)*dnorm(.1,0,2)*dnorm(3,0,2)
 ```
 
-By putting the code you wrote until now, you should be able to calculate the numerator of the equation above, i.e. likelihood times prior probability (density), for parameters `alpha = -1`, `beta = .1` and `sigma = 3`.
+By putting together the code you wrote until now, you should be able to calculate the numerator of the equation above, i.e. likelihood times prior probability (density), for the parameter values `alpha = -1`, `beta = .1` and `sigma = 3`.
 
 ```{r}
 # Joint probability of data and parameters for alpha = -1, beta = .1 and sigma = 3.
 # given the prior distributions for alpha, beta and sigma
-
+JP = L*P
 ```
 
 # Grid approximation
@@ -150,7 +185,7 @@ First set up the grid. You can use the the code example below. Feel free to chan
 # expand.grid produces all combinations 
 # of the N (here 3) variables submitted
 # and puts them in a matrix with N columns
-grid_resolution = 30
+grid_resolution = 51
 params = 
   expand.grid(
     alpha = seq(-3, 3, length.out = grid_resolution),
@@ -162,36 +197,87 @@ head(params)
 tail(params)
 ```
 
+### Unnormalized posterior (relative plausibility)
 
 Now you can calculate the unnormalized posterior for all parameter combinations.  It is easiest to use a for loops for this.
 
-Store the result for each parameter combination in the the variable `UP`. Set "eval = TRUE" at the beginning of the code block, so tha the code is executed when you knit the document!
+Store the result for each parameter combination in the the variable `UP`.
 
-```{r, eval=TRUE}
-# Here comes your code in which you calculate the 'likelihood * prior expression'
-# (see the formula or your code above) for each combination of parameter values.
+```{r}
 params$UP = NA
 for (k in 1:nrow(params)) {
-  alpha = params$alpha[k]
-  beta = params$beta[k]
-  sigma = params$sigma[k]
-  mu = alpha + beta*my_data$age.c
-  params$UP[k] = prod(dnorm(my_data$time,mu,sigma)*dnorm(alpha,0,3)*dnorm(beta,0,2)*dnorm(sigma,0,2))
+  a = params$alpha[k]
+  b = params$beta[k]
+  sig = params$sigma[k]
+  mu = a + b*my_data$age.c
+  P_params = dnorm(a,0,3)*dnorm(b,0,2)*dnorm(sig,0,2)
+  likelihood = prod(dnorm(my_data$time,mu,sig))
+  params$UP[k] = P_params*likelihood
 }
 ```
+
 
 
 ### Calculate the evidence
 
 Use the data.frame `params` that you just created, specifically one column in it, to calculate the _evidence_. If you are uncertain, check the equation above
 
+The following figure shows the unnormalized posterior for a part of our grid. Each panel shows a part of the grid for selected values of sigma and the colors show the value of the unnormalized posterior (UP) at the grid point defined by the $\alpha$, $\beta$ and $\sigma$ parameter values. The evidence is the sum of all unnormalized posterior values.
+
+
+```{r, echo = F, warning=FALSE}
+library(data.table)
+library(ggplot2)
+sx = unique(params$sigma)[seq(26,50,length.out = 4)]
+params.dt = data.table(params)[sigma %in% sx]
+ggplot(
+  params.dt,
+  aes(x = alpha, y = beta, fill = UP)) + 
+  geom_raster() + 
+  facet_wrap(~sigma) + 
+  theme_bw() + 
+  theme(strip.background = element_blank()) 
+```
+
+
 ```{r, eval = TRUE}
 # Calculate the evidence from the unnormalized posterior
 evidence = sum(params$UP)
 ```
 
-
 ### Normalize to get a proper posterior distribution.
+
+```{r, eval=FALSE, echo = FALSE}
+grid_resolution = 101
+params = 
+  expand.grid(
+    alpha = seq(-3, 3, length.out = grid_resolution),
+    beta = seq(-1, 1, length.out = grid_resolution),
+    sigma = seq(.01, 3, length.out = grid_resolution)
+  )
+params = data.frame(params)
+
+t = my_data$time
+a = my_data$age.c
+px = function(alpha,beta, sigma) {
+  return(
+     exp(sum(dnorm(t,a*beta+alpha,sigma, log = TRUE)+
+               dnorm(alpha,0,3, log = TRUE)+
+               dnorm(beta,0,2, log = TRUE)+
+               dnorm(sigma,0,2, log = TRUE)))
+  )
+}
+
+for (k in 1:nrow(params)) {
+  params$UP[k] = px(params$alpha[k],params$beta[k],sigma = params$sigma[k])
+}
+save(params, file = "Chapter4/params.Rdata")
+```
+
+```{r, echo=FALSE}
+load("params.Rdata")
+```
+
 
 Now you can use the evidence to add a one more column to the `params` data frame, let's call it `PP`, which has the posterior probability for each parameter combination.
 ```{r eval = TRUE}
@@ -204,10 +290,8 @@ params$PP = params$UP/evidence
 ```{r}
 # We are sampling indexes and then 
 # use indexes to get samples
-
 post.idx = sample(1:nrow(params), 10000, prob = params$PP, replace = TRUE)
 posterior = params[post.idx, c("alpha","beta","sigma")]
-
 ```
 
 
@@ -218,11 +302,11 @@ Here, you should use the `sample` command to generate a posterior distribution f
 
 ```{r}
 ## marginal posterior distribution for alpha
-hist(posterior$alpha)
+hist(posterior$alpha, breaks = 100)
 ## marginal posterior distribution for beta
-hist(posterior$beta)
+hist(posterior$beta, breaks = 100)
 ## marginal posterior distribution for sigma
-hist(posterior$sigma)
+hist(posterior$sigma, breaks = 100)
 ```
 
 
@@ -230,18 +314,93 @@ If you find that these posteriors look very coarse, you can go back and increase
 the value for `grid_resolution` but things might get very slow if you go above 50.
 
 Add some code here to get the means and 95% HPDIs for the three parameters.
-```{r}
-
+```{r, message=FALSE, warning=FALSE}
+library(rethinking)
+mean(posterior$alpha)
+HPDI(posterior$alpha,prob = c(.9))
+mean(posterior$beta)
+HPDI(posterior$beta,prob = c(.9))
+mean(posterior$sigma)
+HPDI(posterior$sigma,prob = c(.9))
 ```
-
 
 Now make a 2-D plots of the posterior. Do you see if some of the parameters are correlated?
 
-```{r}
-# use smoothScatter to plot the joint distribution
-smoothScatter(posterior$alpha, posterior$beta)
-smoothScatter(posterior$alpha, posterior$sigma)
-smoothScatter(posterior$beta, posterior$sigma)
+```{r, echo = FALSE, eval=FALSE}
+grid_resolution = 100
+params = 
+  expand.grid(
+    alpha = seq(-3, 0, length.out = grid_resolution),
+    beta = seq(-1, 0, length.out = grid_resolution),
+    sigma = seq(1, 2.25, length.out = grid_resolution)
+  )
+params$UP = NA
+
+t = my_data$time
+a = my_data$age.c
+px = function(alpha,beta, sigma) {
+  return(
+     prod(dnorm(t,a*beta+alpha,sigma)*dnorm(alpha,0,3)*dnorm(beta,0,2)*dnorm(sigma,0,2))
+  )
+}
+
+for (k in 1:nrow(params)) {
+  params$UP[k] = px(params$alpha[k],params$beta[k],sigma = params$sigma[k])
+}
+save(params, file = "Chapter4/params_fine.Rdata")
 ```
 
+```{r, echo = FALSE}
+load("params_fine.Rdata")
+evidence = sum(params$UP)
+params$PP = params$UP/evidence
+post.idx = sample(1:nrow(params), 10000, prob = params$PP, replace = TRUE)
+posterior = params[post.idx, c("alpha","beta","sigma")]
+```
+
+
+
+```{r}
+# use smoothScatter to plot the joint distribution
+smoothScatter(posterior$alpha, posterior$beta, nrpoints = 0)
+smoothScatter(posterior$alpha, posterior$sigma, nrpoints = 0)
+smoothScatter(posterior$beta, posterior$sigma, nrpoints = 0)
+```
+
+```{r, message=FALSE}
+library(magrittr)
+library(ggplot2)
+posterior %>% 
+  ggplot(aes(x = alpha, y = beta)) +
+  geom_density_2d_filled() +
+    geom_smooth(method = "lm")
+posterior %>% 
+    ggplot(aes(x = alpha, y = sigma)) +
+    geom_density_2d_filled() +
+    geom_smooth(method = "lm")
+posterior %>% 
+    ggplot(aes(x = beta, y = sigma)) +
+    geom_density_2d_filled() +
+    geom_smooth(method = "lm")
+```
+```{r, warning=FALSE}
+library(plot3D)
+
+##  Create cuts:
+alpha_c <- cut(posterior$alpha, 20)
+beta_c <- cut(posterior$beta, 20)
+sigma_c <- cut(posterior$sigma, 20)
+
+##  Calculate joint counts at cut levels:
+z <- table(alpha_c, beta_c)
+
+##  Plot as a 2D heatmap:
+image2D(z=z, border="black")
+```
+
+```{r}
+##  Plot as a 3D histogram:
+hist3D(z=z, border="black")
+
+```
 
