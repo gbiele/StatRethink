@@ -10,8 +10,6 @@ output:
   tufte::tufte_book:
     citation_package: natbib
     latex_engine: pdflatex
-bibliography: skeleton.bib
-link-citations: yes
 ---
 
 ```{r setup, include=FALSE}
