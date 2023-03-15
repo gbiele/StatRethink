@@ -7,7 +7,7 @@ animate_residulas = function(m.B_D,d) {
     png(paste0("animation/anim",sprintf("%03d", k), ".png"),
         width = 1000, height = 900,pointsize = 40)
     par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.02, bg = "white")
-    plot(0,type = "n", ylim = c(-3,3), xlim = range(x),
+    plot(0,type = "n", ylim = c(-3,4), xlim = range(x),
          ylab = "",
          xlab = "D")
     if(plot.abline == T) {
@@ -89,7 +89,7 @@ animate_residulas = function(m.B_D,d) {
   }
   
   
-  system(glue::glue("ffmpeg -y -pattern_type sequence -i animation/anim%03d.png -c:v libx264 -pix_fmt yuv1000p residuals.mp4"))
+  system(glue::glue("ffmpeg -y -pattern_type sequence -i animation/anim%03d.png -c:v libx264 -pix_fmt yuv420p residuals.mp4"))
 }
 
   

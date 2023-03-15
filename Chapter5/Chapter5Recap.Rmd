@@ -27,9 +27,9 @@ pre{
 }
 /* Headers */
 h1{
-    font-size: 24pt;
+    font-size: 22pt;
   }
-h1,h2{
+h2{
     font-size: 20pt;
   }
 h3,h4,h5,h6{
@@ -42,6 +42,7 @@ h3,h4,h5,h6{
   top: 0;
   width: 300px;
   height: 100%;
+  font-size: 12pt;
   overflow:auto;
 }
 ```
@@ -313,18 +314,18 @@ This is harder than it might seem, because it is very difficult to show that a r
 
 If the data come from dag2, $\beta_B$ and $\beta_C$ should be (close to) zero.
 
-Which regression models can you estimate to test dag3?
+Which of the two regression models above can you estimate to test dag3?
 
 
 # Multiple regression
 
 ## Extending the linear model
 
-To go from a simple to a multiple linear regression, we simply add a predictor variable to the linear predictor:
+To go from a univariate to a multiple linear regression, we simply add a predictor variable to the linear predictor:
 
 | What | Notation | quap R-code |
 |---|---|---|
-|Simple linear model | $\mu_i = \alpha + \beta_B B_i$ | `mu[i] <- a + bB*B[i]`|
+|Univariate linear model | $\mu_i = \alpha + \beta_B B_i$ | `mu[i] <- a + bB*B[i]`|
 |Multiple linear model | $\mu_i = \alpha + \beta_B B_i + \beta_D D_i$ | `mu[i] <- a + bB*B[i] + bD*D[i]`|
 
 Accordingly, the `quap` model for the multiple linear regression looks a lot like the one for simple linear regression.
@@ -478,12 +479,12 @@ if(!file.exists("residuals.mp4")) {
 ```
 
 <center>
-<video autoplay controls loop>
+<video autoplay controls loop width="500" height="450">
 <source src="residuals.mp4" type="video/mp4">
 </video>
 </center>
 
-Now we can use $\small B_R$ as a predictor of $\small C$ and plot the regression line:
+Now we can use $\small B_R$ as a predictor of $\small C$:
 
 ```{r class.source = 'fold-show'}
 d$BR =  BR
@@ -567,7 +568,7 @@ plot(mu_mean[idx]~-d$C[idx],
      ylim = range(C_PI[,idx]))
 # regression line for perfect coincidence
 # of observed and predicted values
-abline( a=0,b=1,lty=2)
+abline( a=0,b=1,lty=2, col = "red")
 # add credible intervals to predictions
 for (i in idx) 
   lines(rep(d$C[i],2),
@@ -583,7 +584,7 @@ plot(mu_mean[idx]~-d$C[idx],
      ylim = range(C_PI[,idx]))
 # regression line for perfect coincidence
 # of observed and predicted values
-abline( a=0,b=1,lty=2)
+abline( a=0,b=1,lty=2, col = "red")
 # add credible intervals to predictions
 for (i in idx) 
   lines(rep(d$C[i],2),
@@ -622,7 +623,7 @@ plot(mu_mean[idx]~-d2$C[idx],
 
 # regression line for perfect coincidence
 # of observed and predicted values
-abline( a=0,b=1,lty=2)
+abline(a=0,b=1,lty=2, col = "red")
 # add credible intervals to predictions
 for (i in idx) 
   lines(rep(d2$C[i],2),
@@ -638,7 +639,7 @@ plot(mu_mean[idx]~-d2$C[idx],
      ylim = range(C_PI[,idx]))
 # regression line for perfect coincidence
 # of observed and predicted values
-abline( a=0,b=1,lty=2)
+abline(a=0,b=1,lty=2, col = "red")
 # add credible intervals to predictions
 for (i in idx) 
   lines(rep(d2$C[i],2),
@@ -657,7 +658,7 @@ Let's assume you are thinking about an intervention to improve child reading abi
 This can be calculated with counterfactuals, so called because they calculate outcomes under conditions that were actually not observed. Counterfactual outcomes are computed according to following rules:
 
 - Set the manipulated variable to chosen values (some of which were not realized in the data). This makes the manipulated variable independent of all other variables in the DAG/model, it makes it "exogenous".
-- Using coefficients from you model(s), calculate all down stream effects of the manipulated variable on the outcome. This includes direct and indirect effects.
+- Using coefficients from you model(s), simulate all down stream effects of the manipulated variable on the outcome. This includes direct and indirect effects.
 
 Here is as a refresher our DAG:
 
@@ -665,7 +666,7 @@ Here is as a refresher our DAG:
 drawdag(dag1, cex = 0.5, lwd = 1)
 ```
 
-If we want to manipulate $\small D$ and examine the effect on $\small C$, we have to calculate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need regression coefficients for all these paths. With `quap` we can estimate them in one model:
+If we want to manipulate $\small D$ and examine the effect on $\small C$, we have to simulate the resulting direct effect $\small D \rightarrow C$ and the indirect effect $\small D \rightarrow B \rightarrow C$. In order to do this, we need regression coefficients for all these paths. With `quap` we can estimate them in one model:
 
 ```{r class.source = 'fold-show'}
 m.BC <-quap(
@@ -726,7 +727,7 @@ shade(PIs,
 mtext( "Total counterfactual effect of D on C")
 ```
 
-This is a large effect. Next we calculate by how many sd child reading gets better if we go from increase daily reading of parents from 0 to 1 (which is also a 1 sd increase because the sd of parental reading is 1.).
+This is a large effect. Next we calculate by how many standard deviations child reading gets better if we increase daily reading of parents from 0 to 1 (which is also a 1 sd increase because the sd of parental reading is 1.).
 
 ```{r class.source = 'fold-show'}
 sim2_dat = data.frame(D = c(0,1))
@@ -742,7 +743,7 @@ Now we look at counterfactuals for $\small B$. We calculate the effect of $\smal
 sim_datB = data.frame(
   B=seq(from=-2,to=2,length.out=10),
   D=0)
-sB  = rethinking::sim(m.BC,
+sB = rethinking::sim(m.BC,
                       data=sim_datB,
                       vars="C")
 ```
@@ -828,7 +829,7 @@ par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 pairs(d)
 ```
 
-This plot does not show a clear relationship between stress and satisfaction! The reason is that decision authority and stress are positively related, but also have opposite effects on job satisfaction.
+This plot does not show a clear relationship between decision authority (A) and job satisfaction (W)! The reason is that decision authority and stress are positively related, but also have opposite effects on job satisfaction.
 
 ## A naive analysis
 
@@ -878,7 +879,7 @@ plot( mu.mean~S_seq,data=d,'l', col = "blue",
 shade( mu.PI, S_seq, col = adjustcolor("blue", alpha = .2))
 ```
 
-Let's check again if the model we used was reasonable. Given that we assumed that $\small A$ and $\small S$ are independent, this is that DAG that would justify the naive analysis: 
+Let's check again if the model we used was reasonable. Given that we assumed that $\small A$ and $\small S$ are independent, this is the DAG that would justify the naive analysis: 
 
 ```{r fig.height=1.3, fig.width=1.5, fig.align = 'center'}
 naive.dag = dagitty(
@@ -960,7 +961,7 @@ plot(coeftab(m.A,m.S,m.AS),pars=c("bA","bS"))
 ```
 
 
-Next we use the `link` function from the `rethinking` package to calculate values $\small W$ for varying $\small A$ while we fix $\small S = 0$. We plot counterfactual effect with a solid line and add for comparison the effect from the unadjusted model (`m.A`) with a dotted line.
+Next we use the `link` function from the `rethinking` package to calculate values $\small W$ for varying $\small A$ while we fix $\small S = 0$. We plot the counterfactual effect with a solid line and add for comparison the effect from the unadjusted model (`m.A`) with a dotted line.
 
 ```{r, fig.height=3.5, fig.width=4, out.width="50%"}
 par(mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
