@@ -87,15 +87,18 @@ All graphs are made of nodes and edges. What is special about directed acyclic g
 
 # Bias
 
-One important use case for DAGs is to determine which variables need to be involved if one wants to estimate the causal effect of one variable on the other. The underlying message here is that is we want to understand (causal) relationships between variables, we should not choose statistical models based on goodness of fit or related model selection criteria like AIC, BIC, RMSEA, TIL ..., but based on our knowledge about the about the data generating process. This knowledge can be simply domain knowledge, but it might also be be gained from data by investigating implied conditional independencies.
+One important use case for DAGs is to determine which variables need to be involved if one wants to estimate the causal effect of one variable on the other. The underlying message here is that if we want to understand (causal) relationships between variables, we should not choose adjustement variables based on goodness of fit or related model selection criteria like AIC, BIC, RMSEA, TIL ..., but based on our knowledge about the about the data generating process. This knowledge can be simply domain knowledge, but it might also be be gained from data by investigating implied conditional independencies.
 
 Due to it's reliance on observational data, the epidemiological literature on bias is much richer than the psychological literature. Here, **bias means that an association or causal effect we estimate from data ($\hat y$) diverges from the true association or causal effect that we are interested in ($y$), that is $bias = \hat y - y$ **. 
 
-Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using a non-random sub-set of the data. Here are the most well-known biases:
+Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using a non-random sub-set of the population data. Here are the most well-known biases:
 
 - confounding bias from missing adjustment for a common cause of exposure and outcomes 
+  - _fork_
 - bias from adjustment of a mediator (post treatment variables)
+  - _pipe_
 - selection bias from conditioning on a collider or it's decedent.
+  - _collider_
 
 
 # Confounding bias: Common cause of exposure and outcome
@@ -170,9 +173,9 @@ drawmydag(C_dag)
 plot_path(x,ys,length(x))
 ```
 
-Confounding bias refers to the situation where we estimate the wrong relationship between two variables because we omit a common cause of the two variables from the regression model.
+Confounding bias refers to the situation where we estimate the wrong association between two variables because we omit a common cause of the two variables from the regression model.
 
-```{r fig.width=5, fig.height=5, fig.align = 'center'}
+```{r fig.width=4, fig.height=4, fig.align = 'center'}
 set.seed(12345)
 N = 1000
 S = rbinom(N,1,.5)
