@@ -47,7 +47,7 @@ h3,h4,h5,h6{
 ```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = 'center')
 library(plotrix)
 library(DescTools)
 library(rethinking)
@@ -175,7 +175,8 @@ plot_path(x,ys,length(x))
 
 Confounding bias refers to the situation where we estimate the wrong association between two variables because we omit a common cause of the two variables from the regression model.
 
-```{r fig.width=4, fig.height=4, fig.align = 'center'}
+```{r fig.width=4, fig.height=4, fig.align = 'center', out.width="50%"}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 set.seed(12345)
 N = 1000
 S = rbinom(N,1,.5)
@@ -203,8 +204,8 @@ plot_path(x,ys,160, arrow.col = "green3")
 
 Previously, we saw that we can think of the regression coefficient for $\small B$ after adjustment for $\small S$ as the coefficient we obtain if we use the residuals $\small B_r$ from the model $\small B_i \sim Normal(\alpha + \beta_S S_i, \sigma)$ as predictor:
 
-```{r, fig.width=10, fig.height=5}
-par(mfrow = c(1,2))
+```{r, fig.width=8, fig.height=4}
+par(mfrow = c(1,2), mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 plot(D ~ B, col = 2-S)
 abline(lm(D~B))
 abline(coef(lm(D~B+S))[1:2], lwd = 2, col = "green3")
@@ -217,7 +218,8 @@ title(expression(D%~%normal(alpha + beta[B[R]]*B[R],sigma)))
 
 An alternative view point is that adjustment amounts to _conditioning_ the association between $\small B$ and $\small D$ on sex $\small S$, that is we estimate the association for the two sex groups separately:
 
-```{r fig.width=5, fig.height=5, fig.align = 'center'}
+```{r fig.width=4, fig.height=4, out.width="50%"}
+par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 plot(D ~ B, col = 2-S)
 abline(lm(D[S == 0]~B[S == 0]), col = 2)
 abline(lm(D[S == 1]~B[S == 1]), col = 1)
@@ -325,8 +327,8 @@ flow_dag(M_dag_A,
 
 We can regress $\small W$ on $\small T$ only and on $\small T$ and $\small W$ to illustrate how the total estimated effect becomes smaller if one adjusts for the mediator.
 
-```{r fig.width=10, fig.height=5}
-par(mfrow = c(1,2))
+```{r fig.width=8, fig.height=4}
+par(mfrow = c(1,2),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 T = rnorm(N)
 M = T + rnorm(N)
 W = 0.125*T + 0.5*M + rnorm(N)
@@ -343,10 +345,9 @@ title(expression(W%~%normal(alpha + beta[T]*T + beta[M]*M,sigma)))
 
 As before, we display the effect of adjusting for $\small M$ by regressing on the residuals of T (the plot shows only a sub/set of the data points):
 
-```{r, fig.width=10, fig.height=5}
+```{r, fig.width=8, fig.height=4}
 T_R = residuals(lm(T~M))
-
-par(mfrow = c(1,2))
+par(mfrow = c(1,2),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 idx = sample(N,200)
 plot(T[idx],W[idx], col = "blue", ylab = "W", xlab = expression(T  %->% T[R]), pch = 16)
 points(T_R[idx],W[idx], col = grayblue(100)[51])
@@ -470,14 +471,14 @@ flow_dag(Cl_dag,
 
 From this, we expect that if we simulate data from the DAG we described, we should find an association between $\small E$ and $\small I$ in the BUP sample, even when they are independent in the population. Let's check this:
 
-```{r, fig.width=10, fig.height=5}
+```{r, fig.width=8, fig.height=4}
 set.seed(12345)
 I = rnorm(N)
 E = rnorm(N)
 B = (I + E) > rnorm(N,mean = 2)
 I_s = I[B == TRUE]
 E_s = E[B == TRUE]
-par(mfrow = c(1,2))
+par(mfrow = c(1,2),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 
 plot(I_s ~ E_s, 
      xlim = range(I),
