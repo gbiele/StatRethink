@@ -29,7 +29,7 @@ animate_residulas = function(m.B_D,d) {
   }
   
   x = d$D[idx]
-  y = d$C[idx]
+  y = d$B[idx]
   
   coefs = coef(m.B_D)
   a = coefs[1]
