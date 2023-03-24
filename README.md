@@ -20,5 +20,5 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 5. [Multiple Regression and intro to DAGs](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter5/Chapter5Recap.html)
 
-6. [Forks, mediators & colliders: Chosing covariates with DAGs](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter5/Chapter6Recap.html)
+6. [Forks, mediators & colliders: Chosing covariates with DAGs](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter6/Chapter6Recap.html)
 
