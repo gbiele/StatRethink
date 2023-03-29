@@ -1,7 +1,7 @@
 ---
 title: "Chapter 7: Recap"
 author: "Guido Biele"
-date: "27.04.2022"
+date: "29.03.2023"
 output:
   html_document: 
     mathjax: default
@@ -45,8 +45,24 @@ h3,h4,h5,h6{
 }
 ```
 
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
+
+
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = "center")
 library(rethinking)
 library(magrittr)
 library(knitr)
@@ -61,7 +77,7 @@ par(mar=c(3,3,0,1), mgp=c(1,.5,0), tck=-.01)
 
 One important goal of statistical inference is to **learn about the data generating process**. In the simple case, this can simply mean to find out if a certain independent variable influences our outcome of interest. If we do a randomized experiment, we can just _compare the outcomes conditional on different values of the independent variable_ to find out if the independent variable is part of the data generating process.
 
-Keeping with our experiment example, we can also _describe two alternative statistical models_ (e.g. using regression models) that describe the data generating process, where one model assumes an effect of the independent variable, but the other does not. Then we could _compare the two models_ and declare the model that fits the data better to be the winner. The problem with this approach is that if the addition of one independent variable is the only difference between the two models, the **model with more variables will always fit the data better**, even if it is not the correct model.
+Keeping with our experiment example, we can also _describe two alternative statistical models_ (e.g. using regression models) that describe the data generating process, where one model assumes an effect of the independent variable, but the other does not. Then we can _compare the two models_ and declare the model that fits the data better to be the winner. The problem with this approach is that if the addition of one independent variable is the only difference between the two models, the **model with more variables will always fit the data better**, even if it is not the correct model.
 
 Hence, we need more sophisticated approaches to determine which of two models better capture the data generating process.
 
@@ -105,7 +121,7 @@ plot_xy(x,y,mu)
 ```
 
 However, we only have a sample of `N = 15` participants to learn about this relationship.
-The following figure shows different random samples in rows, and predictions of regression models of increasing complexity, from a simple linear model $\small \mu = \alpha + \beta x$ to a polynomial of the 4th order $\small \mu = \alpha + \beta_1 x + \beta_2 x^2 + \beta_3 x^3 + \beta_4 x^4$,  in columns.
+The following figure shows different random samples in rows, and predictions of regression models of increasing complexity, from a simple linear model $\small \mu = \alpha + \beta x$ in column 1 to a polynomial of the 4th order $\small \mu = \alpha + \beta_1 x + \beta_2 x^2 + \beta_3 x^3 + \beta_4 x^4$  in column 4.
 The red lines show the true relationship and the blue lines show the learned relationships.
 
 ```{r}
@@ -158,8 +174,7 @@ The variation in the inferred associations between different samples is now smal
 
 As an aside, we can also see that a polynomial model has difficulties in capturing the true non-linear and monotonic relationship, which was generated with a spline model.
 
-
-The goal of model comparison is then to identify the model that best describes the data generating process, i.e. that does suffer the least from over of underfitting.
+__The goal of model comparison is then to identify the model that best describes the data generating process, i.e. that does suffer the least from over- or underfitting.__
 
 # Evaluating accuracy
 
@@ -248,23 +263,47 @@ joint_prob.weeks - exp(joint_log_prob.weeks)
 
 # Information, uncertainty and entropy
 
-The concepts of --information and uncertainty are tightly related: The more information we have, the less uncertain we are.
+The concepts of information and uncertainty are tightly related: The more information we have, the less uncertain we are.
 
 Measures of information or uncertainty should have following properties:
 
-- continuity
-- increases as number of possible events increases
-- additivity
+- __continuity__ (no step function)
+- __increases as number of possible events increases__
+- __additivity__ (how probabilities are presented is irrelevant)
 
 ## Entropy
 
-We'll entropy to display these properties. The entropy of a probabilities encoded in the vector $\small p$ with length $\small n$ is defined as:
+Paraphrasing Wikipedia: 
+
+> Entropy quantifies the amount of uncertainty involved in the outcome of a random process. For example, revealing the outcome of a fair coin flip (with two equally likely outcomes) provides less information (lower entropy) than revealing the outcome from a roll of a die (with six equally likely outcomes).
+
+
+### Why entropy?
+
+- we want to learn about random (data generating) processes that produced observed data
+- _entropy quantifies uncertainty_ about data from random processes
+  - even true DGPs still have _uncertainty_
+- if a candidate model has the same _uncertainty_ as the DGP, it is the DGP
+  - motivates to measure the deviance in _uncertainty_ between candidate models & DGP
+- we don't know the DGP, but we can compare the relative _uncertainty_ associated with two candidate models
+
+Entropy is our measure of uncertainty!
+
+### Calculating entropy
+
+To show how to calculate entropy we are starting with 
+
+1. $\small n$ possible events, each with an assigned a probability, so that all probabilities sum to 1. 
+2. These probabilities are stored in a vector $\small p$
+3. Then, entropy is calculated as
+
 
 $$
-H(p) = -E\;log(p_i) = \sum_{i=1}^{n} p_i log(p_i)
+H(p) = \mathbb{E}[-log(p_i)] = -\sum_{i=1}^{n} p_i log(p_i)
 $$
 
-Here, $\small E$ is the expectation or the weighted mean, where the weights are given by the probability for the events.
+Here, $\small H(p)$ is the information contained in the vector $\small p$ with occurrence probabilities and 
+$\small \mathbb{E}$ is the expectation or the weighted mean, where the weights are given by the probability for the events.
 
 In `R` code we can write:
 
@@ -274,11 +313,25 @@ H = function(p) -sum(p*log(p))
 
 Note that if one $\small p_i = 1$ the sum of all other $\small p_i$s must be zero and entropy / uncertainty becomes zero.
 
+To come back to the Wikipedia example, here is the entropy for a coin toss:
+
+```{r class.source = "fold-show"}
+H(rep(1,2)/2)
+```
+
+and here is the entropy for a roll of a die:
+
+```{r class.source = "fold-show"}
+H(rep(1,6)/6)
+```
+
+<!-- __Why should we be interested in entropy? Because we should prefer models where observing outcomes reduces uncertainty less over models where learning outcomes reduces uncertainty more. Intuitively, we know more before observing an outcome if oberving this outcome reduces uncertainty less.__ -->
+
 ## Continuity
 
 Now lets look at the simple case of only two possible events. The bottom panel in the following figure shows on the x-axis the probability of the first event $\small p_1$ and on the y axis the entropy:
 
-```{r, fig.width=4, fig.height=4}
+```{r, fig.width=4, fig.height=4, out.width="50%"}
 p1 = seq(.01,.99, length.out = 99)
 entropy = do.call(
   c,
@@ -291,8 +344,8 @@ plot(0,type = "n", xlim = c(0,1), ylim = c(0,1),
      ylab = expression(p[1]+p[2]))
 polygon(x = c(0,1,1,0), y = c(0,0,1,0), col = "blue")
 polygon(x = c(0,1,0,0), y = c(0,1,1,0), col = "red")
-text(.75,.25, expression(p[1]), cex = 2, col = "white")
-text(.25,.75, expression(p[2]), cex = 2, col = "white")
+text(.75,.25, expression(p["i=1"]), cex = 2, col = "white")
+text(.25,.75, expression(p["i=2"]), cex = 2, col = "white")
 par(mar=c(3,3,1,1), mgp=c(1.25,.3,0), tck=-.01)
 plot(p1,entropy, type = 'l', xlab = expression(p[1]))
 ```
@@ -301,11 +354,11 @@ The figure shows that when we have two events and assign them equal probability,
 
 All changes in entropy are continuous in changes of $\small p_1$, i.e. they do not have a step function.
 
-## Increasing in number of events
+## Increasing in $\small n$
 
-What happens with entropy if we increase the number of events and calculate entropy for uniform distributions over events?
+What happens with entropy if we increase the number of events $\small n$ and calculate entropy for uniform distributions over events?
 
-```{r}
+```{r fig.width=4, fig.height=3, out.width="50%"}
 n = 2:8
 entropies = 
   do.call(
@@ -313,6 +366,7 @@ entropies =
     lapply(n, function(n) H(rep(1,n)/n))
   )
 names(entropies) = n
+par(mar=c(3,3,1,1), mgp=c(1.25,.3,0), tck=-.01)
 barplot(entropies, ylab = "entropy", xlab = "number possible events with equal probability")
 ```
 
@@ -339,7 +393,7 @@ cbind(H(P2), H(P2s))
 
 ## Additivity
 
-Additivity is about the fact that they way we represent the data should not influence how the information measure.
+Additivity is about the fact that they way we represent the data should not influence how the information value.
 
 Lets assume we have the following distributions of event types A and B:
 
@@ -402,15 +456,21 @@ $$
 
 To understand why entropy is useful to measure the accuracy of a model, one can reframe the problem and ask **"Does a model contain the same information as the true data generating process?"**. 
 
-We can talk about information in the model of the true data generating process and the candidate model, because we can calculate the probability of the data both for the true data generating process and the candidate model  (what we create with the `sim` function from rethinking packages).
+We can talk about information 
 
-Lets use our initial example again to make clear what we mean when we measure accuracy:
+1. in the model of the true data generating process and 
+2. in the candidate model
+
+because we can calculate the probability of the data both for the true data generating process and the candidate model  (what we create with the `sim` function from rethinking packages).
+
+Let's use our initial example again to make clear what we mean when we measure accuracy:
 
 - We assume there is a true DGP and data derived from it
 - We sample from the population data and estimate parameters for a candidate model
 - We want to estimate the accuracy of our candidate model, i.e. the deviance between the true DGP and the candidate model
 
-```{r, fig.width=10.5, fig.height=10.5}
+```{r, fig.width=6, fig.height=6, out.width="100%"}
+par(mar=c(3,3,2,1), mgp=c(1.5,.7,0), tck=-.01)
 layout(matrix(c(1,3,2,3), ncol = 2))
 plot(x,y)
 lines(x, mu, col = "red")
@@ -454,16 +514,15 @@ legend("topleft", lty = 1, col = c("red","blue"), legend = c("true DGP", "model"
 
 
 We can calculate the probability of data according to the true DGP and the inferred model. In our example, the probability of the data given the true DGP is 
+
+
 $\small y_i \sim Normal(1\cdot bs_1(x_i) + 1\cdot bs_2(x_i) + 1\cdot bs_3(x_i) + 0\cdot bs_4(x_i), 0.1)$^[$bs$ are spline basis functions]
 
 or in `R` code:
 
-```{r, eval = F, class.source = "fold-show"}
-mu = 1*bs2 + 1*bs2 + 1*bs3 + o*bs4
-# I actually used "mu = bf.s %*% bf.b"
-# where bf.s is a matrix with spline basis functions
-# and bf.b is a vector with weights c(1,1,1,0)
-p = dnorm(y, mu , 0.1)
+```{r, class.source = "fold-show"}
+mu = bf.s %*% bf.b # using matrix multiplication
+p_DGP = dnorm(y, mu , 0.1)
 ```
 
 As before, we can use `p` to calculate how much information about the data we have in the DPG. Entropy tells us how much information about the observed data we have in our model. 
@@ -478,12 +537,42 @@ $\small y_i \sim Normal(0.97 + 0.11 \cdot x_i - 0.05 \cdot x_i^2, 0.1)$
 
 or in `R` code:
 
-```{r, eval = F, class.source = "fold-show"}
+```{r, class.source = "fold-show"}
 mu = 0.97 + 0.11*x - 0.05*x^2
-p = dnorm(y, mu, 0.1)
+p_model = dnorm(y, mu, exp(-2.25))
 ```
 
 If we want then to learn about the accuracy of a candidate model, we can compute how much information about the data it has, relative to the true DGP (which is also a model). This differences or deviance in information about the data is called the _Kullback-Leibler divergence_ or KL divergence or short $\small D_{KL}$.
+
+<div class="marginnote"> 
+The _Kullback-Leibler divergence_ in R:
+
+```{r  class.source = "fold-show"}
+dKL = function(p,q) {
+  sum(p*(log(p)-log(q)))
+}
+```
+
+which we use to plot the divergence between the distribution `p = c(.375,.625)` and alternative distributions `q`:
+
+```{r fig.height=3, fig.width=4, echo=FALSE}
+par (mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
+p = c(.375,.625)
+q1 = seq(.01,.99,.01)
+DKL_pq = do.call(
+  c,
+  lapply(q1, function(q1) dKL(p,c(q1,1-q1)))
+)
+plot(q1,DKL_pq,
+     type = 'l',
+     ylab = expression(D[KL](p,q)),
+     xlab = expression(q[1]),
+     xaxt = "n", bty = "n")
+lines(rep(p[1],2), c(0, max(DKL_pq)), lty = 2)
+axis(1, pos=0, at=seq(0,1,.25))
+
+```
+</div>
 
 With probabilities of observed events given the true DGP $\small p$ and model predicted probabilities  $\small q$ the _Kullback-Leibler divergence_ is defined as:
 $$
@@ -495,33 +584,11 @@ D_{KL}(p,q) & = \sum_i p_i \,log(p_i) - p_i \, log(q_i) \\
 \end{aligned}
 $$
 
-Here, $\small p_i \,log(p_i)$ is the entropy and $\small p_i \,log(q_i)$ is the cross entropy. 
+Here, $\small p_i \,log(p_i)$ is the _entropy_ and $\small p_i \,log(q_i)$ is the _cross entropy_. 
 
-Note that if $\small p = q$ then $\small log(p_i) - log(q_i) = 0$ and we could say that the candidate model has no additional uncertainty about the data on top of the uncertainty that is already present given the DGP: $\small D_{KL}(p,q) = 0 \; | \; p = q$. Therefore we can say that _Kullback-Leibler divergence_ is a measure of additional uncertainty due to using a candidate model instead of the true model.
+__Note that if $\small p = q$ then $\small log(p_i) - log(q_i) = 0$ and we can say that the candidate model has no additional uncertainty about the data on top of the uncertainty that is already present given the DGP: $\small D_{KL}(p,q) = 0 \; | \; p = q$. Therefore we can say that the _Kullback-Leibler divergence_ is a measure of additional uncertainty due to using a candidate model instead of the true model.__
 
-Here is an R function for  the _Kullback-Leibler divergence_:
 
-```{r  class.source = "fold-show"}
-dKL = function(p,q) sum(p*(log(p)-log(q)))
-```
-
-which we can use to plot the divergence between the distribution `p = c(.375,.625)` and alternative distributions `q`:
-
-```{r}
-p = c(.375,.625)
-q1 = seq(.01,.99,.01)
-DKL_pq = do.call(
-  c,
-  lapply(q1, function(q1) dKL(p,c(q1,1-q1)))
-)
-plot(q1,DKL_pq,
-     type = 'l',
-     ylab = expression(D[KL](p,q)),
-     xaxt = "n", bty = "n")
-lines(rep(p[1],2), c(0, max(DKL_pq)), lty = 2)
-axis(1, pos=0, at=seq(0,1,.25))
-
-```
 
 ## Estimating deviance
 
@@ -530,7 +597,7 @@ So far, we have determined that
 - entropy is a good measure of information and 
 - KL divergence is a good distance measure between the true model and the model predictions.
 
-However, we generally do not know the true model, we only have a sample of data that was generated from it. This is not really a problem, because **our initial goal was model comparison**. So what we really want to do, is to compare the deviances of two models, here $\small q$ and $\small r$:
+However, we generally do not know the true model, we only have a sample of data that was generated from it. This is not really a problem, because **our initial goal was model comparison**; we want to compare the deviances of two models, here $\small q$ and $\small r$:
 
 $$\small D_{KL}(p,q) - D_{KL}(p,r)$$ 
 Here is how the deviances of the two models are defined:
@@ -570,9 +637,9 @@ $$
 \overset{\color{violet}{\text{posterior probability}}}{P(parameter|data)} = \frac{\overset{\color{red}{\text{likelihood}}}{P(data|parameter)} \cdot \overset{\color{blue}{\text{prior probability}}}{P(parameter)}}{\overset{\color{orange}{\text{evidence}}}{P(data)}}
 $$
 
-This is just the likelihood term we already use when we do Bayesian updating. One important thing when computing this quantity in a Bayesian context is that the $\small paramter$ is not a single value, but a posterior distribution.
+This is just the likelihood term we already use when we do Bayesian updating. One important thing, when computing this quantity in a Bayesian context, is that the $\small paramter$ is not a single value, but a posterior distribution.
 
-The `rethinking` package has a function `lppd`, which calculates for each data point the log of the mean probability of the observation given the model and posterior distribution of parameters, also called the __log pointwise predictive density__.
+The `rethinking` package has a function `lppd`, which calculates for each data point the log of the mean probability (density) of the observations given the model and posterior distribution of parameters, also called the __log pointwise predictive density__.
 
 Coming back to this example:
 
@@ -587,7 +654,27 @@ q.model = alist(
 q.fit = quap(q.model, dt, start = list(b = rep(0,2)))
 ```
 
-We are calculating for each data point its average probability (averaging over posterior samples). In the following figure, each blue line is a prediction from the posterior distribution, and vertical lines represent the distance of observed data from predictions, where larger distances correspond to smaller probabilities of the data given the model. 
+We are calculating for each data point its average probability or density as follows:
+
+1. We extract the log likelihood and exponentiate it to the probability scale:
+
+```{r class.source = "fold-show"}
+ll = sim(q.fit,ll = TRUE,n = 10)  # log likelihood, 10 posterior samples
+pd = exp(ll) # predictive density
+pd[,1:7]
+```
+
+We get a matrix with as many columns as cases (showing only 7 out of `r nrow(dt)` here) and rows as samples. Note that we are dealing with densities here, which can be greater than 0.
+
+2. We average for each individual and take the log:
+
+```{r class.source = "fold-show"}
+ppd = colMeans(pd) # pointwise predictive density
+lppd = log(ppd) # log pointwise predicitive density
+lppd
+```
+
+In the following figure, each blue line is a prediction from the posterior distribution, and vertical lines represent the distance of observed data from predictions, where larger distances correspond to smaller probabilities of the data given the model. 
 
 ```{r}
 par(mar=c(3,3,0.5,0.5), mgp=c(1.25,.5,0), tck=-.01)
@@ -611,21 +698,21 @@ legend("topleft", bty = "n",
        legend = c("data","DGP mu","posterior mu samples"),)
 ```
 
-To complete the computation of the lppd we take the log of the just computed average probabilities. This results in a vector of log probabilities, one for each participant, which we can sum to get the a total score over all participants.
-
-Given a quap model, the _log pointwise predictive density_ is simply calculated as:
+Given a quap model, the _log pointwise predictive density_ (lppd) is simply calculated as:
 
 ```{r class.source = "fold-show"}
 lppd(q.fit)
 ```
 
+The lppd is our stand-in for the probability values we know from the basic definition of entropy if we want to calculate (relative) divergence.
+
 ## Cross validation
 
-So far, we have calculated the divergence for the data we observed. The problem is that this is thus still a divergence in model fit to the observed data. However, what we want to compare is how well to different models are consistent with the data generating process, or the data we can observe from it.
+So far, we have calculated the divergence for the data we observed. The problem is that this is still a divergence in model fit to the observed data. However, what we want to compare is how well to different models are consistent with the data generating process, or the data we can observe from it.
 
 One pragmatic way to go about this is to evaluate the model fit not with the data we used to fit the model parameters (_training data_) but on a new set of _test data_ which we did not use to estimate parameters.
 
-The following figure shows in addition to 25 data points use to estimated the model parameters 25 new test data points that were not used to estimate model parameter. To estimate the deviance of the model predictions from these tests data. 
+The following figure shows in addition to 25 data points used to estimated the model parameters 25 new test data points that were not used to estimate model parameter. We want to calculate the deviance of the model predictions from these _test data_. 
 
 To visualize that we are using the posterior distribution to calculate deviance, the figure also shows 25 lines (`mu`), one for each posterior sample. The figure does not show variations in the standard deviation.
 
@@ -663,13 +750,13 @@ for (N in c(20, 100)) {
 }
 ```
 
-We can use the following figure from the book to explain why deviance in the training data set (cross validation) is a better approach to model comparison:
+We can use the following figure from the book to explain why deviance in the test data set (cross validation) is a better approach to model comparison:
 
 - deviation in the test data generally decreases with increasing model complexity, but we don't want to choose the most complex model
-- deviance on a hold-out test data set is better able to identify the correct model (with 2 parameters)
+- deviance on a hold-out test data set is better able to identify the correct model (with 3 parameters)
 - using deviance only on test data is also a problem for larger sample sizes.
 
-```{r echo = F, fig.height=5, fig.width=10}
+```{r echo = F, fig.height=4, fig.width=8}
 dev_plotter = function(dev) {
   par(mar=c(3,3,2,1), mgp=c(1.5,.5,0), tck=-.01)
   train = dev[1,]
@@ -688,7 +775,7 @@ dev_plotter = function(dev) {
   arrows(x0 = train.x, y1 = train.lower, y0 = train.upper, length = 0)
   arrows(x0 = test.x, y1 = test.lower, y0 = test.upper, length = 0, col = "purple")
   points(test.x,test, pch = 16, col = "purple")
-  axis(1, at = 2, col = "red", col.axis = "red")
+  axis(1, at = 3, col = "red", col.axis = "red")
 }
 par(mfrow = c(1,2))
 load("dev_N20.Rdata")
