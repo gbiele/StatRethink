@@ -46,6 +46,7 @@ h3,h4,h5,h6{
   overflow:auto;
 }
 ```
+
 ```{css sidenote, echo = FALSE}
 .sidenote, .marginnote { 
   float: right;
@@ -408,13 +409,20 @@ One common mistake, which has the name _Table 2 fallacy_, where Table 2 is often
 
 ## Plotting against residuals
 
+<div class="marginnote"> 
+As a reminder, here the DAG. We are interested in the effect of $\small B$ on $\small C$.
+```{r, echo = FALSE, fig.width=2, fig.height=2}
+drawdag(dag1, cex = 0.5, lwd = 1)
+```
+</div>    
+
 Plotting against residuals tells us what multiple regression does.
 
 We discussed earlier that in multiple regression each regression coefficient captures the effect of a variable conditional on that one accounts for the effect of all other variables.
 
 This means that we only look at the effect of the variation in that variable that is independent from the variation in the other variables. If we look for example at the two variables $\small B$ and $\small D$, these are correlated:
 
-```{r, fig.width=4, fig.height=3.5, out.width="50%"}
+```{r, fig.width=4, fig.height=3.5, out.width="50%", echo = FALSE}
 par (mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
 plot(D,B)
 ```
@@ -453,7 +461,7 @@ mu.l = colMeans(link(m.B_D,data=list(D = c(-3,3))))
 idx = sample(nrow(d),75)
 
 # plot raw data
-plot(D[idx],B[idx], ylab = "B (estimated)", xlab = "D")
+plot(D[idx],B[idx], xlab = "D", ylab = "B (estimated)")
 
 # plot regression line
 lines(c(-3,3),mu.l, col = "blue")
@@ -478,11 +486,17 @@ if(!file.exists("residuals.mp4")) {
 }
 ```
 
+<div class="marginnote"> 
+As the regression lines rotates, variation due to $\small D$ is removed.
+</div>    
+
 <center>
 <video autoplay controls loop width="500" height="450">
 <source src="residuals.mp4" type="video/mp4">
 </video>
 </center>
+
+<br>
 
 Now we can use $\small B_R$ as a predictor of $\small C$:
 

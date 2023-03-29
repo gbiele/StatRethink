@@ -1,7 +1,7 @@
 ---
 title: "Chapter 6: Recap"
 author: "Guido Biele"
-date: "20.04.2022"
+date: "22.03.2023"
 output:
   html_document: 
     mathjax: default
@@ -44,6 +44,20 @@ h3,h4,h5,h6{
   height: 100%;
   overflow:auto;
 }
+
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+
 ```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -87,15 +101,18 @@ All graphs are made of nodes and edges. What is special about directed acyclic g
 
 # Bias
 
-One important use case for DAGs is to determine which variables need to be involved if one wants to estimate the causal effect of one variable on the other. The underlying message here is that is we want to understand (causal) relationships between variables, we should not choose statistical models based on goodness of fit or related model selection criteria like AIC, BIC, RMSEA, TIL ..., but based on our knowledge about the about the data generating process. This knowledge can be simply domain knowledge, but it might also be be gained from data by investigating implied conditional independencies.
+One important use case for DAGs is to determine which variables need to be involved if one wants to estimate the causal effect of one variable on the other. The underlying message here is that if we want to understand (causal) relationships between variables, we should not choose adjustement variables based on goodness of fit or related model selection criteria like AIC, BIC, RMSEA, TIL ..., but based on our knowledge about the about the data generating process. This knowledge can be simply domain knowledge, but it might also be be gained from data by investigating implied conditional independencies.
 
 Due to it's reliance on observational data, the epidemiological literature on bias is much richer than the psychological literature. Here, **bias means that an association or causal effect we estimate from data ($\hat y$) diverges from the true association or causal effect that we are interested in ($y$), that is $bias = \hat y - y$ **. 
 
-Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using a non-random sub-set of the data. Here are the most well-known biases:
+Such biases generally occur if either our analysis model is in conflict with the data generating process, or if we estimate an effect using a non-random sub-set of the population data. Here are the most well-known biases:
 
 - confounding bias from missing adjustment for a common cause of exposure and outcomes 
+  - _fork_
 - bias from adjustment of a mediator (post treatment variables)
+  - _pipe_
 - selection bias from conditioning on a collider or it's decedent.
+  - _collider_
 
 
 # Confounding bias: Common cause of exposure and outcome
@@ -170,7 +187,7 @@ drawmydag(C_dag)
 plot_path(x,ys,length(x))
 ```
 
-Confounding bias refers to the situation where we estimate the wrong relationship between two variables because we omit a common cause of the two variables from the regression model.
+Confounding bias refers to the situation where we estimate the wrong association between two variables because we omit a common cause of the two variables from the regression model.
 
 ```{r fig.width=4, fig.height=4, fig.align = 'center', out.width="50%"}
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
@@ -181,7 +198,8 @@ B = 0.5*S + scale(rnorm(N))
 D = -0.5*S + scale(rnorm(N))
 plot(D ~ B, col = 2-S)
 legend("topleft", pch = 1, col = c("red", "black"), 
-       legend = c("F","M"), bty = "white", bg = "white")
+       legend = c("F","M"), bg = "white",
+       bty = "n")
 abline(lm(D~B))
 title(expression(D%~%normal(alpha + beta[B]*B,sigma)))
 ```
@@ -190,7 +208,7 @@ title(expression(D%~%normal(alpha + beta[B]*B,sigma)))
 
 To obtain a correct estimate of the relationship between $\small B$ and $\small D$, we have to cut off the backdoor path.
 
-To interrupt and open path, we can adjust for any (non-collider) variable on the open path. In DAGs, adjustment is typically symbolized by drawing a circle around the variable name: 
+To interrupt an open path, we can adjust for any non-collider variable on the open path. In DAGs, adjustment is typically symbolized by drawing a circle around the variable name: 
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 C_dag_A = C_dag
@@ -213,7 +231,7 @@ abline(lm(D~B_R), lwd = 2, col = "green3")
 title(expression(D%~%normal(alpha + beta[B[R]]*B[R],sigma)))
 ```
 
-An alternative view point is that adjustment amounts to _conditioning_ the association between $\small B$ and $\small D$ on sex $\small S$, that is we estimate the association for the two sex groups separately:
+An alternative view point is that adjustment amounts to _conditioning_ the association between $\small B$ and $\small D$ on sex $\small S$, that is we estimate the association for the two sex groups separately and calculate the average association:
 
 ```{r fig.width=4, fig.height=4, out.width="50%"}
 par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
@@ -250,7 +268,7 @@ The strong focus on confounding as a main problem for (observational) studies ha
 
 ## Pipes depict mediator variables
 
-The effect of causes can be (partially or fully) mediated by auxiliary variables. Specifically, if we have the following _pipe_ structure, the effect of $\small Y$ on $\small X$ is fully mediated by $\small M$ because there is no other path from $\small Y$ to $\small X$ tat does not go via $\small M$. 
+The effect of causes can be (partially or fully) mediated by auxiliary variables. Specifically, if we have the following _pipe_ structure, the effect of $\small Y$ on $\small X$ is fully mediated by $\small M$ because there is no other path from $\small Y$ to $\small X$ that does not go via $\small M$. 
 
 In experimental studies, post-treatment variables are variables that manifest after the treatment was delivered. Post-treatment variables have a higher likelihood to be mediators.
 
@@ -273,7 +291,7 @@ drawmydag(pipe)
 Lets assume we are interested in the total effect of some treatment $\small T$ on wellbeing $\small W$. We have also collected some data about participants' motivation $\small M$ to get better, some time between treatment onset and the final wellbeing measurement. If we assume that 
 
 - treatment has a direct effect on wellbeing, but also 
-- an indirect effect via motivation
+- an indirect effect via motivation (treatment motivates more than waiting list)
 
 we can display the data-generating process as follows:
 
@@ -322,27 +340,41 @@ flow_dag(M_dag_A,
          length.out = 100)
 ```
 
-We can regress $\small W$ on $\small T$ only and on $\small T$ and $\small W$ to illustrate how the total estimated effect becomes smaller if one adjusts for the mediator.
+We can regress $\small W$ on $\small T$ only and on $\small T$ and $\small M$ to illustrate how the  estimated effect of $\small T$ becomes smaller if one adjusts for the mediator.
 
-```{r fig.width=8, fig.height=4}
+<div class="marginnote"> 
+The green line indicated the regression slope. Faint red lines indicate regression slopes at different levels of $\small M$.
+</div>
+
+```{r fig.width=8, fig.height=4, echo=FALSE}
 par(mfrow = c(1,2),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 T = rnorm(N)
 M = T + rnorm(N)
 W = 0.125*T + 0.5*M + rnorm(N)
 grayblue = colorRampPalette(c("grey","blue"))
 plot(W~T, col = grayblue(N)[rank(M)], pch = 16)
-abline(lm(W ~ T), col = "green3", lwd = 2)
+abline(lm(W ~ T), col = "green3", lwd = 3)
 title(expression(W%~%normal(alpha + beta[T]*T,sigma)))
 legend("topleft",pch = 16, col = c("gray","blue"), 
        legend = c("low M", "high M"), bty = "n")
 plot(W~T, col = grayblue(N)[rank(M)], pch = 16)
-abline(coef(lm(W ~ T + M))[1:2], col = "red", lwd = 2)
+
+breaks = c(-Inf,quantile(M,seq(.1,.9,.2)),Inf)
+for (b in 1:(length(breaks)-1)) {
+  idx = M>breaks[b] & M<breaks[b+1]
+  abline(coef(lm(W[idx] ~ T[idx] + M[idx]))[1:2], col = adjustcolor("red",alpha = .25), lwd = 2)
+}
+abline(coef(lm(W ~ T + M))[1:2], col = "red", lwd = 3)
+
 title(expression(W%~%normal(alpha + beta[T]*T + beta[M]*M,sigma)))
 ```
 
 As before, we display the effect of adjusting for $\small M$ by regressing on the residuals of T (the plot shows only a sub/set of the data points):
 
-```{r, fig.width=8, fig.height=4}
+<div class="marginnote"> 
+Left: $\small T$: solid dots, $\small T_R$ circles. Note how the variation of the residuals $\small T_R$ is smaller than the variation of $\small T$, because all data points are moved from more to less extreme values. This is because individuals with high (low) $\small T$ values also had high (low) $\small W$ values.
+</div>    
+```{r, fig.width=8, fig.height=4, echo = FALSE}
 T_R = residuals(lm(T~M))
 par(mfrow = c(1,2),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 idx = sample(N,200)
@@ -356,8 +388,8 @@ plot(W[idx] ~ T_R[idx], col = grayblue(100)[51],
 abline(lm(W~T_R), col = "red", lwd = 2)
 title(expression(W%~%normal(alpha + beta[T[R]]*T[R],sigma)))
 ```
-Note the direction of the arrows that depict how $\small T_R$ differs from $\small T$.
 
+<br>
 
 In sum: **If a variable $\small M$ lies on a path from the treatment $\small X$ to the outcome $\small Y$, such that the arrows points from the treatment to $\small M$ and from $\small M$ to the outcome ($\small T \rightarrow M \rightarrow Y$), we call this variable a mediator, and the corresponding structure a _pipe_. If one is interested in the total effect of $\small X$ on $\small Y$, one must _not_ adjust for $\small M$, because this would close the indirect path and thus lead to a biased estimation of the total effect.**
 
@@ -493,11 +525,11 @@ abline(lm(I~E), lwd = 2, col = "green3")
 title(expression(I %~% normal(alpha + beta * E,sigma)))
 ```
 
-In contrast to bias from adjustment with a mediator or bis from confounding, selection bias cannot be solved by adding or removing an adjustment variable. To deal with selection bias, methods based on propensity scores^[propensity score methods use auxiliary variables to calculate the probability that a participant is included in a sample or receives a treatment], like matching or weighting, need to be used. Note though that propensity score methods and especially weighting do not work naturally (some would say not at all) in the Bayesian framework.
+In contrast to bias from adjustment with a mediator or bis from confounding, selection bias cannot be solved by adding or removing an adjustment variable. To deal with selection bias, methods based on propensity scores^[propensity score methods use auxiliary variables to calculate the probability that a participant is included in a sample or receives a treatment], like matching or weighting, need to be used. Note though that propensity score methods and especially weighting do not work naturally (some would say not at all) in the Bayesian framework. Imputation is a way to deal with missing data that also works in the Bayesian framework (but also makes important assumptions).
 
 In sum: **If a back-door path from exposure to outcome is closed by a collider and we condition on the collider or one of its descendant, this will lead selection bias. This bias is called selection bias, because conditioning on a collider describes a situation where only a non-random sub-set of the population is selected into the study sample.**
 
-Selection bias should absolutely be considered at the study planning phase, because it will be challenging if not impossible to deal with selection bias if one does not plan to collect the relevant data.
+Selection bias should absolutely be considered in the study planning phase, because it will be challenging if not impossible to deal with selection bias if one does not plan to collect the relevant data.
 
 ```{r echo = F}
 if (!file.exists("Cl_dag_flow.gif"))
@@ -614,7 +646,7 @@ $$
 and other functions.
 
 
-Successful adjustment depends on our adjustment model being close to the true data generating process.
+Successful adjustment depends on our adjustment model being close to the true data generating process. Therefor it is a good idea use flexible models to account for e.g. confounding (e.g. splines) in conjunction with methods to regularize parameter estimates to avoid overfitting.
 
 # Excercise M2
 
