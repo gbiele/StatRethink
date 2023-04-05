@@ -20,12 +20,12 @@ quap.spline.model =
 
 N.sim = 1000
 b.sds = exp(seq(log(1),log(15) , length.out = 8))
-b.sds = c(0.5,1,2,3,5,10)
+b.sds = c(0.5,1,2,5,10)
 elpd.test = elpd.train = matrix(NA,nrow = N.sim, ncol = length(b.sds))
 yhats = vector(mode = "list", length = length(b.sds))
 for (my.seed in 1:N.sim) {
-  if (my.seed <= 50)
-    png(paste0("anim/F", stringr::str_pad(my.seed,2,pad = "0"), ".png"), width = 15, height = 10,
+  if (my.seed <= 100)
+    png(paste0("anim/F", stringr::str_pad(my.seed,2,pad = "0"), ".png"), width = 11, height = 11,
       res = 300, units = "cm")
   set.seed(my.seed)
   idx = sample(length(x),75)
@@ -35,7 +35,7 @@ for (my.seed in 1:N.sim) {
   # lines(x,mu, col = "red")
   
   B.m = bs(x, df = 8, intercept = T) 
-  par(mfrow = c(2,3), mar=c(2.5,2.5,0,.5), mgp=c(1,.1,0), tck=-.01)
+  par(mfrow = c(2,2), mar=c(2.5,2.5,0,.5), mgp=c(1,.1,0), tck=-.01, cex.axis = .75)
   for (b.sd in b.sds) {
     q.fit = 
       quap(quap.spline.model,
@@ -46,7 +46,7 @@ for (my.seed in 1:N.sim) {
     p = extract.samples(q.fit)
     yhat = rowMeans(B.m %*% t(p$b))
     yhats[[which(b.sd == b.sds)]] = rbind(yhats[[which(b.sd == b.sds)]],yhat)
-    if (my.seed <= 50) {
+    if (my.seed <= 100 & b.sd != max(b.sds)) {
       plot(x,y, col = adjustcolor("black", alpha = .025))
       points(x[idx],y[idx], pch = 16, 
              col = adjustcolor("black", alpha = .5), cex = .5)
@@ -62,7 +62,7 @@ for (my.seed in 1:N.sim) {
     q.fit@data = list(bf.s = B.m[test.idx,], y = y[test.idx])
     elpd.test[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
   }
-  if (my.seed <= 50) dev.off()
+  if (my.seed <= 100) dev.off()
 }
 save(elpd.test,elpd.train, b.sds, yhats,x,y, file = "sim_lppd.Rdata")
 # for (b.sd in b.sds) {
