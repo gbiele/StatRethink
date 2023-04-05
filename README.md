@@ -22,3 +22,7 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 6. [Forks, mediators & colliders: Chosing covariates with DAGs](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter6/Chapter6Recap.html)
 
+7. A: [Model fit and deviance](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter7/Chapter7Recap.html)
+
+7. B: [Cross validation and model comparison](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter7/Chapter7Recap_b.html)
+
