@@ -1,7 +1,7 @@
 ---
 title: "Chapter 7(b): Recap"
 author: "Guido Biele"
-date: "04.05.2022"
+date: "12.04.2023"
 output:
   html_document: 
     mathjax: default
@@ -14,10 +14,14 @@ header-includes:
 ---
 
   
+
 ```{css, echo = F}
 body{
   font-family: Helvetica;
   font-size: 16pt;
+  max-width: 1000px;
+  margin: auto;
+  margin-left:310px;
 }
 pre{
   font-size: 20px;
@@ -27,15 +31,47 @@ h1{
     font-size: 24pt;
   }
 h1,h2{
-    font-size: 22pt;
+    font-size: 20pt;
   }
 h3,h4,h5,h6{
   font-size: 18pt;
 }
+
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  overflow:auto;
+}
+
+img {
+    display: block;
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+}
 ```
 
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
+
+
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
-knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE)
+knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE, fig.align = "center")
 
 library(rethinking)
 library(magrittr)
@@ -65,16 +101,17 @@ Here _relative_ refers to the scale on which a predictor is measured.
 
 To visualize how shrinkage works, we generate a small data set for which we want to estimate the mean:
 
-```{r}
+```{r, fig.height=4, fig.width=4, out.width="50%"}
 set.seed(5)
 y = (rnorm(15) %>% scale()) + 1
+par(mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 hist(y)
 ```
 
 We want a Bayesian estimate of the mean of `y`: $\small y \sim normal(mu, 1)$ with two different priors $\small mu \sim normal(0,\sigma_{wide})$ and $\small mu \sim normal(0,\sigma_{shrink})$ for mu:
 
-```{r}
-par(mar = c(5,3,.5,.1))
+```{r fig.height=4, fig.width=4, out.width="50%"}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 curve(dnorm(x,0,1), -10, 10, n = 500,
       ylab = "density", xlab = "mu", col = "blue", lwd = 3)
 curve(dnorm(x,0,3), n = 500, add = T,
@@ -82,7 +119,7 @@ curve(dnorm(x,0,3), n = 500, add = T,
 legend("topleft",
        lty = 1, lwd = 3,
        col = c("blue",adjustcolor("blue",alpha = .5)),
-       legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
+       legend = c("normal(0,1)","normal(0,3)"),
        bty = "n")
 ```
 
@@ -150,8 +187,8 @@ The important thing to keep in mind here is that the posterior is the product of
 
 We zoom in to see more clearly how the narrow prior shrinks the estimated mu towards zero.
 
-```{r}
-par(mar = c(5,3,.5,.1))
+```{r  fig.height=5, fig.width=5, out.width="50%"}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 ids = which(mus > 0 & mus < 1.5)
 plot(mus[ids],post1[ids],'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
 lines(mus[ids],post3[ids],'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
@@ -160,8 +197,8 @@ abline(v = c(mus[which.max(post1)],mus[which.max(post3)]), lty = 3,
 arrows(x0 = mus[which.max(post3)],
       x1 = mus[which.max(post1)],
       y0 = mean(c(max(post1),max(post3))),
-      lwd = 3, length = .15)
-legend("topright",
+      lwd = 1, length = .1)
+legend("topleft",
        lty = 1, lwd = 3,
        col = c("purple",adjustcolor("purple",alpha = .5)),
        legend = c("mu ~ normal(0,1)","mu ~ normal(0,3)"),
@@ -174,6 +211,7 @@ legend("topright",
 To show that shrinkage works, we estimate spline models with different standard deviations on regression coefficients for the simulated income / well being data above.
 
 ```{r}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 N = 1000
 set.seed(123456)
 x = sort(rnorm(N,mean = 0))
@@ -189,7 +227,7 @@ lines(x,mu, col = "red", lwd = 2)
 
 The following figure shows the estimated relationships for different samples drawn from the population.
 
-![](shrinkage.gif)
+![](shrinkage.gif){width500px}
 
 
 Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coefficients is narrow (top left) compared to when it is wider (bottom right).
@@ -203,38 +241,41 @@ To confirm this, the following plot shows deviances from a simulation that
 
 The following figure shows deviances +/- 1 sd.
 
-```{r}
+```{r, fig.height=4, fig.width=4, out.width="50%"}
 load("sim_lppd.Rdata")
 
 plot_deviances = function() {
   D.test = -2*elpd.test
-D.train = -2*elpd.train
-m.test = colMeans(D.test)
-m.train = colMeans(D.train)
-
-within_sd = function(m) {
-  apply(apply(m,2, function(x) x - rowMeans(m)), 2, sd)
-}
+  D.train = -2*elpd.train
+  m.test = colMeans(D.test)
+  m.train = colMeans(D.train)
+  
+  within_sd = function(m) {
+    apply(apply(m,2, function(x) x - rowMeans(m)), 2, sd)
+  }
 
 lower.test = m.test - within_sd(elpd.test)
 upper.test = m.test +  within_sd(elpd.test)
 lower.train = m.train - within_sd(elpd.train)
 upper.train = m.train + within_sd(elpd.train)
 
-par(mfrow = c(2,1), mar=c(2.5,2.5,1,.5), mgp=c(1,.1,0), tck=-.01)
+par(mfrow = c(2,1), mar=c(.2,2.5,2,.5), mgp=c(1,.1,0), tck=-.01)
 ylim = range(c(lower.train, upper.train))
 xs = 1:ncol(elpd.test)
-plot(xs,m.train, ylim = ylim, main = "Training data",
-     ylab = "Deviance", xlab = "", xaxt = "n")
-axis(1, at = 1:5, labels = c(1,2,5,10,20))
+plot(xs, m.train, ylim = ylim, xaxt = "n",
+     ylab = "Deviance", xlab = "", pch = 16)
 arrows(xs,y0 = lower.train, y1 = upper.train, length = 0)
+legend("topright", pch = c(16,16),
+       bty = "n",
+       col = c("black","blue"),
+       legend = c("training data","test data"))
 
-
+par(mar=c(2,2.5,.2,.5))
 ylim = range(c(lower.test, upper.test))
-plot(xs+.2, m.test, col = "blue", pch = 16, ylim = ylim, main = "Test data",
+plot(xs, m.test, col = "blue", pch = 16, ylim = ylim,
       ylab = "Deviance", xlab = "sd(b)", xaxt = "n")
-arrows(xs+.2,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
-axis(1, at = 1:6, labels = b.sds)
+arrows(xs,y0 = lower.test, y1 = upper.test, length = 0, col = "blue")
+axis(1, at = 1:5, labels = b.sds)
 }
 
 plot_deviances()
@@ -256,10 +297,10 @@ if(!file.exists("sim_shrinkage_spaghetti.png")) {
   mu = bf.s %*% bf.b
   y = rnorm(N, mu , sd = .1)
   load("sim_lppd.Rdata")
-  png("sim_shrinkage_spaghetti.png", width = 15, height = 8, units = "cm", res = 450)
-  par(mfrow = c(2,3), mar=c(2.5,2,0,.25), mgp=c(1,.1,0), tck=-.01)
-  for (b.sd in b.sds) {
-    plot(x,y, col = adjustcolor("black", alpha = .025))
+  png("sim_shrinkage_spaghetti.png", width = 10, height = 10, units = "cm", res = 450)
+  par(mfrow = c(2,2), mar=c(2.5,2,0,.25), mgp=c(1,.1,0), tck=-.01)
+  for (b.sd in b.sds[1:4]) {
+    plot(x,y, col = adjustcolor("black", alpha = .025), cex.axis= .75)
     matlines(x,t(yhats[[which(b.sd == b.sds)]][1:100,]), lty = 1, 
              col = adjustcolor("blue",alpha = .05))
     text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
@@ -270,7 +311,7 @@ if(!file.exists("sim_shrinkage_spaghetti.png")) {
 
 ```
 
-![](sim_shrinkage_spaghetti.png)
+![](sim_shrinkage_spaghetti.png){width=500px}
 <!-- Here is an example: Assume you want to estimate the effect of educational level (elementary school, high school, bachelor, master or more) and gender on income. -->
 
 ```{r, echo = FALSE, eval = FALSE}
@@ -299,7 +340,7 @@ $$
 D_{KL}(p,q) = \sum_i p_i \,log(p_i) - p_i \, log(q_i)
 $$
 
-- the log pointwise predictive density ($\small lppd$) measures "how much information about the data" a model has, where $p(y|theta)$ is the likelihood
+- the log pointwise predictive density ($\small lppd$) measures "how much information about the data" a model has, where $p(y|\Theta)$ is the likelihood
 
 $$
 \textrm{lppd}(y,\Theta) = \sum_i log \frac{1}{S}\sum_s p(y_i|\Theta_s)
@@ -320,7 +361,7 @@ One thing that is easily implemented with LOO-CV is to calculated the deviance a
 
 This is different for alternative schemes. For instance, at a samples size of 20, there are `r choose(20,10)` to construct the training data set. Here, averaging about all possible test-data deviances would be too computationally expensive.
 
-The key thing to keep in mind when doing cross validation is that dependent observations (more specifically, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets.
+The key thing to keep in mind when doing cross validation is that dependent observations (more specifically, observations with correlated errors) should always be kept in either test or training data sets. Such complications plays e.g. a role in time series or hierarchically organized data sets. Cross validation also makes the assumption that the training data were generated by the same process as the test data.
 
 ## LOO-CV and PSIS-LOO
 
@@ -363,7 +404,7 @@ The **benchmark is out of sample prediction or cross validation**, where we
 - draw a test sample (of same size) and 
 - estimate the out of sample deviance as our parameter of interest.
 
-In the following figure from the book, these **cross validation** values are represented by dots (empty for flat priors black for shrinkage priors).
+In the following figure from the book, these **cross validation** values are represented by black dots for shrinkage priors and circles for flat priors.
 
 Lines in the figures are _average values_ over 1000 simulations and show that on average information criteria, **(LOO)-CV**, **PSIS-LOO** and **WAIC** do a good job of approximating full cross validation. 
 
@@ -383,7 +424,7 @@ Information criteria are often used for model selection, but this is not the onl
 More generally, we can think of two goals of model comparison:
 
 - **Improving predictions**: Here, information criteria are most useful to determine weights for different models
-- **Testing scientific hypotheses**: Here, we have specific qualitatively different scientific hypotheses that we express and statistical models so that we can select which model describes the data best (often done in cognitive psychology)
+- **Testing scientific hypotheses**: Here, we have specific qualitatively different scientific hypotheses that we express as statistical models so that we can select which model describes the data best (often done in cognitive psychology)
 
 **Model comparison should not be used for covariate selection when we want to estimate causal effects**. When our interest is in causal effects, covariate selection should be determined based on the DAG^[Admittedly, things can get more complicated if we are uncertain about which DAG is correct. Model selection criteria can help to select or weight DAGs].
 
@@ -507,24 +548,25 @@ legend("topright",
        bty = "n")
 ```
 
-What this plot also shows is that if we wanted to compared models `W.T` and `W.a` to decide if treatment was effective, the standard errors of the difference show us that we would not be very certain that the true model is better, even though the treatment effect is clearly different from zero:
+What this plot also shows is that if we wanted to compare models `W.T` and `W.a` to decide if treatment was effective, the standard errors of the difference show us that we would not be very confident that the true model is better, even though the treatment effect is clearly different from zero:
 
 ```{r}
 precis(W.T) %>% round(2)
 ```
 
-One intuition for this is that if the data are relatively noisy, model comparison techniques will have difficulties to be sure if one model is clearly better then others, even if within one model the effect of treatment is clear. Model comparison techniques only care about out of sample predictions and penalize for additional parameters. If due to noisy data adding a causal variable does not improve prediction by much, this model will not clearly outperform simpler models.
+One intuition for this is that if the data are relatively noisy, model comparison techniques will have difficulties to be sure if one model is clearly better than others, even if within one model the effect of treatment is clear. Model comparison techniques only care about out of sample predictions and penalize for additional parameters. If due to noisy data adding a causal variable does not improve prediction by much, this model will not clearly outperform simpler models.
 
 
 ## Functional form and robust regression
 
 To correctly estimate effects it is not sufficient to choose the correct adjustment variables, but the functional form should also be (approximately?) correct.
 
-Functional form refers to the form of the function that describes a relationship. The default for gaussian regression models is a linear relationship, but we have seen that relation ships can be non-linear.
+Functional form refers to the form of the function that describes a relationship. The default for Gaussian regression models is a linear relationship, but we have seen that relation ships can be non-linear.
 
 Assume that we have collected the data in the following plot.
 
-```{r}
+```{r fig.width=5, fig.height=4, out.width="60%"}
+par (mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
 N = 500
 set.seed(2)
 x = sort(rnorm(N,mean = 0))
@@ -544,7 +586,7 @@ x = x[sidx]
 
 Now we want to know if the relationship between x and y is linear or non linear.
 
-To do this, we fit a series of models of increasing complexity. To simplify this, we set up a basic model and define design matrices for different models:
+To do this, we fit a series of models of increasing complexity. To simplify, we set up a basic model and define design matrices for different models:
 
 ```{r class.source = "fold-show"}
 quap.spline.model = 
@@ -572,7 +614,9 @@ pp = function(X) {
   o = order(x)
   b = matrix(rnorm(ncol(X)*55, sd = 1),ncol = 55)
   yhat = X %*% b
-  matplot(x[o],yhat[o,],type = 'l', col = "blue", lty = 1, xlab = "x", ylab = "x")
+  matplot(x[o],yhat[o,],type = 'l',
+          col = adjustcolor("blue", alpha = .5), 
+          lty = 1, xlab = "x", ylab = "x")
 }
 
 par(mfrow = c(2,2), mar=c(2.5,2.5,1,.5), mgp=c(1,.1,0), tck=-.01)
@@ -680,7 +724,8 @@ The PSIS warnings are another instance of the _folk theorem of statistical model
 
 The figure makes clear that the model does a bad job dealing with outliers. One method to deal with outliers and that comes under the name "robust regression" uses the student t distribution as an error model (instead of the normal distribution.):
 
-```{r}
+```{r, fig.width=5, fig.height=5, out.width="60%"}
+par (mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
 curve(dnorm(x, mean = , sd = 1), -4, 4, n = 500, ylab = "density", lty = 3)
 curve(dstudent(x, nu = 2, mu = 0, sigma = 1), -4, 4, n = 500,  add = TRUE)
 legend("topleft", lty = c(1,3),
@@ -820,7 +865,7 @@ y = (rnorm(15) %>% scale()) + 1
 hist(y)
 ```
 
-```{r, fig.height=6, fig.width=4, echo = F}
+```{r fig.height=6, fig.width=4, echo = F, out.width="75%"}
 mus = seq(-3,3,.01)
 P = 
   apply(
@@ -829,42 +874,44 @@ P =
       c(
         mu = mu,
         # P(data| mu)
-        llikelihood = sum(dnorm(y,mean = mu, log = T)), 
+        llikelihood = sum(dnorm(y,mean = mu, log = TRUE)), 
         # P(mu), mu ~ normal(0,1)
-        Psd1 = dnorm(mu,0, sd = 1, log = T),
+        Psd1 = dnorm(mu,0, sd = 1, log = TRUE),
          # P(mu), mu ~ normal(0,3)
-        Psd0.1 = dnorm(mu,0, sd = .2, log = T)
+        Psd0.2 = dnorm(mu,0, sd = .2, log = TRUE)
       )
     }
   )
 
 post1 = exp(P["llikelihood",] + P["Psd1.mu",])
-post0.1 = exp(P["llikelihood",] + P["Psd0.1.mu",])
+post0.2 = exp(P["llikelihood",] + P["Psd0.2.mu",])
+post1 = post1/sum(post1)
+post0.2 = post0.2/sum(post0.2)
 
-par(mfrow = c(3,1), mar=c(2.75,2.75,0,.25), mgp=c(1.25,.1,0), tck=-.01)
+par(mfrow = c(3,1), mar=c(2.75,2.75,0.1,.25), mgp=c(1.25,.1,0), tck=-.01)
 
 curve(dnorm(x,0,.2), min(mus), max(mus), n = 500,
       ylab = "P(mu)", xlab = "", col = adjustcolor("blue",alpha = .5), lwd = 3)
-curve(dnorm(x,0,1), n = 500, add = T,
+curve(dnorm(x,0,1), n = 500, add = TRUE,
       ylab = "density", xlab = "", col = "blue", lwd = 3)
 legend("topright",
        lty = 1, lwd = 3,
        col = c("blue",adjustcolor("blue",alpha = .5)),
-       legend = c("mu ~ normal(0,1)","mu ~ normal(0,.01)"),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,.2)"),
        bty = "n")
 mtext("Prior", line = -2, adj = .05)
 
 plot(mus,exp(P["llikelihood",]),'l', xlab = "", ylab = "P(y|mu)", col = "red", lwd = 2)
 mtext("Likelihood", line = -2, adj = .05)
 
-plot(mus,post1,'l', xlab = "mu", ylab = "P(y|mu) * P(mu)", col = "purple", lwd = 2)
-lines(mus,post0.1,'l', col = adjustcolor("purple",alpha = .5), lwd = 2)
-abline(v = c(mus[which.max(post1)],mus[which.max(post0.1)]), lty = 3,
+plot(mus,post0.2,'l', xlab = "mu", ylab = "P(y|mu) * P(mu) [normalized]", col = adjustcolor("purple",alpha = .5), lwd = 2)
+lines(mus,post1,'l', col = "purple", lwd = 2)
+abline(v = c(mus[which.max(post1)],mus[which.max(post0.2)]), lty = 3,
        col = c("purple",adjustcolor("purple",alpha = .5)))
 legend("topright",
        lty = 1, lwd = 3,
        col = c("purple",adjustcolor("purple",alpha = .5)),
-       legend = c("mu ~ normal(0,1)","mu ~ normal(0,0.5)"),
+       legend = c("mu ~ normal(0,1)","mu ~ normal(0,0.2)"),
        bty = "n")
 mtext("Posterior", line = -2, adj = .05)
 ```
