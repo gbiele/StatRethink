@@ -611,7 +611,7 @@ if we assume the $\small f(SES)$ is a linear function, we are saying that
 
 <div class="marginnote"> 
 
-```{r, fig.align="left"}
+```{r, fig.align="left", fig.width=4, fig.height=4}
 curve(b_A(x),0,10, 
       ylab = expression("effect size"~beta[A]~" = f(SES)"), 
       ylim = c(0,b_A(10)), xlab = "SES")
@@ -702,7 +702,7 @@ fig = with(
           project=list(z=TRUE)
         )
       )
-    ) %>% 
+   )%>% 
     add_markers(x = dt$A, y = dt$SES, z = dt$IQ, size = .5)
 )
 fig = 
@@ -723,13 +723,15 @@ fig
 
 # Exercises
 
-## E1: Which of the following explanations invokes an interaction?
+## E1
+Which of the following explanations invokes an interaction?
 
 No interaction here. We need some type of "and" statement for an interaction.
 
 > Intelligent animal species tend to be either highly social or have manipulative appendages (hands, tentacles, etc.).
 
-## M1: Can you explain this result in terms of interactions between water, shade, and temperature?
+## M1
+Can you explain this result in terms of interactions between water, shade, and temperature?
 
 > Recall the tulips example from the chapter. Suppose another set of treatments adjusted the temperature in the greenhouse over two levels: cold and hot. The data in the chapter were collected at the cold temperature. You find none of the plants grown under the hot temperature developed any blooms at all, regardless of the water and shade levels. Can you explain this result in terms of interactions between water, shade, and temperature?
 
@@ -749,7 +751,8 @@ $$
 $$
 
 
-## M3: Can you invent a regression equation that would make the bloom size zero, whenever the temperature is hot?
+## M3
+Can you invent a regression equation that would make the bloom size zero, whenever the temperature is hot?
 
 The trick here is that we need 
 - a binary indicator variable, for hotness, lets call it $\small H$ that is $0$ when it is hot and otherwise one $1$.
@@ -776,11 +779,11 @@ $$
 will not work because $\small \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i$ can be non-zero when it is hot.
 
 
-## M4: ... constrain the effect of water to be positive ... 
+## M4
 
 Repeat the tulips analysis, but this time use priors that constrain the effect of water to be positive and the effect of shade to be negative. Use prior predictive simulation. What do these prior assumptions mean for the interaction prior, if anything?.
 
-## Forcing a negative prior
+### Forcing a negative prior
 
 ```{r}
 data(tulips)
@@ -791,20 +794,105 @@ d$shade_cent <- d$shade - mean(d$shade)
 ```
 
 
-If we have a model $mu <- a + bw*w + bs*s$ and want to force a positive or negative parameter, we generally start by choosing a prior distribution that has only positive values, e.g. `dlnorm` or `dexp`. This is sufficient for positive parameters. For negative paramters we also have to change the sign in the model for mu: $mu <- a + bw*w - bs*s$
+If we have a model `mu <- a + bw*w + bs*s` and want to force a positive or negative parameter, we generally start by choosing a prior distribution that has only positive values, e.g. `dlnorm` or `dexp`. This is sufficient for positive parameters. For negative paramters we also have to change the sign in the model for mu: `mu <- a + bw*w - bs*s`
 
 The a full quap model could be described as:
 
-```{r}
-m <- quap(
+```{r class.source = 'fold-show'}
+m = quap(
   alist(
-    blooms_std ~ dnorm( mu , sigma ) ,
-    mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent ,
-    a ~ dnorm( 0.5 , 0.25 ) ,
-    bw ~ dlnorm( 0 , 0.25 ) ,
-    bs ~ dlnorm( 0 , 0.25 ) ,
-    bws ~ dlnorm( 0 , 0.25 ) ,
-    sigma ~ dexp( 1 )
-  ) , data=d )
+    blooms_std ~ dnorm(mu, sigma),
+    mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent,
+    a ~ dnorm(0.5, 0.25),
+    bw ~ dlnorm(0, 0.25),
+    bs ~ dlnorm(0, 0.25),
+    bws ~ dnorm(0, 1),
+    sigma ~ dexp(1)
+  ), data=d )
 ```
 
+### Adjusting prior parameters
+
+Here are the prior predictions:
+
+```{r, fig.width=9, fig.height=3}
+plot_prior_predictive = function(m) {
+  p = extract.prior(m) 
+  par(mfrow=c(1,3),mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01) # 3 plots in 1 row
+  for ( s in -1:1){
+    idx <- which( d$shade_cent==s )
+    plot( d$water_cent[idx], d$blooms_std[idx], xlim=c(-1,1), ylim=c(0,1),
+          xlab="water", ylab="blooms")
+    mtext( concat( "shade = ", s))
+    mu = link( m, post=p, data=data.frame( shade_cent=s, water_cent=-1:1))
+    for ( i in 1:50) lines( -1:1, mu[i,], col=col.alpha("blue",0.15) )
+  }
+}
+plot_prior_predictive(m)
+```
+
+This is a bit wild. We see that the effect of water is much to steep, so we make the prior for the slopes smaller.
+
+
+```{r  class.source = 'fold-show', fig.width=9, fig.height=3}
+m = quap(
+  alist(
+    blooms_std ~ dnorm(mu, sigma),
+    mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent,
+    a ~ dnorm(0.5, 0.25),
+    bw ~ dlnorm(-2, 0.25),
+    bs ~ dlnorm(-2, 0.25),
+    bws ~ dnorm(0, 1),
+    sigma ~ dexp( 1 )
+  ), data=d )
+plot_prior_predictive(m)
+```
+<div class="marginnote"> 
+There is no quick and easy solution to find the right prior here. Here is one way to go about: At shade = 0 bloom ranges from around 0 to around .6 when water ranges from -1 to 1. So the maximum slope is around `.6/.2` = `r .6/.2`. That is, we are looking for a log-normal distribution where values > 0.3 are rare (the 97.5% percentile should be around 0.3). The quickest way to get this can then be to use either `hist(rlnorm(10000,mu,sd))` or `curve(dlnorm(x,mu,sd))` and play around with different values for `mu` and `sd` until one gets the desired distribution.
+</div>
+ 
+The slopes at shade=1 are now OK (could be a but more variable), but we also see that the effect of water can be positive or negative when there is no shade (shade = -1) or a lot of shade (shade 1).
+But when there is little shade, more water should have a positive effect. If we look at our linear model again:
+
+`mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent`
+
+the term `bws*water_cent*shade_cent` should be positive if shade is -1. To simplify things, lets assume there is a lot of water, so we want that `bws * 1 * -1 > 0` ,which we only get if we enforce that bws is a negative number. We achieve this by also putting a lognormal prior on it and by subtracting this term, instead of addining it.
+
+`mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent,` <br> `...` <br> `bws ~ dnorm(0, 1)`
+
+becomes 
+
+`mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent` <br> `...` <br> `bws ~ dlnorm(-2, .25)`
+
+Here is the full model with prior predictive simulations:
+
+```{r class.source = 'fold-show', fig.width=9, fig.height=3}
+m = quap(
+  alist(
+    blooms_std ~ dnorm(mu, sigma),
+    mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent,
+    a ~ dnorm(0.5, 0.25),
+    bw ~ dlnorm(-2, 0.25),
+    bs ~ dlnorm(-2, 0.25),
+    bws ~ dlnorm(-2, 0.25),
+    sigma ~ dexp(1)
+  ), data=d )
+plot_prior_predictive(m)
+```
+
+
+Lastly, we see that blooming is to high when shade = 0. If we look again at the linear model `mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent` we see that we need to adjust the intercept to deal with this. Our final model is then:
+
+```{r class.source = 'fold-show', fig.width=9, fig.height=3}
+m = quap(
+  alist(
+    blooms_std ~ dnorm(mu, sigma),
+    mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent,
+    a ~ dnorm(0.35, 0.25),
+    bw ~ dlnorm(-2, 0.25),
+    bs ~ dlnorm(-2, 0.25),
+    bws ~ dlnorm(-2, 0.25),
+    sigma ~ dexp(1)
+  ), data=d )
+plot_prior_predictive(m)
+```
