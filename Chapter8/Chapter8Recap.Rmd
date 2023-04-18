@@ -1,7 +1,7 @@
 ---
 title: "Chapter 8: Recap"
 author: "Guido Biele"
-date: "11.05.2022"
+date: "18.04.2023"
 output:
   html_document: 
     mathjax: default
@@ -12,6 +12,61 @@ header-includes:
     \usepackage{xcolor}
     \usepackage{amsmath}
 ---
+
+
+```{css, echo = F}
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+  max-width: 1000px;
+  margin: auto;
+  margin-left:310px;
+}
+pre{
+  font-size: 20px;
+}
+/* Headers */
+h1{
+    font-size: 24pt;
+  }
+h1,h2{
+    font-size: 20pt;
+  }
+h3,h4,h5,h6{
+  font-size: 18pt;
+}
+
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100%;
+  overflow:auto;
+}
+
+img {
+    display: block;
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+}
+```
+
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
 
   
 ```{css, echo = F}
@@ -47,12 +102,12 @@ source("../utils.R")
 
 # The Scarr-Rowe effect
 
-We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%E2%80%93Rowe_effect) (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes is larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
+We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%E2%80%93Rowe_effect) (or hypothesis) to look more closely on interaction effects. The Scarr-Rowe hypothesis states that the (genetic) **heritability of a trait depends on the environment**, such that the effects of genes are larger when environments are better. The underlying idea is that if everyone lives in a perfect environment, i.e. there is no variation in the relevant environment, then a trait will only depend on genes.
 
 This interaction can be visualized as follows:
 
-```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="40%"}
-par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
+```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
 heritability = c(scarce = 0.5, plentiful = 0.8)
 barplot(heritability,
         ylim = c(0,1),
@@ -95,7 +150,7 @@ This function could be
 - $\small IQ = SES + A \cdot SES$,
 - ...
 
-or any other imaginable function that uses the variables. The model we have in mind now is:
+or any other imaginable function that uses the variables. The model we have now in mind is:
 
 $$
 IQ =  f(SES) A
@@ -110,6 +165,13 @@ SES = rlnorm(N,log(4.75),.3)
 A = rlnorm(N,log(10),.2)
 ```
 
+```{r echo = FALSE, fig.width=3, fig.height=3, out.width="40%", fig.cap="A and SES are independent"}
+par(mfrow = c(1,1),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
+plot(SES,A, pch = 16, cex = .5)
+abline(lm(A~SES), col = "grey")
+```
+
+
 Now comes the interesting part: Scarr-Rowe assumes that the effect or weight of genes depends on the SES. So we formulate the weight of genes as as a function of SES. 
 
 ```{r class.source = 'fold-show', warning=FALSE, message=FALSE}
@@ -117,13 +179,13 @@ library(boot)
 # use inv.logit to give weights a lower and upper bound
 # add a constant one to model that even at lowest SES 
 # there are genetic effects
-b_A = function(x) 0.5 + inv.logit(x-5) * 2.5
+b_A = function(x) 0.25 + inv.logit(x-5) * 2.75
 ```
 
 
 We are literally defining the weight for A as a function of SES. This is one way to understand interactions. Here is a visualization of the weights, with a histogram of SES values on the bottom.
 
-```{r fig.height=4, fig.width=5, fig.align = 'center', out.width="70%"}
+```{r fig.height=3.5, fig.width=5, fig.align = 'center', out.width="70%"}
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 curve(b_A(x),0,10, 
       ylab = expression("effect size"~beta[A]), 
@@ -132,21 +194,28 @@ hist(SES,add = T, probability = T)
 ```
 **In this plot, the interaction is encoded by the fact that $\small \beta_A$ has a slope.**
 
-Now we can simulate IQ values using exogenous variables and derived weights. We assume that IQ depends on $\small A$, whereby this effect depends on $\small SES$: $\small IQ = f(SES)A$. Lets simulate data from this model:
+Now we can simulate IQ values using 
+
+1. exogenous variables and 
+2. derived weights. 
+
+We assume that IQ depends on $\small A$, whereby this effect depends on $\small SES$: $\small IQ = f(SES)A$. Lets simulate data from this model:
 
 ```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-# Adding 70 to get an IQ around 100
+# Adding 85 to get an IQ around 100
 IQ = 85 + b_A(SES)*A + rnorm(N,sd = 10)
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
-hist(IQ)
+hist(IQ, main = "")
 ```
 
 If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plot:
 
-```{r fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
+```{r echo = FALSE, fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
 par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(SES,IQ, pch = 16, cex = .5,)
-plot(A,IQ, pch = 16, cex = .5,)
+plot(SES,IQ, pch = 16, cex = .5)
+abline(lm(IQ~SES), col = "grey")
+plot(A,IQ, pch = 16, cex = .5)
+abline(lm(IQ~A), col = "grey")
 ```
 
 # Categorial interactions
@@ -154,15 +223,12 @@ plot(A,IQ, pch = 16, cex = .5,)
 To run a simple interaction with a categorical interaction variable we dichotomise the SES variable to create the variable `SES.c`:
 
 ```{r class.source = 'fold-show'}
-low.SES = which(SES < quantile(SES,.50))
-high.SES = which(SES > quantile(SES,.50))
-idx = c(low.SES,high.SES)
 dt = data.frame(
-  A = A[idx],
-  IQ = IQ[idx],
-  SES = SES[idx],
-  SES.c = c(rep(1,length(low.SES)),
-            rep(2,length(high.SES))))
+  A = A,
+  IQ = IQ,
+  SES = SES,
+  SES.c = 1 + (SES > quantile(SES,.50))
+  )
 ```
 
 
@@ -184,14 +250,14 @@ plot_data(dt)
 #abline(lm(IQ ~ A, data = dt[high.SES,]), col = "red")
 ```
 
-Next, we estimate some linear regression models with increasing complexity, our goal being to have a model that accurately depicts the effect of A, C, E, and SES on the IQ.
+Next, we estimate some linear regression models with increasing complexity. Our goal is to have a model that accurately depicts the effect of A and SES on the IQ.
 
 ## Simple linear regression
 
 We start with a simple linear regression. But first some intuitions on priors:
 
 - Eyeballing the data, we see that the IQ at an average $\small A$ of 10 is around 100, so we use a prior `a ~ dnorm(100,5)`
-- The range of $\small A$ is 16-6 = 10 and the range of IQ = 120-80 = 40. So for a one unit increase of $\small A$, IQ changes around 40/10 = 4. If we want that an effect of +/-4 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,4)`. This prior allows for the possibility of a negative effect of $\small A$. 
+- The range of $\small A$ is 16-6 = 10 and the range of IQ = 130-70 = 60. So for a one unit increase of $\small A$, IQ can change around 60/10 = 6. If we want that an effect of +/-6 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,6)`. This prior allows for the possibility of a negative effect of $\small A$. 
 - Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.25)` 
 
 Here is the regression model:
@@ -204,7 +270,7 @@ IQ.A =
       IQ ~ dnorm(mu,sigma),
       mu <- a + b*(A - 10),
       a ~ dnorm(100,5),
-      b ~ dnorm(0,4),
+      b ~ dnorm(0,6),
       sigma ~ dexp(.5)
     ),
     data=dt)
@@ -276,7 +342,7 @@ compare(
 ```
 
 
-## Linear regression with category-main effect and category-slope
+## Linear regression with category-main effect and category-slope, i.e. _interaction_
 
 Lastly, we can also let the slopes vary by SES: 
 
@@ -305,7 +371,7 @@ plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black")
 plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red")
 ```
 
-Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because our model puts the intercept at A = 10, whereas it was A = 0 in the DGP.
+Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because when the effect of A depends on SES, and A and SES are independent, we still expect children of high SES parents to have on average higher IQ.
 
 Here is a comparison of all the models we have fit:
 
@@ -326,7 +392,7 @@ While the correct model has the best PSIS and WAIC value, for the top two models
 
 ### A simple contrast
 
-How can we figure out if the difference in slopes is reliably larger than 0? We simply extract posteriors and calculate the difference in slopes from them:
+How can we figure out if the difference in slopes is reliably larger than zero? We simply extract posteriors and calculate the difference in slopes from them:
 
 
 ```{r class.source = 'fold-show'}
@@ -352,9 +418,9 @@ c(mean = mean(delta.b),
 
 And we can plot a histogram of the contrast:
 
-```{r fig.height=3, fig.width=4, fig.align = 'center', out.width="40%"}
-par(mar=c(3,3,2,1), mgp=c(1.25,.5,0), tck=-.01)
-hist(delta.b, xlim = range(c(0,delta.b)))
+```{r fig.height=3.5, fig.width=4, fig.align = 'center', out.width="50%"}
+par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+hist(delta.b, xlim = range(c(0,delta.b)), main = "")
 abline(v = 0, lty = 2)
 abline(v = PI(delta.b,prob = c(.95)), col = "red")
 ```
@@ -377,7 +443,7 @@ rbind(
 
 We are not recovering the exact parameters, after all we used a _golem_ instead of a model that depicts the DGP, but qualitatively the results are consistent with the DGP.
 
-## Symetric interactions
+## Symmetric interactions
 
 Earlier, we described the function
 
@@ -392,20 +458,34 @@ By saying that the effect $\small A$ is a function of $\small SES$. However, we 
 
 Accordingly, we can also plot the difference between high and low $\small SES$ as a function of $\small A$:
 
-```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r fig.height=4, fig.width=8, fig.align = 'center'}
 A.seq = seq(from=5,to=16,length.out=50)
 mu.low = link(IQ.AxSES,data=data.frame(SES.c=1,A=A.seq))
 mu.high = link(IQ.AxSES,data=data.frame(SES.c=2,A=A.seq))
 delta = mu.high-mu.low
 CIs = apply(delta,2,PI)
-par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+par(mfrow = c(1,2), mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot(A.seq, colMeans(delta),'l',
      ylim = range(CIs),
      col = "blue",
      xlab = "A",
-     ylab = expression(IQ[high~SES]~-~IQ[low~SES]))
+     ylab = expression(SES-effect: IQ[high~SES]~-~IQ[low~SES]))
 shade(CIs,A.seq, col = adjustcolor("blue", alpha = .25))
 abline(h = 0, lty = 2)
+
+
+A.seq = c(10,11)
+mu.low = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=10))
+mu.high = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=11))
+delta = mu.high-mu.low
+CIs = apply(delta,2,PI)
+plot(c(1,2), colMeans(delta), pch = 16, cex = 3,
+     ylim = range(CIs), xlim = c(.8,2.2),
+     col = "blue", xlab = "SES", xaxt = "n",
+     ylab = expression(A-effect: IQ["A=11"]~-~IQ["A=10"]))
+axis(1, at = c(1,2), labels = c("low","high"))
+lines(c(1,1),CIs[,1], col = adjustcolor("blue",alpha = .5), lwd = 2)
+lines(c(2,2),CIs[,2], col = adjustcolor("blue",alpha = .5), lwd = 2)
 ```
 
 # Continuous interactions
@@ -437,7 +517,7 @@ points3D(A,SES,IQ, type = "h",
          zlab = "IQ")
 ```
 
-A panel of 2d plots does the job better, and will later allow to display uncertainty.
+A panel of 2d plots (small multiples) does the job better, and will later allow to display uncertainty.
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 qs = quantile(SES, probs = seq(0,1,.25))
@@ -492,7 +572,8 @@ We are using prior predictions to check if the model does a good job:
 plot.pred(IQc.A_SES,dt, type = "prior")
 ```
 
-This is pretty wild. Lets try a bit narrower priors:
+This is pretty wild: Each line represents the expected IQ given A, which means that we should not see lines that lie mostly below or above the data points. Such lines indicate that the prior for the intercept should be adjusted, in our case it should be narrower.
+Lets try a bit narrower priors:
 
 ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 set.seed(1)
@@ -528,11 +609,21 @@ $$
 
 if we assume the $\small f(SES)$ is a linear function, we are saying that
 
+<div class="marginnote"> 
+
+```{r, fig.align="left"}
+curve(b_A(x),0,10, 
+      ylab = expression("effect size"~beta[A]~" = f(SES)"), 
+      ylim = c(0,b_A(10)), xlab = "SES")
+hist(SES,add = T, probability = T)
+```
+</div>
+
 $$
 \gamma_A = \beta_A + \beta_{AS}SES
 $$
 
-Here, $\small \beta_A$ is the intercept for the effect of $\small A$, i.e. the effect of $\small A$ when $\small SES = 0$. If knew that the effect of $\small A$ has to be zero when $\small SES = 0$, we could ommit the $\small \beta_A$
+Here, $\small \beta_A$ is the intercept for the effect of $\small A$, i.e. the effect of $\small A$ when $\small SES = 0$. If we knew that the effect of $\small A$ has to be zero when $\small SES = 0$, we could omit the $\small \beta_A$
 
 Now lets think back to our original regression, with slightly modified notations
 
@@ -577,54 +668,7 @@ This priors look OK (even though slopes become extreme at high SES values), so w
 plot.pred(IQc.AxSES.m,dt)
 ```
 
-<!-- ## Linear regression with only interaction -->
 
-<!-- Here we have removed the main effects `ba*(A - 10) + bs*(SES - 2.5)` from the previous model. -->
-
-<!-- ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'} -->
-<!-- set.seed(1) -->
-<!-- IQc.AxSES =  -->
-<!--   quap( -->
-<!--     alist( -->
-<!--       IQ ~ dnorm(mu,sigma), -->
-<!--       mu <- a + bas*(A - 10)*(SES - 2.5), -->
-<!--       a ~ dnorm(100,7.5), -->
-<!--       bas ~ dnorm(0,2), -->
-<!--       sigma ~ dexp(.5) -->
-<!--     ), -->
-<!--     data=dt) -->
-<!-- plot.pred(IQc.AxSES,dt, type = "prior") -->
-<!-- ``` -->
-
-<!-- Because the model is simpler, the posterior predictions are more constraint, but still very variable. Here are the model predictions: -->
-
-<!-- ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
-<!-- plot.pred(IQc.AxSES,dt) -->
-<!-- ``` -->
-<!-- This model cannot capture that the average IQ is higher at higher SES values. The next model addresses this: -->
-
-<!-- ## Linear regression with SES main effect and interaction -->
-
-<!-- ```{r class.source = 'fold-show', fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
-<!-- IQc.AxSES.mSES =  -->
-<!--   quap( -->
-<!--     alist( -->
-<!--       IQ ~ dnorm(mu,sigma), -->
-<!--       mu <- a + bs*(SES - 2.5) + bas*(A - 10)*(SES - 2.5), -->
-<!--       a ~ dnorm(100,7.5), -->
-<!--       bas ~ dnorm(0,2), -->
-<!--       bs ~ dnorm(0,2), -->
-<!--       sigma ~ dexp(.5) -->
-<!--     ), -->
-<!--     data=dt) -->
-<!-- #plot.pred(IQc.AxSES.mSES,dt, type = "prior") -->
-<!-- ``` -->
-
-<!-- Here are the model predictions: -->
-
-<!-- ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"} -->
-<!-- plot.pred(IQc.AxSES.mSES,dt) -->
-<!-- ``` -->
 
 ## Model comparison
 
@@ -635,6 +679,7 @@ compare(IQc.A_SES,IQc.AxSES.m, func = "WAIC") %>% round(1)
 ```{r class.source = 'fold-show'}
 compare(IQc.A_SES,IQc.AxSES.m, func = "PSIS") %>% round(1)
 ```
+
 PSIS and WAIC correctly identify the interaction model, and the difference is clearer compared to the categorical interaction, which used only a subset of the data and through way information by dichotomizing.
 
 ## A fancy plot
@@ -672,9 +717,94 @@ fig =
 fig
 ```
 
-## Scarr-Rowe effect: Latest results
+# Scarr-Rowe effect: Latest results
 
 ![Giagrande 2019: Scarr-Rowe effect](Giagrande_ScarrRoweEffect.png)
 
-# Excersices
+# Exercises
+
+## E1: Which of the following explanations invokes an interaction?
+
+No interaction here. We need some type of "and" statement for an interaction.
+
+> Intelligent animal species tend to be either highly social or have manipulative appendages (hands, tentacles, etc.).
+
+## M1: Can you explain this result in terms of interactions between water, shade, and temperature?
+
+> Recall the tulips example from the chapter. Suppose another set of treatments adjusted the temperature in the greenhouse over two levels: cold and hot. The data in the chapter were collected at the cold temperature. You find none of the plants grown under the hot temperature developed any blooms at all, regardless of the water and shade levels. Can you explain this result in terms of interactions between water, shade, and temperature?
+
+This is indeed a three way interaction. A quick way would be to simply write the model as 
+
+$$
+mu_i = \alpha + \beta_{TSW}(T_i \cdot S_i \cdot W_i)
+$$
+
+However, it is a good idea to generally model all lower level main and interaction effects
+
+$$
+\mu_i = \\
+\alpha + \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i \\
++ \beta_{TS}(T_i \cdot S_i) + \beta_{SW}(S_i \cdot W_i)+  \beta_{TW}(T_i \cdot W_i) \\
++ \beta_{TSW}(T_i \cdot S_i \cdot W_i)
+$$
+
+
+## M3: Can you invent a regression equation that would make the bloom size zero, whenever the temperature is hot?
+
+The trick here is that we need 
+- a binary indicator variable, for hotness, lets call it $\small H$ that is $0$ when it is hot and otherwise one $1$.
+- an equation where all other effects interact with hotness.
+
+Here is an example that works:
+
+$$
+\mu_i = (\alpha + \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i) \cdot H_i
+$$
+
+Here is an example that does not work:
+
+$$
+\mu_i = \alpha + \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i\cdot H_i
+$$
+
+If we have any terms in the model that are not multiplied by hotness, we cannot insure that $\mu$ will be zero when it is hot. _This is also true for a model where the intercept depends on hotness_, for example 
+
+$$
+\mu_i = \alpha_{[H_i]} + \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i
+$$
+
+will not work because $\small \beta_{T}T_i + \beta_{S}S_i + \beta_{W}W_i$ can be non-zero when it is hot.
+
+
+## M4: ... constrain the effect of water to be positive ... 
+
+Repeat the tulips analysis, but this time use priors that constrain the effect of water to be positive and the effect of shade to be negative. Use prior predictive simulation. What do these prior assumptions mean for the interaction prior, if anything?.
+
+## Forcing a negative prior
+
+```{r}
+data(tulips)
+d <- tulips
+d$blooms_std <- d$blooms / max(d$blooms)
+d$water_cent <- d$water - mean(d$water)
+d$shade_cent <- d$shade - mean(d$shade)
+```
+
+
+If we have a model $mu <- a + bw*w + bs*s$ and want to force a positive or negative parameter, we generally start by choosing a prior distribution that has only positive values, e.g. `dlnorm` or `dexp`. This is sufficient for positive parameters. For negative paramters we also have to change the sign in the model for mu: $mu <- a + bw*w - bs*s$
+
+The a full quap model could be described as:
+
+```{r}
+m <- quap(
+  alist(
+    blooms_std ~ dnorm( mu , sigma ) ,
+    mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent ,
+    a ~ dnorm( 0.5 , 0.25 ) ,
+    bw ~ dlnorm( 0 , 0.25 ) ,
+    bs ~ dlnorm( 0 , 0.25 ) ,
+    bws ~ dlnorm( 0 , 0.25 ) ,
+    sigma ~ dexp( 1 )
+  ) , data=d )
+```
 
