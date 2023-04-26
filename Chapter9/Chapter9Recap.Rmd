@@ -1,7 +1,7 @@
 ---
-title: "Chapter 9: Recap (a)"
+title: "Chapter 9: Recap"
 author: "Guido Biele"
-date: "11.05.2022"
+date: "26.04.2023"
 output:
   html_document: 
     mathjax: default
@@ -64,7 +64,7 @@ The goal of an MCMC algorithm is to generate a posterior distribution, i.e. we w
 
 To introduce the Metropolis algorithm, we use a simple example where we try to estimate the mean and standard deviation of these data:
 
-```{r class.source = 'fold-show', fig.height=4, fig.width=5, fig.align = 'center', out.width="40%"}
+```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 set.seed(1)
 y = rnorm(100)
 hist(y)
@@ -110,7 +110,7 @@ Proposals for the Metropolis algorithm have to be symmetric around the current p
 
 This standard deviation is an important parameter because if it is to small and we initialize far away from the posterior distribution the algorithm will take a lot of time to find the posterior distribution. On the other hand, if the standard deviation is to large, the algorithm will make lots of proposals that are rejected, which also slows things down.
 
-One rule of thumb is to set the standard deviation such that around 80% of the proposals are accepted. This is partially a process of trial and error, though it helps to choose reasonable priors and to choose standard deviations for proposals that are consistent with the priors. _Luckily, modern MCMC samplers are tuned automatically.
+One rule of thumb is to set the standard deviation such that around 80% of the proposals are accepted. This is partially a process of trial and error, though it helps to choose reasonable priors and to choose standard deviations for proposals that are consistent with the priors. _Luckily, modern MCMC samplers are tuned automatically._
 
 ```{r class.source = 'fold-show'}
 i = 2 # current iteration
@@ -124,13 +124,15 @@ proposal.log_sigma =
         sd = 0.05)
 ```
 
+We could also choose different standard deviations for the different parameters.
+
 ## Adding a sample
 
 Because our goal is to describe a posterior distribution, we should choose more of those samples that have a high log posterior. 
 
-On the other hand, we also want explore the space of possible parameters and should therefor also accept samples that have lower log posteriors. We also do not simply want to find the maximum a posteriori, i.e. the parameter combination at which the log posterior is highest, but we want to know the (relative) probability of parameters combinations.
+On the other hand, we also want explore the space of possible parameters and should therefor also accept samples that have lower log posteriors. We do not simply want to find the maximum a posteriori, i.e. the parameter combination at which the log posterior is highest, but we want to know the (relative) probability of parameters combinations.
 
-The decision about wether the proposal is accepted as the new sample depends on the relative log posteriors of the old sample and the proposal. So we next calculate the log posterior for the new sample.
+The decision about whether the proposal is accepted as the new sample depends on the relative log posteriors of the old sample and the proposal. So we next calculate the log posterior for the new sample.
 
 ```{r class.source = 'fold-show'}
 proposal.P = calc.P(proposal.mu, proposal.log_sigma, y)
@@ -156,7 +158,7 @@ exp(proposal.P-P[1])
 
 So the probability of the proposal is `r round(exp(proposal.P-P[1]),2)` time the probability of the last sample.
 
-Because the proposal has a lower probability, we choose randomly:
+Because the proposal has a lower probability, we choose randomly, i.e. using a random number between 0 and 1:
 
 ```{r class.source = 'fold-show'}
 r = runif(1)
@@ -281,7 +283,7 @@ To clarify the relationship of different terms:
 - _Hamiltonian Monte Carlo_ is the name for a type of MCMC samplers
 - _Stan_ is one (the leading) software that implements a HMC sampler and also a probabilistic programming language
 - `ulam` is a function in the `rethinking` packages that translates rethinking models (`alist(...)`) into the Stan language and runs the HMC sampler
-- Other packages that use _Stan_ to generate MCMC samples are `brms` and `rastanarm`, where one can formulate models like typically in `R` (e.g. `fit = brms(y ~ x1 + x2, data = dt)` ) and `rstan` and `cmdstandr`, which require that that the use writes the model directly in the Stan progamming language.
+- Other packages that use _Stan_ to generate MCMC samples are `brms` and `rastanarm`, where one can formulate models like typically done in `R` (e.g. `fit = brms(y ~ x1 + x2, data = dt)` ) and `rstan` and `cmdstandr`, which require that that the use writes the model directly in the Stan progamming language.
 
 
 ## Fitting in `ulam`
@@ -363,8 +365,8 @@ First an example: This is an ensemble of 4 healthy chains:
 
 ```{r}
 trace.rankplot = function(chains) {
-  par(mfrow = c(2,1), mar=c(2,3,0.1,.5), mgp=c(1.75,.5,0), tck=-.01)
-  matplot(chains, typ = "l", lty = 1, ylab = "theta", xlab = "") 
+  par(mfrow = c(2,1), mar=c(3,3,0.1,.5), mgp=c(1.75,.5,0), tck=-.01)
+  matplot(chains, typ = "l", lty = 1, ylab = "theta", xlab = "iteration") 
   ranks = matrix(rank(chains), ncol = ncol(chains))
   h = hist(ranks, plot = F, breaks = 30)
   rank.hists = 
@@ -372,7 +374,7 @@ trace.rankplot = function(chains) {
           function(x) counts = hist(x,breaks = h$breaks, plot = F)$counts)
   par(mar=c(3,3,0,.5))
   matplot(h$mids,rank.hists,'s', ylim = c(0,max(rank.hists)),lty = 1, 
-          xlab = "iteration", ylab = "frequency")
+          xlab = "rank", ylab = "frequency")
 }
 ```
 
@@ -414,7 +416,7 @@ These chains exhibit autocorrelation, because the samples i-1, i-2, i-3 ... can 
 
 Good mixing means that the samples vary with a constant variance around their mean. 
 
-Here is an example of chains that did not mix:
+Here is an example of chains that are not well mixed:
 
 ```{r}
 chains.not.mixing = 
@@ -517,10 +519,10 @@ The effective sample size (n_eff or ess) can be understood as the number of inde
 - Rhat is the key convergence diagnostic
 - The effective number of samples depends on (a) Rhat and (b) the number of posterior samples. It tells us how much we can trust statistics we can calculate from the posterior. As a rule of thumb, a few hundred samples are enough. If we are mainly interested in the mean, we should look at the n_eff / ess for the bulk, if we are interested in the tail (e.g. when we are looking at cut-off values in the tail region) we should look at the n_eff / ess for the bulk.
 - _Multiple chains are useful_ because they increase the number of posterior samples and thus contribute to ess / n_eff.
-- Typically 4 chains are sufficient. Fewer chains reduce the chance to detect problems. More chains can be useful to detect problems in tricky models. (this would typically be )
+- Typically 4 chains are sufficient. Fewer chains reduce the chance to detect problems. More chains can be useful to detect problems in tricky models. (for instance models with multi-modal posteriors)
 - **In sum: Go with defaults!**
   - 4 chains
-  - 1000 warmup and 100 post warm up iterations
+  - 1000 warmup and 1000 post warm up iterations
   - check if Rhat <= 1.01
   - check if relevant ess / n_eff > 500
 
@@ -528,11 +530,11 @@ The effective sample size (n_eff or ess) can be understood as the number of inde
 
 [Andrew Gelman](andrewgelman.com) has described the _The Folk Theorem of Statistical Computing_, which means that if you have computational problems with your model, e.g. divergent transitions or non-converging chains, the culprit is not the algorithm but a suboptimally specified model.
 
-The reasoning is that modern samplers like Stan's Hamiltonian Monte Carlo NUTS sampler are so goodd that they can fit almost any model, and that therefore problems during model estimation are not due to the sampler but due to a model that is not specifies well.
+The reasoning is that modern samplers like Stan's modified NUTS Hamiltonian Monte Carlo sampler are so good that they can fit almost any model, and that therefore problems during model estimation are not due to the sampler but due to a model that is not specified well.
 
 One important part of model specification are the priors.
 
-To see this, lets look at the problem of colinearity and specify and extremely co-linear situation, where we use two times the same parameter to predict an outcome:
+To see this, lets look at the problem of collinearity and specify and extremely co-linear situation, where we use two times the same parameter to predict an outcome:
 
 ```{r}
 data.list = list(
@@ -541,7 +543,7 @@ data.list = list(
 )
 ```
 
-If we specify a model $\small y ~ normal(a + \beta_1 X_1 + \beta_2 X_2, \sigma)$:
+If we specify a model $\small y \sim normal(a + \beta_1 X_1 + \beta_2 X_2, \sigma)$:
 
 ```{r}
 wide.model = alist(
@@ -554,7 +556,14 @@ wide.model = alist(
 )
 ```
 
-then this is non-identified because e.g. the prediction for $\small  \beta_1 = 1, beta_2 = 0$, $\small  \beta_1 = 0, beta_2 = 1$, $\small \beta_1 = 0.5, beta_2 = 0.5$, $\small \beta_1 = 0.75, beta_2 = .25$ will be the same. In fact there is an infinite number of combinations of values for $\small \beta_1$ and $\small \beta_2$ that make identical predictions.
+then this is non-identified because e.g. the prediction for 
+
+- $\small  \beta_1 = 1, beta_2 = 0$, 
+- $\small  \beta_1 = 0, beta_2 = 1$, 
+- $\small \beta_1 = 0.5, beta_2 = 0.5$, 
+- $\small \beta_1 = 0.75, beta_2 = .25$ 
+
+will be the same. In fact there is an infinite number of combinations of values for $\small \beta_1$ and $\small \beta_2$ that make identical predictions.
 
 Lets see if we can still fit this model
 
@@ -601,35 +610,39 @@ precis(u.fit.wide) %>% round(2)
 
 The pairs plot is useful to show correlations between parameters, which explains our problem.
 
-```{r class.source = 'fold-show'}
+```{r class.source = 'fold-show', warning=FALSE}
 pairs(u.fit.wide)
 ```
 
-This model did clearly not work out. Lets look again and the model and think about how we could improve the model. We start with prior preditions: 
+This model did clearly not work out. Lets look again and the model and think about how we could improve the model. We start with prior predictions: 
 
 ```{r, class.source = 'fold-show', results='hide', message=FALSE}
 prior = extract_prior_ulam(u.fit.wide)
-mu = link_ulam(u.fit.wide, data = list(X1 = range(data.list$X1)), post = prior)
+mu = link_ulam(
+  u.fit.wide,
+  data = list(X1 = range(data.list$X1)),
+  post = prior,
+  n = 50)
 ```
 
 ```{r, class.source = 'fold-show', fig.width=10, fig.height=5}
 par(mfrow = c(1,2), mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-plot(X[,1],Y, xlab = "Y1")
+plot(X[,1],Y, xlab = "X1")
 matplot(range(data.list$X1),
         t(mu[1:50,]), 'l',
         col = adjustcolor("blue", alpha = .25),
         lty = 1, xlab = "X1")
 ```
 
-We see that prior for beta allows slope that are orders of magnitude steeper than is reasonable. Lets look at the priors again:
+The left panel shows observed Y and X1 values. The right panels shows that the prior for beta allows slope that are orders of magnitude steeper than is reasonable. Lets look at the priors again:
 
 ```{r}
 wide.model
 ```
 
-The priors on b1 and b2 are indeed very wide. Note that a 4 unit change on the x axis corresponds to a 12 unit change on the y axis, for only one parameter. 12/4/2 = 1.5, so even if we set the prior sd for b1 and b2 to 15, we are stilling using very wide priors (though not ridiculously  wide). Lets try this model:
+The priors on b1 and b2 are indeed very wide. Note that a 4 unit change on the x axis corresponds to a 12 unit change on the y axis, for only one parameter b1 or b2. 12/4/2 = 1.5, so even if we set the prior sd for b1 and b2 to 15, we are stilling using very wide priors (though not ridiculously  wide). Lets try this model:
 
-```{r class.source = 'fold-show'}
+```{r class.source = 'fold-show', results='hide'}
 less.wide.model = alist(
   Y ~ normal(mu,exp(log_sigma)),
   mu <- a + b1*X1 + b2*X1,
@@ -644,7 +657,7 @@ u.fit.less.wide = ulam(
   chains = 4,       # for chains, to check convergence
   cores = 4,        # use 4 cores in parallel
   cmdstan = TRUE)   # use cmdstanr not rstan
-traceplot(u.fit.less.wide, max_rows = 1, pars = c("b1","b2"), n_cols = 2)
+traceplot(u.fit.less.wide, max_rows = 1, pars = c("b1","b2"), n_cols = 1)
 ```
 
 ```{r class.source = 'fold-show'}

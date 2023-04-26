@@ -91,7 +91,7 @@ make_anim = function(theta, fn = NULL) {
     },
     output = fn,
     framerate = 20,
-    width = 900, height = 450, pointsize = 25)
+    width = 900*1.6, height = 450*1.6, pointsize = 25*1.6)
 }
 
 post.theta = metropolis(start.list = list(c(-2,3,-3,1.5)))[[1]]
