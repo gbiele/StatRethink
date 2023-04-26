@@ -26,3 +26,7 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 7. B: [Cross validation and model comparison](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter7/Chapter7Recap_b.html)
 
+8.: [Interactions](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter8/Chapter8Recap.html)
+
+9. B: [MCMC and chain diagnostics](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter9/Chapter9Recap.html)
+
