@@ -69,6 +69,8 @@ for (k in ks) {
        ylim = c(ylims.b[i], ylim.t),
        xlim = c(xlim.l, xlims.r[i]),
        'l',ylab = "mu", xlab = "sigma", col = clr)
+  abline(h = mean(x), col = adjustcolor("red",alpha = .2))
+  abline(v = sd(x), col = adjustcolor("red",alpha = .2))
   dot.col = ifelse(keep.old[k] == TRUE, "red","blue")
   points(exp(post.log_sigma[k]), post.mu[k], col = dot.col, pch = 16)
   points(exp(post.log_sigma[1:k]), post.mu[1:k], col = clr2, pch = 16)

@@ -141,7 +141,8 @@ proposal.P = calc.P(proposal.mu, proposal.log_sigma, y)
 The decision rule about accepting the proposal as the next samples is as follows:
 
 - If the log posterior of the proposal is higher, always accept the proposal as the new sample
-- If the log posterior of the proposal is lower, randomly choose between the last sample and the new sample. The log posteriors determine the probability of choosing the proposal or old sample, such that the smaller the log posterior of the proposal is compared to the log posterior of the last sample, the smaller is the probability to choose the proposal. 
+- If the log posterior of the proposal is lower, randomly choose between the last sample and the new sample. 
+  - The log posteriors determine the probability of choosing the proposal or old sample, such that the smaller the log posterior of the proposal is compared to the log posterior of the last sample, the smaller is the probability to choose the proposal. 
 
 This was the decision rule in words, here it is in code:
 
@@ -239,6 +240,8 @@ c(mean = mean(y), sd = sd(y))
 ```
 
 While this was a trivial example, it shows us the MCMC, here in the form of the Metropolis algorithm, can compute posterior distributions.
+
+**With an infinite number of posterior samples the simple Metropolis algorithm can recover any posterior.** But we cannot generate an infinte number of samples.
 
 # Why Hamiltonian Monte Carlo?
 
