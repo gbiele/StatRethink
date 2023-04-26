@@ -1,7 +1,4 @@
 
-
-
-
 plot_quap_preds = function(q.model, dt, pred.var, out.var = as.character(q.model[[1]])[2], plot.data = TRUE, start.list = NULL, fix.ylim = NULL, return.yhat = FALSE) {
   if (class(q.model) == "map") {
   } else {
@@ -79,7 +76,8 @@ plot.pred = function(q.fit, dt, type = "posterior") {
                   data.frame(A = seq(2,20,.5),
                              C = seq(2,20,.5),
                              SES = mean(dt[idx,"SES"])),
-                col = "blue",
+                col = adjustcolor("blue",alpha = .5),
+                spaghetti = TRUE,
                 type = type)
   }
 }

@@ -106,13 +106,27 @@ We are going to use the [Scarr-Rowe effect](https://en.wikipedia.org/wiki/Scarr%
 
 This interaction can be visualized as follows:
 
-```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
-par(mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
-heritability = c(scarce = 0.5, plentiful = 0.8)
+```{r fig.height=4, fig.width=8, fig.align = 'center'}
+par(mfrow = c(1,2), mar=c(3,3,1,.5), mgp=c(1.25,.5,0), tck=-.01)
+
+plot(0,type = "n", ylim = c(0,1), xlim = c(0,1), xaxt = "n", yaxt = "n",
+     ylab = "IQ", xlab = "PGS", bty = "n")
+axis(1, at = c(-2,2))
+axis(2, at = c(-2,2))
+lines(c(.05,.95), c(.3, .8), col = "green3", lwd=2)
+lines(c(.05,.95), c(.2, .5), col = "orange3", lwd=2)
+legend("topleft", title = "environment", bty = "n",
+       legend = c("scarce","plentiful"),
+       lwd=2, col = c("orange3","green3"))
+
+heritability = c(scarce = 0.3, plentiful = 0.5)
 barplot(heritability,
-        ylim = c(0,1),
+        ylim = c(0,1), yaxt = "n",
         xlab = "environment",
-        ylab = "heritability (effect of genes)")
+        ylab = "heritability (effect of genes)",
+        col = c("orange3","green3"))
+axis(2, at = c(-2,2))
+axis(1, at = c(-2,3))
 ```
 
 
@@ -156,7 +170,9 @@ $$
 IQ =  f(SES) A
 $$
 
-Lets simulate data that show the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that all variables are close to normally distributed:
+## Scarr-Rowe simulation
+
+Lets simulate data that show the Scarr-Rowe effect, first our exogenous variables. To keep things simple, we assume that the variables are independent and close to normally distributed:
 
 ```{r class.source = 'fold-show'}
 set.seed(25)
@@ -201,14 +217,18 @@ Now we can simulate IQ values using
 
 We assume that IQ depends on $\small A$, whereby this effect depends on $\small SES$: $\small IQ = f(SES)A$. Lets simulate data from this model:
 
-```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r class.source = 'fold-show'}
 # Adding 85 to get an IQ around 100
 IQ = 85 + b_A(SES)*A + rnorm(N,sd = 10)
+```
+
+```{r echo = FALSE, fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 par(mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 hist(IQ, main = "")
 ```
 
-If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plot:
+
+If we just look at the bivariate associations between  $\small A$ or $\small SES$ and $\small IQ$, we get the following plots:
 
 ```{r echo = FALSE, fig.height=4, fig.width=8, fig.align = 'center', out.width="100%"}
 par(mfrow = c(1,2),mar=c(3,3,1,.5), mgp=c(1.75,.5,0), tck=-.01)
@@ -224,17 +244,14 @@ To run a simple interaction with a categorical interaction variable we dichotomi
 
 ```{r class.source = 'fold-show'}
 dt = data.frame(
-  A = A,
-  IQ = IQ,
-  SES = SES,
-  SES.c = 1 + (SES > quantile(SES,.50))
-  )
+  A = A, IQ = IQ, SES = SES,
+  SES.c = 1 + (SES > quantile(SES,.50)) )
 ```
 
 
 Lets plot the association between  $\small A$ and $\small IQ$ again, this time split by SES:
 
-```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r fig.height=3.5, fig.width=3.5, fig.align = 'center', out.width="50%"}
 low.SES = dt$SES.c == 1
 high.SES = dt$SES.c == 2
 plot_data = function(dt) {
@@ -257,8 +274,8 @@ Next, we estimate some linear regression models with increasing complexity. Our 
 We start with a simple linear regression. But first some intuitions on priors:
 
 - Eyeballing the data, we see that the IQ at an average $\small A$ of 10 is around 100, so we use a prior `a ~ dnorm(100,5)`
-- The range of $\small A$ is 16-6 = 10 and the range of IQ = 130-70 = 60. So for a one unit increase of $\small A$, IQ can change around 60/10 = 6. If we want that an effect of +/-6 is at 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,6)`. This prior allows for the possibility of a negative effect of $\small A$. 
-- Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.25)` 
+- The range of $\small A$ is 16-6 = 10 and the range of IQ = 130-70 = 60. So for a one unit increase of $\small A$, IQ can change by around 60/10 = 6. If we want that an effect of +/-6 is well within 1 sd of the prior, we set the prior for the effect of $\small A$ to `a ~ dnorm(0,6)`. This prior allows for the possibility of a negative effect of $\small A$. 
+- Lacking a strong intuition for the error variance, we set the prior for the variance to a generous `dexp(0.5)` 
 
 Here is the regression model:
 
@@ -278,7 +295,7 @@ IQ.A =
 
 Lets quickly look at the prior predictions to make sure the piors are OK.
 
-```{r class.source = 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
+```{r 'fold-show', fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 prior = extract.prior(IQ.A)
 A.seq = seq(from=0,to=20,length.out=50)
 mu = link(
@@ -328,23 +345,21 @@ IQ.A_SES =
 
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 plot_data(dt)
-plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 1), "black")
-plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 2), "red")
+plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 1), "black", spaghetti = TRUE)
+plot_mu.CIs(IQ.A_SES, data.frame(A=A.seq, SES.c = 2), "red", spaghetti = TRUE)
 ```
 
-We can see already from the plot the the model with separate means for high and low SES is better. But here is the comparison with PSIS-LOO:
+We can see already from the plot that the model with separate means for high and low SES is better. But here is the comparison with PSIS-LOO:
 
-```{r}
-compare(
-  IQ.A,IQ.A_SES,
-  func = "PSIS") %>% 
-  round(2)
+```{r class.source = 'fold-show'}
+compare(IQ.A,IQ.A_SES,func = "PSIS") %>% round(2)
 ```
 
+The model with 2 intercepts is clearly better because the difference between the models is larger than 2 sds.
 
-## Linear regression with category-main effect and category-slope, i.e. _interaction_
+## Linear regression with category-main effect and category-slope
 
-Lastly, we can also let the slopes vary by SES: 
+Finally, we can also let the slopes vary by SES. We are estimating an **interaction model**. 
 
 ```{r class.source = 'fold-show'}
 IQ.AxSES = 
@@ -367,25 +382,19 @@ And again the posterior predictions:
 ```{r fig.height=4, fig.width=4, fig.align = 'center', out.width="50%"}
 par(mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot_data(dt)
-plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black")
-plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red")
+plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black", spaghetti = TRUE)
+plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red", spaghetti = TRUE)
 ```
 
-Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because when the effect of A depends on SES, and A and SES are independent, we still expect children of high SES parents to have on average higher IQ.
+Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because when the effect of A depends on SES, and childre with higher parental SES should have a higher IQ than children with lower parental SES and the same A.
 
 Here is a comparison of all the models we have fit:
 
 ```{r class.source = 'fold-show'}
-compare(
-  IQ.A, IQ.A_SES, IQ.AxSES,
-  func = "PSIS") %>% 
-  round(2)
+compare( IQ.A, IQ.A_SES, IQ.AxSES, func = "PSIS") %>% round(2)
 ```
 ```{r class.source = 'fold-show'}
-compare(
-  IQ.A, IQ.A_SES, IQ.AxSES,
-  func = "WAIC") %>% 
-  round(2)
+compare(IQ.A, IQ.A_SES, IQ.AxSES, func = "WAIC") %>% round(2)
 ```
 
 While the correct model has the best PSIS and WAIC value, for the top two models the differences are not large compared to the SEs of the differences.
@@ -451,7 +460,7 @@ $$
 IQ =  f(SES) A
 $$
 
-By saying that the effect $\small A$ is a function of $\small SES$. However, we really just have two variables: $\small A$ and $\small f(SES)$ which are multiplied with each other. Therefore, these statements are equivalent:
+By saying that the effect $\small A$ is a function of $\small SES$. However, we really just have two variables: $\small A$ and $\small f(SES)$ which are multiplied with each other. Therefore, these statements are both true:
 
 - The effect of $\small A$ depends on $\small f(SES)$
 - The effect of $\small f(SES)$ depends on $\small A$
@@ -459,18 +468,19 @@ By saying that the effect $\small A$ is a function of $\small SES$. However, we 
 Accordingly, we can also plot the difference between high and low $\small SES$ as a function of $\small A$:
 
 ```{r fig.height=4, fig.width=8, fig.align = 'center'}
+blue.25 = adjustcolor("blue", alpha = .25)
 A.seq = seq(from=5,to=16,length.out=50)
 mu.low = link(IQ.AxSES,data=data.frame(SES.c=1,A=A.seq))
 mu.high = link(IQ.AxSES,data=data.frame(SES.c=2,A=A.seq))
 delta = mu.high-mu.low
 CIs = apply(delta,2,PI)
-par(mfrow = c(1,2), mar=c(3,3,2,.5), mgp=c(1.75,.5,0), tck=-.01)
+par(mfrow = c(1,2), mar=c(3,3,.5,.5), mgp=c(1.75,.5,0), tck=-.01)
 plot(A.seq, colMeans(delta),'l',
      ylim = range(CIs),
      col = "blue",
      xlab = "A",
      ylab = expression(SES-effect: IQ[high~SES]~-~IQ[low~SES]))
-shade(CIs,A.seq, col = adjustcolor("blue", alpha = .25))
+shade(CIs,A.seq, col = blue.25)
 abline(h = 0, lty = 2)
 
 
@@ -479,14 +489,16 @@ mu.low = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=10))
 mu.high = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=11))
 delta = mu.high-mu.low
 CIs = apply(delta,2,PI)
-plot(c(1,2), colMeans(delta), pch = 16, cex = 3,
+plot(c(1,2), colMeans(delta), pch = 16, cex = 2,
      ylim = range(CIs), xlim = c(.8,2.2),
      col = "blue", xlab = "SES", xaxt = "n",
      ylab = expression(A-effect: IQ["A=11"]~-~IQ["A=10"]))
 axis(1, at = c(1,2), labels = c("low","high"))
-lines(c(1,1),CIs[,1], col = adjustcolor("blue",alpha = .5), lwd = 2)
-lines(c(2,2),CIs[,2], col = adjustcolor("blue",alpha = .5), lwd = 2)
+lines(c(1,1),CIs[,1], col = blue.25, lwd = 2)
+lines(c(2,2),CIs[,2], col = blue.25, lwd = 2)
 ```
+
+Nothing in the data determines which of the two interpretations is more appropriate.
 
 # Continuous interactions
 
@@ -503,7 +515,7 @@ dt = data.frame(
 
 You can try it the fancy way and make a 3d plot, but in this instance its a lot of effort for meager results:
 
-```{r fig.height=6, fig.width=6, fig.align = 'center', out.width="100%"}
+```{r fig.height=6, fig.width=6, fig.align = 'center', out.width="100%", warning = FALSE}
 library(plot3D)
 points3D(A,SES,IQ, type = "h",
          col = "black",
@@ -517,7 +529,7 @@ points3D(A,SES,IQ, type = "h",
          zlab = "IQ")
 ```
 
-A panel of 2d plots (small multiples) does the job better, and will later allow to display uncertainty.
+A panel of 2d plots (small multiples) does a better job, and will later allow to display uncertainty.
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 qs = quantile(SES, probs = seq(0,1,.25))
@@ -557,7 +569,7 @@ IQc.A_SES =
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a + ba*(A - 10) + bs*(SES - 2.5),
+      mu <- a + ba*(A - 6) + bs*(SES - 2),
       a ~ dnorm(100,10),
       ba ~ dnorm(0,4),
       bs ~ dnorm(0,4),
@@ -581,7 +593,7 @@ IQc.A_SES =
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a + ba*(A - 10) + bs*(SES - 2.5),
+      mu <- a + ba*(A - 6) + bs*(SES - 2),
       a ~ dnorm(100,7.5),
       ba ~ dnorm(0,2),
       bs ~ dnorm(0,2),
@@ -597,7 +609,7 @@ These priors are reasonable, so we look at the predictions:
 plot.pred(IQc.A_SES,dt)
 ```
 
-As expected from the model we specified, all slopes are the same. Note that the different "intercepts" we seem to come from this part of the model: `mu <- ... + bs*(SES - 2.5),`.
+As expected from the model we specified, all slopes are the same. Note that the different "intercepts" we see come from this part of the model: `mu <- ... + bs*(SES - 2) + ...`.
 
 ## Linear regression with main effects and interaction
 
@@ -607,7 +619,7 @@ $$
 \gamma_A = f(SES)
 $$
 
-if we assume the $\small f(SES)$ is a linear function, we are saying that
+if we assume that $\small f(SES)$ is a linear function, we are saying that
 
 <div class="marginnote"> 
 
@@ -645,14 +657,14 @@ $$
 
 which is the standard interaction model with 2 main effects.
 
-The `quap` model is then similar to the previous, but adds this interaction term: `bas*(A - 10)*(SES - 2.5)`.
+The `quap` model is then similar to the previous, but adds this interaction term: `bas*(A - 6)*(SES - 2)`.
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%", class.source = 'fold-show'}
 IQc.AxSES.m = 
   quap(
     alist(
       IQ ~ dnorm(mu,sigma),
-      mu <- a + ba*(A - 10) + bs*(SES - 2.5) + bas*(A - 10)*(SES - 2.5),
+      mu <- a + ba*(A - 6) + bs*(SES - 2) + bas*(A - 6)*(SES - 2),
       a ~ dnorm(100,7.5),
       ba ~ dnorm(0,2),
       bs ~ dnorm(0,2),
@@ -662,13 +674,14 @@ IQc.AxSES.m =
     data=dt)
 plot.pred(IQc.AxSES.m,dt, type = "prior")
 ```
+
 This priors look OK (even though slopes become extreme at high SES values), so we plot the model predictions:
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 plot.pred(IQc.AxSES.m,dt)
 ```
 
-
+We now clearly see that the slope, the effect of A, is steeper when SES is higher.
 
 ## Model comparison
 
@@ -794,7 +807,7 @@ d$shade_cent <- d$shade - mean(d$shade)
 ```
 
 
-If we have a model `mu <- a + bw*w + bs*s` and want to force a positive or negative parameter, we generally start by choosing a prior distribution that has only positive values, e.g. `dlnorm` or `dexp`. This is sufficient for positive parameters. For negative paramters we also have to change the sign in the model for mu: `mu <- a + bw*w - bs*s`
+If we have a model `mu <- a + bw*w + bs*s` and want to force a positive or negative parameter, **we generally start by choosing a prior distribution that has only positive values**, e.g. `dlnorm` or `dexp`. This is sufficient for positive parameters. For negative paramters we also have to change the sign in the model for mu: `mu <- a + bw*w - bs*s`
 
 The a full quap model could be described as:
 
@@ -845,18 +858,23 @@ m = quap(
     bws ~ dnorm(0, 1),
     sigma ~ dexp( 1 )
   ), data=d )
-plot_prior_predictive(m)
 ```
+
 <div class="marginnote"> 
 There is no quick and easy solution to find the right prior here. Here is one way to go about: At shade = 0 bloom ranges from around 0 to around .6 when water ranges from -1 to 1. So the maximum slope is around `.6/.2` = `r .6/.2`. That is, we are looking for a log-normal distribution where values > 0.3 are rare (the 97.5% percentile should be around 0.3). The quickest way to get this can then be to use either `hist(rlnorm(10000,mu,sd))` or `curve(dlnorm(x,mu,sd))` and play around with different values for `mu` and `sd` until one gets the desired distribution.
 </div>
+
+```{r echo=FALSE}
+plot_prior_predictive(m)
+```
+
  
 The slopes at shade=1 are now OK (could be a but more variable), but we also see that the effect of water can be positive or negative when there is no shade (shade = -1) or a lot of shade (shade 1).
 But when there is little shade, more water should have a positive effect. If we look at our linear model again:
 
 `mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent`
 
-the term `bws*water_cent*shade_cent` should be positive if shade is -1. To simplify things, lets assume there is a lot of water, so we want that `bws * 1 * -1 > 0` ,which we only get if we enforce that bws is a negative number. We achieve this by also putting a lognormal prior on it and by subtracting this term, instead of addining it.
+the term `bws*water_cent*shade_cent` should be positive if shade is -1. To simplify things, lets assume there is a lot of water, so we want that `(bws * 1 * -1) > 0` ,which we only get if we enforce that bws is a negative number. We achieve this by also putting a lognormal prior on it and by subtracting this term, instead of addining it.
 
 `mu <- a + bw*water_cent - bs*shade_cent + bws*water_cent*shade_cent,` <br> `...` <br> `bws ~ dnorm(0, 1)`
 
@@ -888,7 +906,7 @@ m = quap(
   alist(
     blooms_std ~ dnorm(mu, sigma),
     mu <- a + bw*water_cent - bs*shade_cent - bws*water_cent*shade_cent,
-    a ~ dnorm(0.35, 0.25),
+    a ~ dnorm(0.3, 0.25),
     bw ~ dlnorm(-2, 0.25),
     bs ~ dlnorm(-2, 0.25),
     bws ~ dlnorm(-2, 0.25),
