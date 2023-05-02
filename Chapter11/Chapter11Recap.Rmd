@@ -57,6 +57,7 @@ library(knitr)
 library(kableExtra)
 library(MASS)
 source("../utils.R")
+cmdstanr::set_cmdstan_path("C:/Users/gubi/cmdstan-2.32.0/")
 
 set_par = function(mfrow = c(1,1), mar=c(3,3,.5,.5), cex = 1.25) 
   par(mfrow = mfrow, mar=mar, mgp=c(1.75,.5,0), tck=-.01, cex = cex)
@@ -100,7 +101,7 @@ __Choosing a different distribution means choosing a different likelihood functi
 
 Here are a few examples:
 
-- The [Binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) models the _"number of successes in a sequence of n independent experiments, each asking a yes–no question"_. Hence we use the Binomial distribution function to calculate the likelihood of the data given model and parameters when we model number of successes. A special case is when we have only one trial / experiment, then the Binomial distribution models binary outcomes.
+- The [Binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) models the _"number of successes in a sequence of n independent experiments, each asking a yes–no question"_. Hence we use the Binomial distribution function to calculate the likelihood of the data given model and parameters when we model the number of successes. A special case is when we have only one trial / experiment, then the Binomial distribution models binary outcomes.
 
 ```{r out.width="80%", fig.height=4}
 set_par()
@@ -135,9 +136,9 @@ lines(x+.2,dpois(x, 10),"h", col = "red", lwd = 2)
 legend("topright",
        lwd = 2, col = c("black","blue","red"),
        legend = c(
-         expression(theta[1]~" = "~lambda~" = p =  .5"),
-         expression(theta[1]~" = "~lambda~" = p = 5"),
-         expression(theta[1]~" = "~lambda~" = p = 10")
+         expression(theta[1]~" = "~lambda~" = .5"),
+         expression(theta[1]~" = "~lambda~" = 5"),
+         expression(theta[1]~" = "~lambda~" = 10")
        ),
        bty = "n")
 ```
@@ -287,7 +288,7 @@ title("a ~ dnorm(-1,1)")
 
 ```
 
-With a wide prior, most of the probability mass is either smaller than -5, leading to p very close to 0, or larger than 5, leading to p close to 1. Hence we will use a tighter prior on a. In addition, we know the failure proportion is closer to zero than to one, so we can set the mean to a number below 0.
+With a wide prior, most of the probability mass is either smaller than -5, leading to $p$ very close to 0, or larger than 5, leading to $p$ close to 1. Hence we will use a tighter prior on a. In addition, we know the failure proportion is closer to zero than to one, so we can set the mean to a number below 0.
 
 Here is the prior distribution of p:
 
@@ -331,7 +332,7 @@ Lets get back to specifying our prior for $\small \beta$:
 - We had an odds ratio of 0.49, which corresponds to a log odds ratio of log(.49) ~ -.7. 
 - This means that if we assume that fail-probability is low and a shift from no to one prior fail comes with a doubling of the fail probability, we should comfortably allow $\small \beta$ values of size .7.
 - If we wanted to set an informative shrinkage prior, which however does not prefer one direction of the effect, we could set a `dnorm(0,.7)` prior.
-- But we are not so sure and don't like to informative priors, so we set a `dnorm(0,2)` prior.
+- But we are not so sure and don't like too informative priors, so we set a `dnorm(0,2)` prior.
 
 Lets specify such a model and look at the prior predictions for the difference between two levels of education.
 
@@ -405,7 +406,7 @@ One simple rule of thumb for logistic or binomial regressions is that with a $\s
 
 To see if our model describes the data well, we plot model predicted and observed data together:
 
-```{r, out.width="100%", fig.height=6}
+```{r, out.width="100%", fig.height=5, fig.width = 5, fig.cap="Observed (gray) and predicted proportion of fails by maternal education"}
 aggr.fun = function(x) return(c(mean = mean(x), N = length(x)))
 obs = 
   aggregate(
@@ -552,7 +553,7 @@ Because the parameters are log-odds ratios, we exponentiate them to get ORs. Bec
 
 The OR and relative risks, which we have to deal with due to the link function, make it hard to interpret the results. But if we create posterior predictions we can simply calculate contrasts. i.e. risk differences.
 
-Lets look at the data we used to generate posterior predictions:
+Lets look at **unique patterns** the data we used to generate posterior predictions:
 
 ```{r class.source = 'fold-show'}
 sim.data = 
@@ -562,7 +563,7 @@ rownames(sim.data) = NULL
 sim.data
 ```
 
-If we now generate the posterior predictions, we get a matrix in which each column corresponds to one row in `sim.data`
+If we now generate the **posterior predictions unique patterns**, we get a matrix in which each column corresponds to one row in `sim.data`
 
 ```{r class.source = 'fold-show'}
 pp = link_ulam(
@@ -584,7 +585,7 @@ precis(
        delta.diff = pp[,6] - pp[, 5] - pp[,2] + pp[, 5])) 
 ```
 
-```{r, fig.height=5, fig.width=15, out.width="125%"}
+```{r, fig.height=4, fig.width=12, out.width="125%"}
 # plot data
 xlim = range(c(delta.L1,delta.L2))
 xlim[1] = ifelse(xlim[1]>0,0,xlim[1])
@@ -598,7 +599,7 @@ hist(delta.L2-delta.L1, main = "")
 abline(v = 0, col = "red", lty = 3)
 ```
 
-The right histogram shows an interaction effect on the scale of risk differences, even though our model has no interaction term! This is due to the exponent in the link function!
+**The right histogram shows an interaction effect on the scale of risk differences, even though our model has no interaction term!** This is due to the exponent in the link function!
 
 > This interaction effect can also be understood by remembering that odds ratios are relative effects, i.e. the effect of a one unit change of a variable depends on the probability of success at the comparison value. Here is an example with numbers. Lets assume our intercepts for two groups are 1 and 2, respecitively, and the log-odds ration for the effect of interest is 1. Then we can calculate the risk differences as
 > - `inv_logit(1+1) - inv_logit(1+0)` = `r round(inv_logit(2) - inv_logit(1),2)` 
@@ -819,8 +820,8 @@ Regarding the effect of topic we find that
 plot(precis(u.fit_NT2, pars = c("b1","b2")))
 ```
 
-- the log odds ratio for math is -.17, i.e. the odds ratio is `exp(-.17)` = `r round(exp(-.17),2)`. Because the baseline probability for reading is low, we can simply say that the relative risk to be excused from the math test is `r round(exp(-.17),2)`
-- the log odds ratio for English is -.08, i.e. the odds ratio is `exp(-.08)` = `r round(exp(-.08),2)`. Because the baseline probability for reading is low, we can simply say that the relative risk to be excused from the math test is `r round(exp(-.08),2)`
+- the log odds ratio for math is -.17, i.e. the odds ratio is `exp(-.17)` = `r round(exp(-.17),2)`. Because the baseline probability for reading is low, we can simply say that the relative risk to be excused from the math test is, *compared to reading*, `r round(exp(-.17),2)`
+- the log odds ratio for English is -.08, i.e. the odds ratio is `exp(-.08)` = `r round(exp(-.08),2)`. Because the baseline probability for reading is low, we can simply say that the relative risk to be excused from the math test is, *compared to reading*, `r round(exp(-.08),2)`
 
 # Summary
 
