@@ -57,6 +57,7 @@ library(knitr)
 library(kableExtra)
 library(MASS)
 source("../utils.R")
+cmdstanr::set_cmdstan_path("C:/Users/gubi/cmdstan-2.32.0/")
 
 set_par = function(mfrow = c(1,1), mar=c(3,3,.5,.5), cex = 1.25) 
   par(mfrow = mfrow, mar=mar, mgp=c(1.75,.5,0), tck=-.01, cex = cex)
@@ -115,15 +116,15 @@ log_odds = log(P_fail/P_pass)
 log_odds
 ```
 
-This is exactly our threshold and explain why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`. The following figure shows we can use the cumulative distribution function (`plogis`) to go from a threshold value to success probabilities and the quantile function (`qlogis`) to go from cumulative success probabilities to thresholds.
+This is exactly our threshold and explains why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`. The following figure shows that we can use the cumulative distribution function (`plogis` or `inv.logit`) to go from a threshold value to success probabilities and the quantile function (`qlogis` or `logit`) to go from cumulative success probabilities to thresholds.
 
 ```{r, out.width="80%", fig.width=10, fig.height=5}
 set_par(mfrow = c(1,2), cex = 1.5)
-curve(plogis(x),-5,5, xlab = "threshold")
+curve(plogis(x),-5,5, xlab = "threshold", ylab = "plogis(x) or inv.logit(x)")
 arrows(x0 = threshold, y0 = 0, y1 = plogis(threshold), col = "blue", lwd = 2)
 arrows(x0 = threshold, x1 = -5.4, y0 = plogis(threshold), col = "blue", lwd = 2)
 text(-5.4,plogis(threshold),labels = round(plogis(threshold),2), pos = 2, col = "blue", xpd = TRUE, cex = .75)
-curve(qlogis(x),0,1, xlab = "cumulative probability")
+curve(qlogis(x),0,1, xlab = "cumulative probability", ylab = "qlogis(x) or logit(x)")
 arrows(x0 = plogis(threshold), y0 = -5, y1 = threshold, col = "blue", lwd = 2)
 arrows(y0 = threshold, x0 = plogis(threshold), x1 = -0.04, col = "blue", lwd = 2)
 text(-5.4,plogis(threshold),labels = round(plogis(threshold),1), pos = 2, xpd = TRUE)
@@ -182,11 +183,16 @@ Due to simulation noise we are not exactly recovering the parameters, but we are
 
 This shows us again that regression weights in logistic regressions represent changes in log odds ratios, and thus also changes in the threshold, due to a predictor variable.
 
-# Ordinal logistic regression
+# Cumulative ordinal logistic regression
 
 ## A simple threshold / intercepts only model
 
 The ordinal logistic regression is named as such, because just like logistic regression, it assumes a latent logistic variable that determines responses. Differently than standard logistic regression, ordered logistic regression uses multiple thresholds, which are used to map the latent variable onto ordered responses:
+
+```{r class.source = 'fold-show'}
+thresholds = c(-1.24,.25,2)
+```
+
 
 ```{r out.width="60%"}
 plot_dlogis.thresh = function(threshs, xlim = c(-5,5), plot.text = TRUE) {
@@ -210,7 +216,6 @@ plot_dlogis.thresh = function(threshs, xlim = c(-5,5), plot.text = TRUE) {
     }
   }
 }
-thresholds = c(-1.24,.25,2)
 n_cat = length(thresholds) + 1
 clrs = colorRampPalette(c("blue","blue4"))(n_cat)
 set_par(cex = 1.5)
@@ -228,7 +233,7 @@ threshold_1 %>% round(2)
 
 As you might have guessed, we can also read the probability of different responses from the cumulative logistic distribution:
 
-```{r out.width="80%"}
+```{r fig.height=5, fig.width=8, out.width="80%"}
 plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5)) {
   x.st = xlim[1]-1
   x.en = xlim[2]+1
@@ -288,7 +293,7 @@ R = cut(
 
 which we can show as histogram and as cumulative counts:
 
-```{r fig.height=4}
+```{r fig.height=5, fig.width=10}
 set_par(mfrow = c(1,2))
 R %>% 
   table() %>% 
@@ -324,7 +329,7 @@ bol.model =
   )
 ```
 
-The key difference between the simple logistic and the ordered logistic regression is that the former has only one threshold parameter:
+The key difference between the simple logistic and the cumulative ordered logistic regression is that the former has only one threshold parameter:
 
 $$
 log \left( \frac{P(fail)}{P(success)} \right) = \alpha
@@ -364,6 +369,10 @@ for (k in 1:2) {
 ```
 Moving the thresholds changes the probability / likelihood to observe the different categories.
 
+<p align="center">
+![](swipe_thresholds.mp4){width=50%}
+</p>
+
 The basic ordered logistic regression model without predictors finds the  threshold values that allow to reproduce the observed distribution of ratings.
 
 We fit the model.
@@ -374,9 +383,10 @@ if (file.exists(fn)) {
   load(fn)
 } else {
   bol.fit = ulam(
-  bol.model,
-  data=list(R=R),
-  chains=4,cores=4)
+    bol.model,
+    data=list(R=R),
+    chains=4,cores=4,
+    cmdstan = TRUE)
   save(bol.fit,file = fn)
 }
 ```
@@ -450,11 +460,11 @@ log \left( \frac{P_i(R>\alpha_2|X = 0)}{P_i(R>\alpha_2|X = 1)} \right) =
 log \left( \frac{P_i(R>\alpha_3|X = 0)}{P_i(R>\alpha_3|X = 1)} \right)
 $$
 
-This is referred to as the proportional odds assumptions, which may or may not be true for the data at hand.
+This is referred to as the proportional odds assumptions, which may or may not be true for the data at hand. _There are alternative models that do not make this assumption. Here is a good paper that describes these models:_ [Ordinal Regression Models in Psychology: A Tutorial](https://osf.io/gyfj7/download)
 
 ### An example
 
-To see the ordered logistic regression in action, we'll use the example data from the Portuguese school again^[P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008, EUROSIS, ISBN 978-9077381-39-7. The data can be downloaded [here](https://archive.ics.uci.edu/ml/datasets/Student+Performance)]. In particular, we are looking at the final grade again and estimate again the association with maternal education.
+To see the ordered logistic regression in action, we'll use the example data from the Portuguese school^[P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008, EUROSIS, ISBN 978-9077381-39-7. The data can be downloaded [here](https://archive.ics.uci.edu/ml/datasets/Student+Performance)]. In particular, we are looking at the final grade and estimate again the association with maternal education.
 
 ```{r out.width="80%", fig.height=4}
 df=read.table("../Chapter11/data/student-mat.csv",sep=";",header=TRUE)
@@ -505,7 +515,7 @@ tm.fit = ulam(
 
 Now we can plot the manually calculated thresholds against those estimated with `ulam`:
 
-```{r, out.width="60%"}
+```{r, out.width="50%", fig.height=5, fig.width=5}
 post = extract.samples(tm.fit)
 ulam_thresholds = colMeans(post$thresholds)
 CI = apply(post$thresholds, 2, PI)
@@ -521,7 +531,7 @@ abline(0,1,lty = 3, col = "grey")
 ```
 
 Now that we have understood thresholds, we can implement a model that uses predictors.
-Specifically, we estimate the effect of past failure and maternal education on grades and allow an interaction between these two variables. Ordinal logistic regressions allow differences in the magnitude of slopes between groups without modelling interactions explicitly. But if we do need to model interactions explicitly if we want to allow slopes with different signs for different groups.
+Specifically, we estimate the effect of past failure and maternal education on grades and allow an interaction between these two variables. Ordinal logistic regressions allow differences in the magnitude of slopes between groups without modelling interactions explicitly. But we do need to model interactions explicitly if we want to allow slopes with different signs for different groups.
 
 ```{r class.source = 'fold-show'}
 ol.model = 
@@ -542,9 +552,11 @@ if (file.exists(fn)) {
   load(fn)
 } else {
   ol.fit = ulam(
-  ol.model,
-  data=list(G3 = df$G3, Medu = df$Medu, failures = df$failures),
-  chains=4,cores=4)
+    ol.model,
+    data=list(G3 = df$G3, Medu = df$Medu, failures = df$failures),
+    start = list(thresholds = seq(-1,1, length.out = 9)),
+    chains=4,cores=4,
+    cmdstan = TRUE)
   save(ol.fit,file = fn)
 }
 ```
@@ -584,7 +596,7 @@ lines(0:10,c(0,obs.counts), 'S', lwd = 2)
 We can see that the ordinal logistic model has no problems modeling a multimodal response distribution.
 
 Lets quickly compare the thresholds with thresholds from a thresholds only model again:
-```{r, out.width="60%"}
+```{r, out.width="50%", fig.height=5, fig.width=5}
 post = extract.samples(ol.fit)
 ulam_thresholds = colMeans(post$thresholds)
 CI = apply(post$thresholds, 2, PI)
@@ -612,7 +624,7 @@ coeffs %>% round(2)
 What do these results mean?^[remember that because thresholds are changed as $\small\alpha - \beta X$ positive values of $\small \beta$ mean that higher positive values x move the thresholds to the left and thus make higher-level responses more likely.]
 
 - for each level of maternal education the odds ratio to get a one level higher grade is exp(`r round(coeffs["bM",1],2)`) = `r round(exp(coeffs["bM",1]),2)`
-- for each paste fail the odds ratio to get a one level higher grade is exp(`r round(coeffs["bF",1],2)`) = `r round(exp(coeffs["bF",1]),2)`.
+- for each past fail the odds ratio to get a one level higher grade is exp(`r round(coeffs["bF",1],2)`) = `r round(exp(coeffs["bF",1]),2)`.
 - the "effect" of past fails depends on maternal education, with a log odd ratio of `r round(coeffs["bFE",1],2)`, though the 90% credible interval overlaps with zero.
 
 It is a bit hard to interpret these results because they are on the log odds ratio scale and because it is not totally clear (to me) how to interpret interaction effects. Therefor, we use posterior predictions to understand the results better.
@@ -653,7 +665,7 @@ legend("topright", pch = 16, col = 1:4, legend = 1:4, title = "Medu", bty = "n")
 This plot suggests several questions:
 
 - Do grades decrease from 0 to 3 previous fails?
-- Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 3-4 fails?
+- Is higher maternal education associated with higher grades when there were 0 previous fails and with lower grades when there were 3 fails?
 - Are the above mentioned slopes robustly different?
 
 Lets first look at the data for which we simulated outcomes:
@@ -679,7 +691,7 @@ for (k in 1:nrow(sim.data)) {
 }
 ```
 
-To answer the the first question, **Do grades decrease from 0 to 3 previous fails?**, we calculate (note that the minimum number of previous fails is 0):
+To answer the first question, **"Do grades decrease from 0 to 3 previous fails?"**, we calculate (note that the minimum number of previous fails is 0):
 
 $$
 \delta = \frac{1}{3}\sum^i_{1:3} G3(fails = i) - G3(fails = i-1)
@@ -714,24 +726,24 @@ posterior_hist( # un-hide previous code block for this function
   xlim = range(delta))
 ```
 
-To answer the the first question, **Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 3-4 fails?**, we first calculate the effect of maternal education in students with 0 and 2 or 3 precious fails:
+To answer the second question, **"Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 2-3 fails?"**, we first calculate the effect of maternal education in students with 0 and 2 or 3 previous fails:
 
 ```{r class.source = 'fold-show'}
 # calculate contrasts
 delta_F0 = rep(0,nrow(pp))
-delta_F23 = rep(0,nrow(pp))
+delta_F3 = rep(0,nrow(pp))
 # we loop over maternal education levels 2-4
 # each time calculating the difference to the next lower level
 for (i in 2:4) { # here, i is the maternal education level
   delta_F0 = delta_F0 +
     pp[,which(sim.data$Medu == i & sim.data$failures == 0)] - 
     pp[,which(sim.data$Medu == i-1 & sim.data$failures == 0)]
-  delta_F23 = delta_F23 +
-    rowMeans(pp[,which(sim.data$Medu == i & sim.data$failures > 1)]) - 
-    rowMeans(pp[,which(sim.data$Medu == i-1 & sim.data$failures > 1)])
+  delta_F3 = delta_F3 +
+    pp[,which(sim.data$Medu == i & sim.data$failures == 3)] - 
+    pp[,which(sim.data$Medu == i-1 & sim.data$failures == 3)]
 }
 delta_F0 = delta_F0 / 3
-delta_F23 = delta_F23 / 3
+delta_F3 = delta_F3 / 3
 ```
 
 ```{r echo = F, fig.height=5, fig.width=10}
@@ -743,8 +755,8 @@ posterior_hist(
   set_par = FALSE,
   xlim = c(-1.25,1.1))
 posterior_hist(
-  delta_F23,
-  "delta(fails>1)",
+  delta_F3,
+  "delta(fails=3)",
   set_par = FALSE,
   xlim = c(-1.25,1.1))
 ```
@@ -754,10 +766,10 @@ We see that whereas higher maternal education is associated with better grades w
 And next we can calculate the difference between these two delta:
 
 ```{r class.source = 'fold-show', out.width="60%"}
-interaction_eff = delta_F0-delta_F23
+interaction_eff = delta_F0-delta_F3
 posterior_hist(
   interaction_eff,
-  "delta(fails=0)-delta(fails>1)",
+  "delta(fails=0)-delta(fails=3)",
   xlim = range(interaction_eff))
 ```
 
