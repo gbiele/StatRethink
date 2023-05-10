@@ -1,7 +1,7 @@
 ---
 title: "Chapter 12: Recap"
 author: "Guido Biele"
-date: "01.06.2022"
+date: "10.05.2023"
 output:
   html_document: 
     mathjax: default
@@ -45,7 +45,18 @@ h3,h4,h5,h6{
   overflow:auto;
 }
 
-
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
 ```
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -105,6 +116,7 @@ curve(plogis(x),-6,-2,col = "red", add = T, lwd = 1.5)
 curve(plogis(x),-2,6,col = "green3", add = T, lwd = 1.5)
 lines(c(-6,threshold),rep(plogis(threshold),2), lty = 2, col = "red")
 lines(rep(threshold,2),c(0,plogis(threshold)), lty = 2, col = "red")
+abline(h = c(0,1), lty = 2)
 ```
 
 
@@ -116,48 +128,53 @@ log_odds = log(P_fail/P_pass)
 log_odds
 ```
 
-This is exactly our threshold and explains why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`. The following figure shows that we can use the cumulative distribution function (`plogis` or `inv.logit`) to go from a threshold value to success probabilities and the quantile function (`qlogis` or `logit`) to go from cumulative success probabilities to thresholds.
+This is exactly our threshold and explains why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`. 
+
+The following figure shows that we can use the *cumulative distribution function* (`plogis` or `inv.logit`) to go from a threshold value to success probabilities and the *quantile function* (`qlogis` or `logit`) to go from success probabilities to thresholds.
 
 ```{r, out.width="80%", fig.width=10, fig.height=5}
 set_par(mfrow = c(1,2), cex = 1.5)
 curve(plogis(x),-5,5, xlab = "threshold", ylab = "plogis(x) or inv.logit(x)")
-arrows(x0 = threshold, y0 = 0, y1 = plogis(threshold), col = "blue", lwd = 2)
-arrows(x0 = threshold, x1 = -5.4, y0 = plogis(threshold), col = "blue", lwd = 2)
+arrows(x0 = threshold, y0 = 0, y1 = plogis(threshold), col = "blue", lwd = 2, length = .2)
+arrows(x0 = threshold, x1 = -5.4, y0 = plogis(threshold), col = "blue", lwd = 2, length = .2)
 text(-5.4,plogis(threshold),labels = round(plogis(threshold),2), pos = 2, col = "blue", xpd = TRUE, cex = .75)
+abline(h = c(0,1), lty = 2)
 curve(qlogis(x),0,1, xlab = "cumulative probability", ylab = "qlogis(x) or logit(x)")
-arrows(x0 = plogis(threshold), y0 = -5, y1 = threshold, col = "blue", lwd = 2)
-arrows(y0 = threshold, x0 = plogis(threshold), x1 = -0.04, col = "blue", lwd = 2)
+arrows(x0 = plogis(threshold), y0 = -5, y1 = threshold, col = "blue", lwd = 2, length = .2)
+arrows(y0 = threshold, x0 = plogis(threshold), x1 = -0.04, col = "blue", lwd = 2, length = .2)
 text(-5.4,plogis(threshold),labels = round(plogis(threshold),1), pos = 2, xpd = TRUE)
 text(plogis(threshold),-5.4,labels = round(plogis(threshold),2), pos = 1, col = "blue", xpd = TRUE, cex = .75)
+abline(v = c(0,1), lty = 2)
 ```
 
 <br>
 
-Now let us assume that there is another variable $\small X$ that increases the probability to pass a class, so that also students with lower latent scholastic aptitude of -3 can pass a class (could be class difficulty).
+Now let us assume that there is another variable $\small X$ that increases the probability to pass the class, so that also students with lower latent scholastic aptitude of -3 can pass a class (could be class difficulty).
 
 In a logistic regression we estimate the effect of $\small X$ as follows:
 
 $$
-log \left( \frac{P_{fail}}{P_{pass}} \right) = \alpha - \beta \cdot X
+log \left( \frac{P_{fail}}{P_{pass}} \right) = \alpha + \beta \cdot X
 $$
 
 Here, $\small \alpha$ is the intercept and baseline log-odds to pass the test (due to latent scholastic aptitude) and $\small \beta$ captures log odds ratio from passing the class due to $\small X$.
 
-Because our baseline threshold / log odds is -2 and the threshold for children with variable X is -3, we calculate
+Because our baseline threshold / log odds is -2 and the threshold for children with variable X is -3, *we calculate beta as the difference of the two thresholds*:
 
 $$
-\beta = -2 -(-3) = 1
+\beta = -3-(-2) = -1
 $$
 
-So if we simulate data according to this data generating process and estimate a logistic regression, we should find that $\small \alpha = -2$ and $\small \beta = 1$.
+So if we simulate data according to this data generating process and estimate a logistic regression, we should find that $\small \alpha = -2$ and $\small \beta = -1$.
 
 Lets simulate the data:
 
 ```{r class.source = 'fold-show'}
 set.seed(1)
 N = 10000
-X = rep(c(0,-1),N/2) %>% sort()
-thresholds = -2 + X
+thresholds = rep(-2,N)
+X = sample(c(0,1), N, replace = TRUE)
+thresholds[X==1] = -3
 pass = rlogis(N) > thresholds
 ```
 
@@ -187,7 +204,9 @@ This shows us again that regression weights in logistic regressions represent ch
 
 ## A simple threshold / intercepts only model
 
-The ordinal logistic regression is named as such, because just like logistic regression, it assumes a latent logistic variable that determines responses. Differently than standard logistic regression, ordered logistic regression uses multiple thresholds, which are used to map the latent variable onto ordered responses:
+The ordinal logistic regression is named as such, because just like logistic regression, it assumes a latent logistic variable that determines responses. Differently than the standard logistic regression, ordered logistic regression uses multiple thresholds, which are used to map a latent trait (variable) onto ordered responses.
+
+Lets visualize this with 3 thresholds of our choice for $\small M=4$ categories.
 
 ```{r class.source = 'fold-show'}
 thresholds = c(-1.24,.25,2)
@@ -211,7 +230,7 @@ plot_dlogis.thresh = function(threshs, xlim = c(-5,5), plot.text = TRUE) {
     polygon(c(min(x),x,max(x)), c(0,dlogis(x),0), col = clrs[k])
     arrows(x0 =  threshs[k], y0 = 0, y1 = dlogis(0), lty = 2, col = "red", lwd = 2,length = 0)
     if (plot.text == TRUE) {
-      text((st+en)/2,dlogis(0)/2,paste0("R=",k), col = "grey50", cex = 1.5)
+      text((st+en)/2,dlogis(0)/2,paste0("Y=",k), col = "grey50", cex = 1.5)
       text(threshs[k],dlogis(0),round(threshs[k],2), col = "red", pos = 2)
     }
   }
@@ -222,18 +241,20 @@ set_par(cex = 1.5)
 plot_dlogis.thresh(thresholds)
 ```
 
-Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds) for the simple logistic regression, we can use it to recover thresholds from an ordered logistic model.
+Just as we can use the (cumulative) logistic distribution to recover threshold values (log odds) for the simple logistic regression, we can use it to recover thresholds for an ordered logistic model.
 
-For instance, when `r round(plogis(thresholds[1])*100,1)`% of individuals respond with R = 1:
+For instance, when `r round(plogis(thresholds[1])*100,1)`% of individuals respond with Y = 1:
 
 ```{r class.source = 'fold-show'}
 threshold_1 = log(.224/(1-.224)) 
 threshold_1 %>% round(2)
 ```
 
-As you might have guessed, we can also read the probability of different responses from the cumulative logistic distribution:
+As you might have guessed, we can also read the cumulative probabilities to give a response up to a level $\small k$ given $\small k-1$ thresholds from the cumulative logistic distribution.
 
-```{r fig.height=5, fig.width=8, out.width="80%"}
+Then we obtain a categorical distribution by calculating the probability of a response as the difference of the probabilities at the thresholds that enclose that category.
+
+```{r fig.height=5, fig.width=9, out.width="80%"}
 plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5)) {
   x.st = xlim[1]-1
   x.en = xlim[2]+1
@@ -264,7 +285,7 @@ plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5))
           1-plogis(thresholds[k-1]),
           plogis(thresholds[k])-plogis(thresholds[k-1]))) %>% 
       round(2)
-    text(-4, (b+t)/2, paste0("P(R=",k,")=", prob.level), pos = 4)
+    text(-4, (b+t)/2, paste0("P(Y=",k,")=", prob.level), pos = 4)
     
     if (k < n_cat) {
       p=plogis(thresholds[k])
@@ -285,7 +306,7 @@ Let's again simulate data from the model and estimate the thresholds.
 
 ```{r class.source = 'fold-show'}
 N = 1000
-R = cut(
+Y = cut(
   rlogis(1000), # latent variable
   breaks = c(-Inf,thresholds,Inf)) %>% 
   as.numeric()
@@ -295,7 +316,7 @@ which we can show as histogram and as cumulative counts:
 
 ```{r fig.height=5, fig.width=10}
 set_par(mfrow = c(1,2))
-R %>% 
+Y %>% 
   table() %>% 
   barplot(ylab = "N",
           col = clrs,
@@ -303,7 +324,7 @@ R %>%
 
 m = diag(4)
 m[upper.tri(m)] = 1
-m = apply(m,2, function(x) x*R %>% table())
+m = apply(m,2, function(x) x*Y %>% table())
 x = barplot(m, col = clrs,
         ylab = "cumulative N",
         xlab = "Response",
@@ -324,23 +345,24 @@ Here is an ordered logistic model:
 ```{r class.source = 'fold-show'}
 bol.model = 
   alist(
-    R ~ dordlogit(0,thresholds),
+    Y ~ dordlogit(0,thresholds),
     thresholds ~ dnorm(0,3)
   )
 ```
 
-The key difference between the simple logistic and the cumulative ordered logistic regression is that the former has only one threshold parameter:
+The key difference between the simple logistic and the cumulative ordered logistic regression with responses $\small Y_i \in \{0,1\}$ is that the former has only one threshold parameter:
 
 $$
-log \left( \frac{P(fail)}{P(success)} \right) = \alpha
+log \left( \frac{P(Y_i = 1)}{P(Y_i = 0)} \right) = \alpha
 $$
 
-and the latter has $\small \textrm{1-number of levels}$ threshold parameters:
+and the latter has, given responses $\small Y_i \in \{1, 2, ..., M\}$ in ordered categories, $\small M-1$ threshold parameters:
 
 $$
-log \left( \frac{P(R>\alpha_k)}{P(R<\alpha_k)} \right) = \alpha_k 
+log \left( \frac{P(Y_i>k)}{P(Y_i<k)} \right) = \alpha_k 
 $$
 
+with response $\small k \in \{1,2...M\}$
 
 The `dordlogit` function in the rethinking package **calculates the likelihood of the observations given the model using the `plogis` / `inv_logit` function, whereby different threshold values lead to different likelihoods**:
 
@@ -352,7 +374,7 @@ thresh_list = list(thresholds,thresholds-1.25)
 for (k in 1:2) {
   thres = thresh_list[[k]]
   plot_plogis.thresh(thres)
-  rbind(R %>% 
+  rbind(Y %>% 
           table %>% 
           prop.table(),
         rlogis(100) %>% 
@@ -384,7 +406,7 @@ if (file.exists(fn)) {
 } else {
   bol.fit = ulam(
     bol.model,
-    data=list(R=R),
+    data=list(Y=Y),
     chains=4,cores=4,
     cmdstan = TRUE)
   save(bol.fit,file = fn)
@@ -394,7 +416,7 @@ if (file.exists(fn)) {
 ```{r class.source = 'fold-show', eval = F}
 bol.fit = ulam(
   bol.model,
-  data=list(R=R),
+  data=list(Y=Y),
   chains=4,cores=4)
 ```
 
@@ -422,9 +444,9 @@ plot_dlogis.thresh(thresholds)
 plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
-If we want to increase the chance that this hypothetical person achieves a rating of R = 3, we can either increase the value of the latent variable or shift the the thresholds to the left:
+If we want to increase the chance that this hypothetical person achieves a rating of Y = 3, we can either increase the value of the latent variable or shift the the thresholds to the left:
 
-```{r, fig.height=5, fig.width=10, out.width="120%"}
+```{r, fig.height=4.5, fig.width=10, out.width="120%"}
 set_par(mfrow = c(1,2),cex = 1.25)
 plot_dlogis.thresh(thresholds)
 arrows(x0 = 0, x1 = 1, y0 = .005, length = .1, col = "yellow")
@@ -441,23 +463,23 @@ arrows(x0 = thresholds, x1 = thresholds.b,
 plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
-If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally. In both plots above the bright white dot is in in the middle between the 2/3 and 3/4 thresholds.
+If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally. In both plots above the bright white dot is in in the middle between the 2|3 and 3|4 thresholds.
 
 Therefore we can, as we saw earlier for the logistic regression, add terms for individual level effects to the basic threshold / intercept only model to capture the effect of predictor variables on responses:
 
 $$
-log \left( \frac{P_i(R>\alpha_k)}{P_i(R<\alpha_k)} \right) = \alpha_k - \beta \cdot X_i
+log \left( \frac{P(Y_i>k)}{P(Y_i<k)} \right) = \alpha_k + \beta \cdot X_i
 $$
 where $\small \alpha_k$ are thresholds and $\beta$ captures the effect of the variable $X$ by modifying each individual's threshold.
 
-Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. R = 4 instead of R = 3 (R = 3 instead of R = 4).
+Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. Y = 4 instead of Y = 3 (Y = 3 instead of Y = 4).
 
-Because there is only one regression weight $\small \beta$ per variable that is added all thresholds, the log odds ratios are the same for all category transitions, i.e. 
+Because there is only one regression weight $\small \beta$ per variable that is added to all thresholds, the log odds ratios are the same for all category transitions, i.e. 
 
 $$
-log \left( \frac{P_i(R>\alpha_1|X = 0)}{P_i(R>\alpha_1|X = 1)} \right) = 
-log \left( \frac{P_i(R>\alpha_2|X = 0)}{P_i(R>\alpha_2|X = 1)} \right) = 
-log \left( \frac{P_i(R>\alpha_3|X = 0)}{P_i(R>\alpha_3|X = 1)} \right)
+log \left( \frac{P(Y_i>1|X_i = 0)}{P(Y_i<1|X_i = 1)} \right) = 
+log \left( \frac{P(Y_i>2|X_i = 0)}{P(Y_i<2|X_i = 1)} \right) = 
+log \left( \frac{P(Y_i>3|X_i = 0)}{P(Y_i<3|X_i = 1)} \right)
 $$
 
 This is referred to as the proportional odds assumptions, which may or may not be true for the data at hand. _There are alternative models that do not make this assumption. Here is a good paper that describes these models:_ [Ordinal Regression Models in Psychology: A Tutorial](https://osf.io/gyfj7/download)
@@ -473,7 +495,7 @@ set_par()
 df$G3 = as.numeric(cut(df$G3, breaks = seq(0,20,2),include.lowest = T))
 df$G3 %>% table() %>% barplot()
 ```
-Yes, ordinal logistic regressions can also handle multimodal data!
+Yes, cumulative ordinal logistic regressions can also handle multimodal data! But there are limits to this ability.
 
 To recapitulate that thresholds are just log odds at category boundaries, lets calculate them:
 
@@ -515,7 +537,7 @@ tm.fit = ulam(
 
 Now we can plot the manually calculated thresholds against those estimated with `ulam`:
 
-```{r, out.width="50%", fig.height=5, fig.width=5}
+```{r, out.width="50%", fig.height=4.5, fig.width=5}
 post = extract.samples(tm.fit)
 ulam_thresholds = colMeans(post$thresholds)
 CI = apply(post$thresholds, 2, PI)
@@ -538,7 +560,7 @@ ol.model =
   alist(
     G3 ~ dordlogit(phi,thresholds),
     phi <- bM*(Medu-2.5) + iFE*failures,
-    iFE <- bF + bFE*(Medu-2.5),
+    iFE <- bF + bFE*(Medu-2.5), # interaction
     c(bF, bM, bFE) ~ normal(0,1),
     thresholds ~ dnorm(0,3)
   )
@@ -580,7 +602,7 @@ This looks OK.
 
 As a quick posterior predictive check we compare the histogram of the observed and predicted grades. We use the `sim` function instead of the `link` function to get posterior predictions on the scale of the ordered outcome variable.
 
-```{r out.width="60%"}
+```{r out.width="50%", fig.height=4.5, fig.width=5}
 set_par()
 
 pp = sim(ol.fit)
@@ -593,9 +615,9 @@ for (k in 1:250) {
 }
 lines(0:10,c(0,obs.counts), 'S', lwd = 2) 
 ```
-We can see that the ordinal logistic model has no problems modeling a multimodal response distribution.
+We can see that the ordinal logistic model has no problems modeling this multimodal response distribution.
 
-Lets quickly compare the thresholds with thresholds from a thresholds only model again:
+Lets quickly compare the thresholds with thresholds from a thresholds-only model again:
 ```{r, out.width="50%", fig.height=5, fig.width=5}
 post = extract.samples(ol.fit)
 ulam_thresholds = colMeans(post$thresholds)
@@ -611,7 +633,7 @@ arrows(x0 = simple_thresholds,
 abline(0,1,lty = 3, col = "grey")
 ```
 
-Because the model now also estimates effects of education and past failures, the thresholds are a bit different^[Not centering predictor variables leads to additional differences]. Only if the the covariates would be independent of grades would we expect to see identical thresholds.
+Because the model now also estimates effects of education and past failures, the thresholds are a bit different^[Not centering predictor variables leads to additional differences]. Only if the covariates would be independent of grades would we expect to see identical thresholds.
 
 Now lets look at the coefficients of interest:
 
@@ -631,16 +653,24 @@ It is a bit hard to interpret these results because they are on the log odds rat
 
 First, we create posterior predictions for all levels of maternal education and past fails:
 
+Lets look at the data for which we simulate outcomes:
+
 ```{r class.source = 'fold-show'}
+# create all combinations of Medu and failures
 sim.data = expand.grid(
   Medu = sort(unique(df$Medu)),
   failures = sort(unique(df$failures)))
 
+# use the function sim to generate posterior predictions
 pp = sim(ol.fit,data = sim.data, n = 2000)
+sim.data
 ```
 
-Here is a general overview:
+Here is a general overview over the model predictions:
 
+<div class="marginnote"> 
+Note the highly uncertainty in the posterior predictions!
+</div>
 ```{r, out.width="60%"}
 mu = colMeans(pp)
 CI80 = apply(pp,2,function(x) PI(x, prob = .8))
@@ -668,15 +698,7 @@ This plot suggests several questions:
 - Is higher maternal education associated with higher grades when there were 0 previous fails and with lower grades when there were 3 fails?
 - Are the above mentioned slopes robustly different?
 
-Lets first look at the data for which we simulated outcomes:
-
-```{r}
-sim.data
-```
-
-
-Above, we used `sim(ol.fit)` to easily obtain predicted response values. However, these are a bit noisy, because thy are simulated randomly given
-the phi and the thresholds. We can be more accurate by using only phi, and thresholds to  calculate response-probabilities and then calculate expected responses by weighting the responses with these probabilities. This does not involve simulation of individual level responses and is therefore less noisy:
+Above, we used `sim(ol.fit)` to easily obtain predicted response values. However, these are a bit noisy, because thy are simulated randomly given the *response probabilities phi* and the thresholds. We can be more accurate by using only phi, and thresholds to calculate response-probabilities and then calculate expected responses by weighting the responses with these probabilities. This does not involve simulation of individual level responses and is therefore less noisy:
 
 ```{r}
 phi = link(ol.fit,data = sim.data)$phi
@@ -691,8 +713,10 @@ for (k in 1:nrow(sim.data)) {
 }
 ```
 
-To answer the first question, **"Do grades decrease from 0 to 3 previous fails?"**, we calculate (note that the minimum number of previous fails is 0):
-
+To answer the first question, **"Do grades decrease from 0 to 3 previous fails?"**, we calculate:
+<div class="marginnote"> 
+The minimum number of previous fails is 0.
+</div>
 $$
 \delta = \frac{1}{3}\sum^i_{1:3} G3(fails = i) - G3(fails = i-1)
 $$
@@ -726,7 +750,10 @@ posterior_hist( # un-hide previous code block for this function
   xlim = range(delta))
 ```
 
-To answer the second question, **"Is higher maternal education associated with higher grades when there were no previous fails and with lower grades when there were 2-3 fails?"**, we first calculate the effect of maternal education in students with 0 and 2 or 3 previous fails:
+On average grades decreased by `round(mean(delta),2)` for each previous fail. 
+
+
+To answer the second question, **"Is higher maternal education associated with higher grades when there were 0 previous fails and with lower grades when there were 3 fails?"**, we first calculate the effect of maternal education for students with 0 and 3 previous fails:
 
 ```{r class.source = 'fold-show'}
 # calculate contrasts
@@ -742,7 +769,9 @@ for (i in 2:4) { # here, i is the maternal education level
     pp[,which(sim.data$Medu == i & sim.data$failures == 3)] - 
     pp[,which(sim.data$Medu == i-1 & sim.data$failures == 3)]
 }
-delta_F0 = delta_F0 / 3
+# average effect of increasing Medu by 1 at 0 previous fails
+delta_F0 = delta_F0 / 3 
+# average effect of increasing Medu by 1 at 3 previous fails
 delta_F3 = delta_F3 / 3
 ```
 
@@ -761,9 +790,9 @@ posterior_hist(
   xlim = c(-1.25,1.1))
 ```
 
-We see that whereas higher maternal education is associated with better grades when the student had not failed the class yet, there is very weak evidence for the opposite effect for students who failed the class 2-3 times already. To see if the two effects are really different, we need to compare them explicitly, which we do next:
+We see that whereas higher maternal education is associated with better grades when the student had not failed the class yet, there is very weak evidence for the opposite effect for students who failed the class 3 times already. To see if the two effects are really different, we need to compare them explicitly, which we do next:
 
-And next we can calculate the difference between these two delta:
+We calculate the difference between these two deltas:
 
 ```{r class.source = 'fold-show', out.width="60%"}
 interaction_eff = delta_F0-delta_F3
@@ -780,6 +809,14 @@ We are reasonably certain that there is a difference in slopes, but we can't be 
 The ordered probit uses the standard normal distribution for the latent variable. The only disadvantage I see with the ordered probit is that the coefficients cannot be interpreted as (log) odds ratios. 
 
 However, one can then interpret regression coefficients as changes on the level of the latent variable on the scale of a standard normal distribution. This can be more attractive, if one is primarily interested in the latent variable. If one is primarily interested in the relative frequency of the response categories the ordered logistic model is easier to interpret.
+
+# Ordered predictors
+
+The basic idea for an ordered predictor with $\small M$ levels is as follows:
+
+1. Set the value for the **standard effect** to 0 for the lowest level ($\small \lambda_1 = 0$) and to 1 for the highest level  ($\small \lambda_k = 1$). 
+2. Estimate parameters $\small \lambda_2 { to } \lambda_{k-1}$ that describe how much of the maximal effect if realized at levels $\small 2 \textrm { to } k-1$, such that $\small \lambda_1 { to } \lambda_{k}$ increase monotonically.
+3. Estimate a parameter $\small \beta_o$ that scales the $\lambda$s so that the effect of a given level is calculated as $\small \lambda_k\beta_o$
 
 # Summary
 
