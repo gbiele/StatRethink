@@ -30,3 +30,7 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 9. B: [MCMC and chain diagnostics](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter9/Chapter9Recap.html)
 
+12. [Generalized linear model and logistic regression](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter11/Chapter11Recap.html)
+
+12. [Ordered logistic regression](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter12/Chapter12Recap.html)
+
