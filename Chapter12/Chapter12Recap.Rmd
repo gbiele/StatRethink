@@ -362,7 +362,7 @@ $$
 log \left( \frac{P(Y_i>k)}{P(Y_i<k)} \right) = \alpha_k 
 $$
 
-with response $\small k \in \{1,2...M\}$
+with responses $\small k \in \{1,2...M\}$
 
 The `dordlogit` function in the rethinking package **calculates the likelihood of the observations given the model using the `plogis` / `inv_logit` function, whereby different threshold values lead to different likelihoods**:
 

@@ -1,7 +1,7 @@
 ---
 title: "Chapter 13: Recap"
 author: "Guido Biele"
-date: "08.06.2022"
+date: "24.05.2023"
 output:
   html_document: 
     mathjax: default
@@ -75,7 +75,7 @@ Here are the things you know about your firm:
 
 - There are 15 departments 
 - Each department has between 8 (administration) and 100 (production) employees
-- The last years have brought many changes to the firm, whereby all departments were typically impacted in a similar manner by these changes. Therefore you think that employee satisfaction should be similar in the departments.
+- The departments have different observed and unobserved characteristics that lead to (small differences) in average satisfaction between departments.
 
 Here is this expressed in some variables.
 ```{r class.source = 'fold-show'}
@@ -132,12 +132,17 @@ Here is a simple model of the data generating process, and its translation in si
 No we can simulate satisfaction of employees in the firm:
 ```{r class.source = 'fold-show'}
 set.seed(1)
+# mean satisfaction in departments
 department_mus = 
     rnorm(n_departments,
           mean_firm_satisfaction,
           sd_dep_satisfaction)
+# employee level satisfaction
 firm_satisfaction = c()
 for (d in 1:n_departments) {
+# employee satisfaction varies around department average
+# due to measurement error, the average of employee satisfaction
+# deviates from the true department mean.
   employee_satisfaction = 
     rnorm(n_employees[d],
           department_mus[d],
@@ -177,7 +182,8 @@ plot_data = function(return.x = FALSE) {
               names.arg = dep.satisf$group1,
               xlab = "department",
               ylab = "satisfaction",
-              ylim = c(0, max(dep.satisf$mean+1.96*se)))
+              ylim = c(0, max(dep.satisf$mean+1.96*se)),
+              cex.names = .85)
   
   arrows(x0 = x,
          y0 = dep.satisf$mean - 1.96*se,
@@ -407,8 +413,9 @@ if (file.exists(fn)) {
   fit.no_pooling = ulam(
   m.no_pooling,
   data = u.data,
-  log_lik = TRUE, iter = 1000,
-  chains = 4, cores = n.cores)
+  log_lik = TRUE, iter = 2000,
+  chains = 4, cores = n.cores,
+  cmdstan = TRUE)
   save(fit.no_pooling, file = fn)
 }
 ```
@@ -419,7 +426,7 @@ fit.no_pooling = ulam(
   m.no_pooling,
   data = u.data,
   log_lik = TRUE, iter = 1000,
-  chains = 4
+  chains = 4, cores = n.cores,
 )
 ```
 
@@ -440,11 +447,21 @@ points(x,est.no_pooling$mean, col = "blue", pch = 16)
 
 As expected, the estimates of this simple, no-pooling,  Bayesian model correspond to the averages we calculated earlier, except that we see a bit of shrinkage towards the prior mean for the small departments (1-5).
 
+Now lets compare the no pooling and full pooling model:
+
+```{r}
+compare(fit.full_pooling.b,
+        fit.no_pooling) %>% 
+  round(2)
+```
+
+As expected, the no pooling model is estimate to have a higher number of effective parameters (13 vs 2) than the full pooling model. The difference of 11 is not the same as the number of departments (15), but close enough.
+
 ## Multilevel regression implements paritial pooling (random effects)
 
 In the full and no pooling analysis, we determined the the degree of pooling by setting the standard deviation for the department level satisfaction to a very low or very high number, respectively.
 
-The key advantage of multilevel regression and partial polling models is that instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.
+*The key advantage of multilevel regression and partial pooling models is that, instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.*
 This allows such models to adapt to situations where the different groups are either similar (low standard deviation) or dissimilar (high standard deviation).
 
 
@@ -541,7 +558,18 @@ est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
 points(x,est.partial_pooling$mean, col = "blue", pch = 16)
 ```
 
-Note that the means estimated with the multilevel / partial pooling model lie between the means of the full pooling approach (dotted red line) and the means of the no pooling approach (bar height),
+Note that the means estimated with the multilevel / partial pooling model lie between the means of the full pooling approach (dotted red line) and the means of the no pooling approach (bar height).
+
+We can compare the models to see which model generalizes best and to compare the number of effective parameters.
+
+```{r}
+compare(fit.full_pooling.b,
+        fit.partial_pooling,
+        fit.no_pooling) %>% 
+  round(2)
+```
+
+Note that the number of effective parameters for the partial pooling model is smaller than for the no pooling model, even though it really has an additional free parameters! We also see that the approximate out-of sample predictive accuracy is best for the partial pooling model. But what about accuracy for the current sample?
 
 ## Accuracy
 
@@ -559,7 +587,8 @@ Here is a plot of these deviations:
 
 ```{r}
 abs.delta = abs.delta %>% abs() %>% t()
-matplot(abs.delta, pch = 16, col = 2:4)
+matplot(abs.delta, pch = 16, col = 2:4, xaxt = "none")
+axis(1,at = 1:15, cex.axis = .85)
 legend("topleft", bty = "n",
        title = "Pooling",
        col = 2:4,
@@ -578,7 +607,7 @@ abs.delta^2 %>%    # square deviation
   sqrt()           # root
 ```
 
-Indeed, the partial pooling model as the smallest error. This is due to the same property of shrinkage estimators we already observed earlier in the course: Shrinkage estimators fit the data not as well as other models (here the no pooling model) but they are better at out of sample prediction.
+Indeed, the partial pooling model has the smallest error. This is due to the same property of shrinkage estimators we already observed earlier in the course: Shrinkage estimators fit the data not as well as other models (here the no pooling model) but they are better at out of sample prediction.
 
 Note though, that this is not a big surprise, because the data was generated according to the multilevel / partial pooling model.
 
@@ -647,8 +676,9 @@ check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
   
   layout(matrix(c(1,1,2,3),ncol = 2))
   RMSD = abs.delta^2 %>% colMeans() %>% sqrt() 
-  matplot(abs.delta, pch = 16, col = 2:4, ylab = "RMSD",
+  matplot(abs.delta, pch = 16, col = 2:4, ylab = "RMSD", xaxt = "none",
           main = paste0("sd = ", sd_dep_satisfaction, ", ",n_departments," groups"))
+  axis(1,at = 1:15, cex.axis = .7)
   legend("topleft", bty = "n",
          title = "Pooling",
          col = 2:4,
@@ -688,15 +718,17 @@ set_par(cex = 1, mar=c(3,3,3,.5))
 check.accuracy(sd_dep_satisfaction = 10, n_departments = 15)
 ```
 
-The last plot shows that if the number of groups is only moderately and the prior for the bias is relatively narrow, one can obtained biased estimates of the between group standard deviation. It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.
+The last plot shows that if the number of groups is only moderately large and the prior for the standard deviation is relatively narrow, one can obtained biased estimates of the between group standard deviation. It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.
 
 __The partial pooling model is generally nearly as accurate as the "true" model.__ Obviously, this also depends on how much data is available! The last figures are based on 15 groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
+
+Still, it is generally a good idea to use hierarchical models when possible if one is interested in estimating parameters for several units, because the it can be shown that pooling towards a common baseline will generally reduce the error. For more, see the [James-Stein Estimator]( https://en.wikipedia.org/wiki/James%E2%80%93Stein_estimator) or the [Stein's paradox or example](https://en.wikipedia.org/wiki/Stein%27s_example).
 
 # Bias–variance tradeoff
 
 One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an error free estimate of the sample mean.
 
-Lets look at the means from the no pooling an partial pooling models, together with the sample means: 
+Lets look at the means from the no pooling an partial pooling models, together with the observed sample means: 
 
 ```{r}
 sample_means = 
@@ -704,7 +736,8 @@ sample_means =
              group = firm_satisfaction$department, 
              mat = TRUE)[,"mean"]
 set_par()
-plot(1:15, sample_means, ylab = "mean", xlab = "department", cex = 1.5)
+plot(1:15, sample_means, ylab = "mean", xlab = "department", xaxt = "none")
+axis(1,at = 1:15, cex.axis = .85)
 points(1:15, est.no_pooling$mean, pch = 16, col = 2)
 points(1:15, est.partial_pooling$mean, pch = 16, col = 4)
 abline(h = mean(u.data$S), lty = 3)
@@ -715,16 +748,17 @@ arrows(x0 = 1:15,
 legend("topright",
        pch = c(1,16,16),
        col = c(1,2,4), bty = "n",
-       legend = c("dep. mean","no pooling", "partial pooling"))
+       legend = c("obs. dep. mean","no pooling", "partial pooling"))
 ```
-The deviation between sample mean and partial pooling estimate shows that the latter is a biased estimate of the sample mean. This bias is larger for smaller departments (on the left hand side) which which are shrunk more, and it is also larger for departments with extreme means, compare e.g. departments 13 and 14.
+The deviation between *sample mean* and partial pooling estimate shows that the latter is a biased estimate of the sample mean. This bias is larger for smaller departments (on the left hand side) which which are shrunk more, and it is also larger for departments with extreme means, compare e.g. departments 13 and 14.
 
-Now one could be concerned that partial pooling makes it difficult to detect differences between groups. But the bias just described is only part of the story. Next, we plot the estimates together with their credible intervals: 
+Now, one could be concerned that partial pooling makes it difficult to detect differences between groups. But the bias just described is only part of the story. Next, we plot the estimates together with their credible intervals: 
 
 ```{r}
 set_par()
 ylim = range(c(est.no_pooling[,3:4],est.partial_pooling[, 3:4]))
-plot(1:15, sample_means, ylab = "mean", xlab = "department", cex = 1.5, ylim = ylim)
+plot(1:15, sample_means, ylab = "mean", xlab = "department", ylim = ylim, xaxt = "none")
+axis(1,at = 1:15, cex.axis = .85)
 points((1:15)-.1, est.no_pooling$mean, pch = 16, col = 2)
 points((1:15)+.1, est.partial_pooling$mean, pch = 16, col = 4)
 abline(h = mean(u.data$S), lty = 3)
@@ -739,14 +773,14 @@ arrows(x0 = (1:15)+.1,
 legend("topright",
        pch = c(1,16,16),
        col = c(1,2,4), bty = "n",
-       legend = c("dep. mean","no pooling", "partial pooling"))
+       legend = c("obs. dep. mean","no pooling", "partial pooling"))
 ```
 
 What do you see?
 
-The variance of the estimates from the hierarchical partial pooling model is generally smaller. The intuition her is that because the estimate for one department also relies partially on data from other departments, the estimated mean for the department was derived from more data and is therefore less uncertain. 
+The variance of the estimates from the hierarchical partial pooling model is generally smaller, especially for smaller departments. The intuition is that because the estimate for one department also relies partially on data from other departments, the estimated mean for the department was derived from more data and is therefore less uncertain. 
 
-This reduction in bias means that even though all estimates were shrunk towards the global mean and group differences became smaller, we can still detect group differences well due to the reduces variance of the estimates for the group mean.
+This reduction in variance means that even though all estimates were shrunk towards the global mean and group differences became smaller, we can still detect group differences well due to the reduces variance of the estimates for the group mean.
 
 More generally, it can be said that total error of an estimate can be decomposed into:
 
