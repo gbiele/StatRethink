@@ -759,7 +759,7 @@ Still, it is generally a good idea to use hierarchical models when possible, if 
 
 # Bias–variance tradeoff
 
-One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an error free estimate of the sample mean.
+One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an error free estimate of the sample mean. This bias is also not random. Instead, estimates are moved towards the grand mean, so that group differences become smaller. Does this mean that we are less likely to detect group differences?
 
 Lets look at the means from the no pooling an partial pooling models, together with the observed sample means: 
 
@@ -862,6 +862,12 @@ legend("topright", bty = "n",
 ```
 
 Hence, even if a hierarchical model means that sub-group estimates are pulled toward the grand mean, we can still detect group difference well because the group means are estimated more precisely.
+
+# Applications
+
+- in repeated measures designs (random effects will also function as "baseline" correction)
+- "small-area-estimation" get better group specific estimates when group size is small
+- alternative to interaction effects: instead of `y ~ x + grp + x:grp` use `y ~ x + (1 + x|grp)`, which is a *random slopes* model.
 
 # Summary
 
