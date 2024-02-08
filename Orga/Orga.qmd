@@ -22,16 +22,23 @@ Seminar based on Richgard McElreath's book [Statistical Rethinking](https://xcel
 
 ## Prerequisits
 
-- some R knowledge
-- willing to spend a day a week preparing
+- Some R knowledge
+- Willing to spend a day a week preparing
 
 ## Procedure
 
 1. Read weekly chapter
-2. Solve exercises and submit html created from quarto Rmarkdown (in groups)
-3. Submit solutions until Monday noon
+2. Solve exercises and submit html created from quarto Rmarkdown (in teams)
+3. Submit solutions until Wednesday noon
 4. (GB summarizes material)
 5. Present results in class (one team per question)
+
+## Teams
+
+Solving the exercises together is more fun and you can help each other. It also lessens the burden.
+Find teams of 2 people and think about a name. 
+
+_Email me if you are without a team by Monday evening._
 
 ## Submitting solutions
 
@@ -41,8 +48,7 @@ To download such a template, right-click either here [quarto](https://raw.github
 
 **Please do not send me the .qmd or .Rmd document, but the .html document that you created.**
 
-Send the solutions via email to guido point biele at fhi point no with the subject line following this pattern:  StatRethink Exercises Chapter [chapter] Team [team name].
-
+Send the solutions via email to guido-point-biele-at-fhi-point-no with the subject line following this pattern: StatRethink Exercises Chapter [chapter] Team [team name].
 
 ## Credit points
 
@@ -60,6 +66,37 @@ The practice exercises that should be submitted are at the bottom of this page.
 1. Summary of chapter
 2. Presentation of solutions
 3. Questions
+
+
+# Using ChatGPT
+
+Do it!
+
+But you will be asked to explain your results.
+ChatGPT can be very useful for explaining code, or explaining a concept a bit differently. Example prompts.
+
+> You are an expert in Bayesian statistics and are particularily influenced by Statistician Andrew Gelman and Richard McElreaths book "statistical rethinking. Please explain the concept of a prior predictive check.
+
+> Explain the following equation: Pr(W, L, p) = Pr(W, L|p) Pr(p)
+
+> Show a linear regression formulated in ulam from the R package rethinking.
+
+> explain this code from the solutions to excercises of the book "Statistical Rethinking":
+
+```{r}
+#| eval: false
+m <- quap(
+  alist(
+    height ~ dnorm( mu , sigma ) ,
+    mu <- a + b*( weight - xbar ) ,
+    a ~ dnorm( 178 , 20 ) ,
+    b ~ dlnorm( 0 , 1 ) ,
+    sigma ~ dunif( 0 , 50 )
+  ) , data=d2 )
+
+```
+
+Use chatGPT as tutor, not as a fast way to complete exercises.
 
 
 # Installing the `rethinking` package
