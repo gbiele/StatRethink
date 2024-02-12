@@ -11,6 +11,8 @@ editor: source
 
 Seminar based on Richgard McElreath's book [Statistical Rethinking](https://xcelab.net/rm/statistical-rethinking/)
 
+## Who am I? Who are you?
+
 # Organisation
 
 ## Learning goals
@@ -141,4 +143,4 @@ We skip some chapters (10) and do others only partially (9, 11, 12)
 
 # Exercises
 
-- Chapter 1: 2E1-2E4, 2M1-2M3
+- Chapter 1 & 2: 2E1-2E4, 2M1-2M3

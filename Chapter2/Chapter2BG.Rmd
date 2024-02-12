@@ -124,9 +124,12 @@ The unconditional (or marginal) probability of snow, $P(snow)$, is the probabili
 
 ### Joint probability
 
-The joint probability of winter and snow $P(winter, snow)$ or $P(winter \textrm{ and } snow)$ is the ellipse-area that overlaps with the bottom right quadrant, which is shown in the next figure.
+The __joint probability__ of winter __and__ snow $P(winter, snow)$ or $P(winter \textrm{ and } snow)$ is the ellipse-area that overlaps with the bottom right quadrant, which is shown in the next figure.
 
-<div class="marginnote">  The **addition rule** for probabilities says that the probability that either of two events $P(A)$ (winter) or $P(B)$ (snow) happens is the the sum of the marginal probabilities $P(A) + P(B)$ minus the **joint probability** (snowy winter days). $P(A \textrm{ or } B) = P(A)+P(B)-P(A \textrm{ and } B)$ where $P(A \textrm{ and } B)$ is the joint probability. <br> Then we can also write the joint probability as $P(A \textrm{ or } B) - P(A) - P(B)= -P(A \textrm{ and } B)$ and $P(A \textrm{ and } B) = -(P(A \textrm{ or } B) - P(A) - P(B))$</div>
+<div class="marginnote">  The **addition rule** for probabilities says that the probability that _either_ of two events $P(A)$ (winter) or $P(B)$ (snow) happens is the the sum of the marginal probabilities $P(A) + P(B)$ minus the **joint probability** (snowy winter days). $P(A \textrm{ or } B) = P(A)+P(B)-P(A \textrm{ and } B)$ where $P(A \textrm{ and } B)$ is the joint probability. <br> Then we can also write the joint probability as 
+$P(A \textrm{ or } B) - P(A) - P(B)= -P(A \textrm{ and } B)$
+$P(A \textrm{ and } B) = -(P(A \textrm{ or } B) - P(A) - P(B))$
+$P(A \textrm{ and } B) = P(A) + P(B) - P(A \textrm{ or } B)$</div>
 
 ```{r, echo = F}
 draw_pie()
@@ -135,14 +138,21 @@ h.e = .25
 k.e = -.25
 a.e = .5
 b.e = .175
-draw_ellipse = function() {
+draw_ellipse = function(col = adjustcolor("grey",alpha = .5),
+                        border =  adjustcolor("grey",alpha = .5)) {
   draw.ellipse(h.e,k.e,a.e,b.e , angle = e.rot,
-               col = adjustcolor("grey",alpha = .5),
-               border = adjustcolor("grey",alpha = .5)) 
+               col = col,
+               border = border) 
 }
 draw_ellipse()
+draw_ellipse(col = adjustcolor("grey",alpha = .5), border = "red")
 text(0,1,expression("P(snow,winter)" =="blue-gray area"))
 ```
+
+```{r}
+
+```
+
 
 ```{r, echo = F, eval = F}
 par(mar = c(0,0,0,0))
@@ -156,11 +166,60 @@ text(0,1,expression("P(snow,winter)" =="blue-gray area"))
 ```
 
 
+```{r}
+par(mfrow = c(2,4), mar = c(0,0,0,0), oma =c(0,0,0,0), bg = adjustcolor("white",alpha = 0))
+
+pie(c(3,1), labels = "", border = "white", col = c("white","#6699cc"))
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+text(.25,.25,"P(A or B)",pos = 3, cex = 2)
+
+
+pie(c(3,1), labels = "", border = "white", col = c("white","#6699cc"))
+text(.25,.25,"P(A)",pos = 3, cex = 2)
+text(x = -.8,-.25,"=", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+pie(c(3,1), col = "white", labels = "", border = "white")
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+text(.25,.25,"P(B)",pos = 3, cex = 2)
+text(x = -.8,-.25,"+", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+
+pie(c(3,1), col = "white", labels = "", border = "white")
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+rect(0,0,.7,.2, col = "white", border = NA)
+rect(0,0,-.2,-.7, col = "white", border = NA)
+text(.25,.25,"P(A,B)",pos = 3, cex = 2)
+text(x = -.8,-.25,"–", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+
+pie(c(3,1), col = "white", labels = "", border = "white")
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+rect(0,0,.7,.2, col = "white", border = NA)
+rect(0,0,-.2,-.7, col = "white", border = NA)
+text(.25,.25,"P(A,B)",pos = 3, cex = 2)
+
+pie(c(3,1), labels = "", border = "white", col = c("white","#6699cc"))
+text(.25,.25,"P(A)",pos = 3, cex = 2)
+text(x = -.8,-.25,"=", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+pie(c(3,1), col = "white", labels = "", border = "white")
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+text(.25,.25,"P(B)",pos = 3, cex = 2)
+text(x = -.8,-.25,"+", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+pie(c(3,1), labels = "", border = "white", col = c("white","#6699cc"))
+draw_ellipse(col = "#6699cc", border = "#6699cc")
+text(.25,.25,"P(A or B)",pos = 3, cex = 2)
+text(x = -.8,-.25,"–", adj = .5, cex = 5, srt = .5, xpd = FALSE)
+
+```
+
+
 ### Conditional probability
 
 A conditional probability gives the answer to the question "Given that it is winter, what is the probability of snow". This amounts to the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". The next figure visualizes this.
 
-<div class="marginnote"> This is an application of the **product rule** for probabilities. <br> If we have two events $A$ (winter) and $B$ (snow), the **joint probability** of both events $P(A,B)$ is calculated by multiplying the **unconditional probability** $P(A)$ (winter) with the **conditional probability** $P(B|A)$ (the conditional probability of snow given winter). If we rearrange  $P(A,B) = P(A) \cdot P(B|A)$ we get $P(A,B)/P(A) = P(B|A)$.</div>
+<div class="marginnote"> This is an application of the **product rule**. <br> If we have two events $A$ (winter) and $B$ (snow), the **joint probability** of both events $P(A,B)$ is calculated by multiplying the **unconditional probability** $P(A)$ (winter) with the **conditional probability** $P(B|A)$ (the conditional probability of snow given winter). If we rearrange  $P(A,B) = P(A) \cdot P(B|A)$ we get $P(B|A) = P(A,B)/P(A)$.</div>
 
 ```{r, echo = F}
 par(mar = c(0,0,0,0))
@@ -172,7 +231,7 @@ rect(0,0,.7,.2, col = "white", border = NA)
 rect(0,0,-.2,-.7, col = "white", border = NA)
 ```
 
-To obtain a conditional probability, we are "conditioning" our question about the probability of snow on the value of another variable, namely that the season is winter. In comparison, the joint probability asks "What is the size of the trimmed ellipse-area, _relative to_ the total circle area of 1".
+To obtain a conditional probability, we "condition" our question about the probability of snow on the value of another variable, here that the season is winter. In comparison, the joint probability asks "What is the size of the trimmed ellipse-area, _relative to_ the total circle area".
 
 The following figures show fractions that make even clearer hat the joint probability is the probability of snowy winter days divided by the probability of any day (which is just one), and that the conditional probability is the probability of snowy winter days divided by the probability of winter days. 
 
