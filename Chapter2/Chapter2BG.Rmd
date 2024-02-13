@@ -1,7 +1,7 @@
 ---
 title: "Chapter 2: Background"
 author: "Guido Biele"
-date: "15.02.2032"
+date: "13.02.2024"
 output:
   html_document: 
     mathjax: default
@@ -586,7 +586,11 @@ Depending on the nature of a parameter, different probability distributions must
 
 ### Probability distributions in Bayesian Statistics
 
+<div class="marginnote"> __Rationality, Bayes rule and prior probability__ Bayes' represents the only logical method to update probabilities or beliefs with new data. Classical Bayesian statistics does not mandate that prior beliefs align with the observable world. Individuals' perceptions vary, hence prior probabilities are partly subjective. Conversely, interpreting probabilities as long-term frequencies ensures consistency with the observed world, albeit limiting the types of events to which probabilities can be assigned. Modern Bayesian statisticians depart from classical constraints: While acknowledging the subjective nature of prior probabilities, they advocate for these to be in consistent with empirical evidence.
+</div>
+
 In Bayesian statistics, we use such distributions to express three things:
+
 
 1. <span style="color:blue">**Prior**</span> judgement about the probability of different parameter^[Parameters are variables that describe characteristics of distributions, like for example the mean and standard deviation of the normal distribution] values before seeing the data. the parameter $p$ we introduced above describe the probability to land on water.
 2. The probability of different parameter values given the data. This is also called the <span style="color:red">**likelihood**</span>
@@ -611,7 +615,7 @@ plot(p,
 
 Next the likelihood. For the globe tossing example, we can think of each toss as a trial and of each landing on the index finger as a success. The distribution that gives the likelihood of different success probabilities $p$ given a number of trials and successes is the binomial distribution. So we use this distribution to get the likelihood function. Let us assume we had 4 trials and 3 successes.
 
-<div class="marginnote"> The likelihood is just the density of the observed data given different parameters values. Because we count successes out of trials, we calculate the likelihood with the `dbinom` function. (`dbinom(x = 3, size = 4, prob = p)`, where `p` is a vector with parameter values.)  </div>
+<div class="marginnote"> The likelihood is just the density of the observed data given different parameters values. Because we count successes out of trials, we calculate the likelihood with the `dbinom` function. (`dbinom(x = 3, size = 4, prob = p)`, where `p` is a vector with parameter values.) </div>
 
 ```{r, echo = F, out.width="75%"}
 trials = 4
@@ -698,6 +702,8 @@ text(p[which.max(prior_x_likelihood)],
 
 
 The next plot shows the posterior distribution together with the prior distribution and the likelihood. We are also adding a plot for the un-normalized posterior with a dotted line.
+
+<div class="marginnote"> The outcome of Bayesian analysis is a posterior distribution. Typically, we report the mean (or median) of this distribution as a point estimate and use credible intervals to convey uncertainty.</div>
 
 ```{r, echo = F, out.width="75%"}
 par(mar = c(5.1,4.1,1,2.1))
