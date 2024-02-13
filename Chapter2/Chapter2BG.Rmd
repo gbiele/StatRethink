@@ -126,10 +126,7 @@ The unconditional (or marginal) probability of snow, $P(snow)$, is the probabili
 
 The __joint probability__ of winter __and__ snow $P(winter, snow)$ or $P(winter \textrm{ and } snow)$ is the ellipse-area that overlaps with the bottom right quadrant, which is shown in the next figure.
 
-<div class="marginnote">  The **addition rule** for probabilities says that the probability that _either_ of two events $P(A)$ (winter) or $P(B)$ (snow) happens is the the sum of the marginal probabilities $P(A) + P(B)$ minus the **joint probability** (snowy winter days). $P(A \textrm{ or } B) = P(A)+P(B)-P(A \textrm{ and } B)$ where $P(A \textrm{ and } B)$ is the joint probability. <br> Then we can also write the joint probability as 
-$P(A \textrm{ or } B) - P(A) - P(B)= -P(A \textrm{ and } B)$
-$P(A \textrm{ and } B) = -(P(A \textrm{ or } B) - P(A) - P(B))$
-$P(A \textrm{ and } B) = P(A) + P(B) - P(A \textrm{ or } B)$</div>
+<div class="marginnote">  The **addition rule** for probabilities says that the probability that _either_ of two events $P(A)$ (winter) or $P(B)$ (snow) happens is the the sum of the marginal probabilities $P(A) + P(B)$ minus the **joint probability** (snowy winter days). $P(A \textrm{ or } B) = P(A)+P(B)-P(A \textrm{ and } B)$. <br> This is often written as $P(A \cup B) = P(A)+P(B)-P(A \cap B)$, where $\cup$ stands for _union_ (or)  and $\cap$ stands for the _intersection_ (and). </div>
 
 ```{r, echo = F}
 draw_pie()
@@ -265,7 +262,7 @@ draw.circle(0,0,.8, lty = 3, border = "grey")
 lines(c(-1,1),c(1,1), lwd = 2)
 ```
 
-Note that because the probability of a winter day is smaller than 1 and dividing by a number smaller than one makes a number larger, dividing by the marginal probability of winter ensures that the conditional probability is larger than the joint probability. This makes sense, as snow in winter has to be more likely than winter-snow in the whole year.
+_Because the probability of a winter day is smaller than 1 and dividing by a number smaller than one makes a number larger, dividing by the marginal probability of winter ensures that the conditional probability is larger than the joint probability._ This makes sense, as snow in winter has to be more likely than winter-snow in the whole year.
 
 So, to calculate the conditional probability $P(snow|winter)$ we want to answer the question "What is the size of the ellipse-area that overlaps with the bottom right quadrant, _relative to_ the area of the bottom right quadrant". Unfortunately, there is no simple equation for calculating the overlap of an ellipse and a circle quadrant. But we can approximate the correct answer by randomly placing points into the circle and checking if they are in the bottom right quadrant (winter), in the ellipse (snow), or in the area of the ellipse that overlaps with the bottom right quadrant (winter and snow).
 
@@ -324,12 +321,12 @@ for (k in 1:N) {
   
   # plot points
   points(xy[1],xy[2],
-         pch = ifelse(is.snow[k] == T,8,21), cex = .75,
+         pch = ifelse(is.snow[k] == T,8,16), cex = .75,
          bg = ifelse(is.winter[k] == T,"blue","red"),
          col = ifelse(is.winter[k] == T,"blue","red"))
 }
 legend(.75,.8,
-       pch = c(8,21,15,15), bty = "n",
+       pch = c(8,16,15,15), bty = "n",
        col = c("black","black","blue","red"),
        legend = c("snow","no snow", "winter", "no winter"))
 ```
@@ -432,6 +429,9 @@ The key to the solution is that we can use both $P(Monday|rain)$ and $P(rain|Mon
 
 Page 37 shows the relationship of joint and conditional probability:
 
+<div class="marginnote"> $P(A,B) = P(\textrm{conditioned}|\textrm{conditioning}) \cdot P(\textrm{conditioning})$
+$P(A,B) = P(\textrm{target}|\textrm{given}) \cdot P(\textrm{given})$</div>
+
 $$
 P(A,B) = \color{blue}{P(A|B) \cdot P(B)} \\
 P(A,B) = \color{red}{P(B|A) \cdot P(A)}
@@ -509,7 +509,7 @@ plot(seq(-3,3,.1),
 text(0,.1, expression(f(x)~"="~frac(1,sigma~sqrt(2~pi))~e^{-frac(1,2)~(frac(x-mu,sigma))^2}))
 ```
 
-In the context of Bayesian statistics analysis, we use probability distributions to describe a state of the world when we remain uncertain.
+In the context of Bayesian statistics analysis, we use probability distributions to describe a state of the world _including how uncertain we are_.
 
 ### Domain of distributions
 
@@ -544,7 +544,7 @@ If we are certain to land on water, $P(water)$ = 1^[The figure shows density, no
 
 If we want to express uncertainty, we also have to allow for all other values. If we had no information whatsoever to say something about the probability to land on water, all probabilities should get the same value.
 
-<div class="marginnote">**Probability distributions in R** In R, functions that return the density for a given value x for a distribution strta with **d**. For instance, `dbeta(x = 0.5, shape1 = 1, shape2 = 1)` returns the density for the value 0.5 under the beta distribution where the parameters shape1 and shape2 have the value 1. `dnorm(x = 0.5, mean = 1, sd = 1)` returns the density for the value 0.5 under the normal distribution  with a mean of 1 and a sd of 1.</div>
+<div class="marginnote">**Probability distributions in R** In R, functions that return the density for a given value x for a distribution start with **d**. For instance, `dbeta(x = 0.5, shape1 = 1, shape2 = 1)` returns the density for the value 0.5 under the beta distribution where the parameters shape1 and shape2 have the value 1. `dnorm(x = 0.5, mean = 1, sd = 1)` returns the density for the value 0.5 under the normal distribution  with a mean of 1 and a sd of 1.</div>
 
 ```{r, echo = F, out.width="75%"}
 par(mar=c(3,2,0,1))
@@ -582,7 +582,7 @@ curve(dbeta(x,1.3,1.1), col = adjustcolor("blue", alpha = .5), add = T)
 
 To summarize, one can think of a probability distribution as a function that expresses how likely different values of a parameter (here p) are and whose area under the curve (or integral) is 1.
 
-Depending on the nature of a parameter, different probability distributions must be used. Above, we use the so called beta distribution, because this distribution allows values between 0 and 1, which matches the fact that probabilities need to be between 0 and 1. For other phenomena different distributions can be used. For instance, we might want to use a normal distribution to characterize our uncertainty about tomorrow's temperature or a Poisson distribution to characterize uncertainty about things we count, like e.g. the number of shoes a person has.
+Depending on the nature of a parameter, different probability distributions must be used. Above, we use the so called beta distribution, because this distribution allows values between 0 and 1, which matches the fact that probabilities need to be between 0 and 1. For other phenomena different distributions can be used. For instance, we might want to use a _normal distribution_ to characterize our uncertainty about tomorrow's temperature. a _Poisson distribution_ to characterize uncertainty about things we count, like the number of shoes a person has, or a _binomial distribution_ to characterize uncertainty about how success probabilities, like how many students hand in exercises in time.
 
 ### Probability distributions in Bayesian Statistics
 
@@ -609,9 +609,9 @@ plot(p,
      col = "blue")
 ```
 
-Next the likelihood. For the globe tossing example, we can think of each toss as a trial and of each landing on the index finger as a success. The distribution that gives the likelihood of different success probabilities $p$ given a number of trials and successes is the binomial distribution. So we use this distribution to get the likelihood function. Let us assume we had 4 trials and 3 successes.
+Next the likelihood. For the globe tossing example, we can think of each toss as a trial and of each landing on the index finger as a success. The distribution that gives the likelihood of different success probabilities $p$ given a number of trials and successes is the _binomial distribution_. So we use this distribution to get the likelihood function. Let us assume we had 4 trials and 3 successes.
 
-<div class="marginnote"> The likelihood is just the density of the observed data given different parameters values. Because we count successes out of trials, we calculate the likelihood with the `dbinom` function. (`dbinom(x = 3, size = 4, prob = p)`, where `p` is a vector with parameter values.)  </div>
+<div class="marginnote"> The likelihood is just the density of the observed data given different parameters values. Because we count successes out of trials, we calculate the likelihood with the `dbinom` function. (`dbinom(x = 3, size = 4, prob = p)`, where `p` is a vector with parameter values.) <b> type `?dbinom` in the R-Consol to see the documentation of the function.</div>
 
 ```{r, echo = F, out.width="75%"}
 trials = 4
@@ -720,7 +720,7 @@ legend("topleft",
 
 The figure shows that the posterior is a compromise between the prior distribution and the likelihood. That is, it is a compromise between our information before we saw the data and the information that is in the data.
 
-Because we had relatively little data compared to the information in the prior, we can still clearly see the influence of the prior in the posterior. However, if we collect five times the data, we become more certain (the posterior distribution is narrower) and the influence of the prior is diminished so that the posterior will be very similar to the likelihood:
+Because we had relatively little data compared to the information in the prior, we can still clearly see the influence of the prior in the posterior. However, if we collect five times the data, we become more certain (the likelihood and the posterior distribution are narrower) and the influence of the prior is diminished so that the posterior will be very similar to the likelihood:
 
 ```{r, echo = F, out.width="75%"}
 trials = 20
@@ -857,3 +857,4 @@ legend("topleft",col = c("blue","red","violet"),
        bty = "n")
 ```
 
+This exaple shows that we can use grid search to _approximate_ the mode of the posterior probability. We only approximate it, because how close we get to the mode depends on how fine our grid is. Because the size of the grid grows exponentially with the number of parameters, it is rarely used in practice. However, it is a straight forward way to find _relatively_ good paramter values that is usefull to build an understanding of what we are trying to do if when we fit parameters.
