@@ -44,6 +44,21 @@ h3,h4,h5,h6{
   overflow:auto;
 }
 ```
+```{css sidenote, echo = FALSE}
+.sidenote, .marginnote { 
+  float: right;
+  clear: right;
+  margin-right: -50%;
+  width: 40%;         # best between 50% and 60%
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 2;
+  font-size: 1.8rem;
+  vertical-align: baseline;
+  position: relative;
+  }
+```
+
 
 ```{r setup, include=FALSE, echo = FALSE}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300, fig.align = 'center')
@@ -192,6 +207,8 @@ rpoint_in_circle = function() {
 
 If we use simulations to calculate these probabilities, as illustrated in the next figure, the problem is reduced to simple counts:
 
+<div class="marginnote"> Do you recognize the product rule here? </div>
+
 $$
 P(snow|winter) = \frac{\text{number of snowy winter days}}{\text{number of winter days}}
 $$
@@ -235,6 +252,8 @@ $$
 $$
 and by multiplying with $P(B)$ on both sides, we get first 
 
+<div class="marginnote"> This is he product rule, which links joint and conditional probabilities. </div>
+
 $$
 \overset{\color{violet}{\text{conditional probability}}}{P(A|B)} \cdot \overset{\color{blue}{\text{marginal probability}}}{P(B)} = \overset{\color{red}{\text{joint probability}}}{P(A,B)}
 $$
@@ -275,14 +294,16 @@ Chapter 3 also introduces a diagnostic example. More generally we can ask the qu
 
 
 $$
-P(D|T+) = \frac{P(T+|D)\cdot P(D)}{P(T+)}
+P(D|T\textrm{+}) = \frac{P(T\textrm{+}|D)\cdot P(D)}{P(T\textrm{+})}
 $$
 
 This tells us the that probability of disease also depends of the unconditional probability (base rate) of the disease and of positive tests.
 
-Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$, which is 
+Sometimes, Bayes rule is expressed in a more complicated manner, if one adds how to calculate $P(T+)$:
 $$
-P(T+|not D)\cdot P(notD) + P(T+|D)\cdot P(D)
+P(D|T\textrm{+}) = 
+\frac{P(T\textrm{+}|D)\cdot P(D)}
+{P(T\textrm{+}|not D)\cdot P(notD) + P(T\textrm{+}|D)\cdot P(D)}
 $$
 However, this is not so relevant for Bayesian inference.
 
@@ -475,6 +496,17 @@ legend("topleft",col = c("blue","red","violet"),
 
 ## Ways to calculate the posterior
 
+### Analytically
+
+For example, if we are a priori assume that a finger is equally likely to land on land and water, we can say our prior is a Beta distribution with parameters $\alpha$ (successes) = 1 and $\beta$ (failures) = 1: $\small Beta(1,1)$. If we then observe $n =$ 10 tosses, where the figure lands on water for $x =$ 7 tosses, the posterior distributions is a Beta distribution with parameters $\alpha$ = 1 + 7 = 8 and $\beta$ = 1 + 3 = 4: $\small Beta(8,4)$. 
+
+More generally, with priors $\alpha$ and $\beta$ 
+$$
+Posterior = Beta(\alpha + x, \beta+n-x)
+$$
+
+However, this solution is only possible in the few situations where there exist conjugate priors, i.e., priors that are conjugate to the likelihood such that the posterior has the same distribution as the prior. For instance, the beta distribution is the conjugate prior of the parameter p of the binomial distribution. The normal distribution is a conjugate prior for the mean parameter of the normal distribution, and the Inverse Gamma distribution is the conjugate prior for the standard deviation of the normal distribution.
+
 ### Grid approximation
 
 - We calculate the posterior probability for a number of prior probability values. 
@@ -536,7 +568,8 @@ I prefer histograms over density plots, because density plots can distort things
 
 ### Mean, median, and mode
 ```{r, echo = F, messsage = FALSE, warning=FALSE, results='hide'}
-colored.hist(samples1, length.out = 30)
+samples1 = rbeta(50000,10,2.5)
+colored.hist(samples1, length.out = 60)
 mode = mean(HPDI(samples1,.1))
 clrs = c("red","blue","black")
 abline(v = c(mean(samples1),median(samples1),mode), col = clrs, lwd = 2)
@@ -553,7 +586,7 @@ What is the value below which x% of the posterior distribution falls.
 
 ```{r}
 Q05 = quantile(samples1,.05)
-colored.hist(samples1, length.out = 30, upper = Q05)
+colored.hist(samples1, length.out = 60, upper = Q05)
 ```
 
 
@@ -565,13 +598,14 @@ An x% credible interval (CI) is the central interval that contains x% of the pos
 Can also be called posterior intervals. This is what some people think confidence intervals are.
 
 ```{r}
+
 CI80 = PI(samples1, prob = .8)
-colored.hist(samples1, length.out = 30,
+colored.hist(samples1, length.out = 60,
              lower = CI80[1],
              upper = CI80[2])
 title(paste("Interval length = ",round(diff(CI80),3)))
 abline(v = CI80, lwd = 2, col  = "blue")
-text(CI80, c(6000,6000), labels = round(CI80,2), pos = c(2,4), col = "blue")
+text(CI80, c(3000,3000), labels = round(CI80,2), pos = c(2,4), col = "blue")
 ```
 
 Credible intervals are calculated with quintiles. For instance, if the 80% credible intervals goes from the 10% ((100-80)/2) quintile to the 90% quintile.
@@ -582,27 +616,27 @@ An x% Highest density posterior interval (HDPI) is the shortest interval that co
 
 ```{r}
 HPDI80 = HPDI(samples1, prob = .8)
-colored.hist(samples1, length.out = 30, color1 = "violet",
+colored.hist(samples1, length.out = 60, color1 = "violet",
              lower = HPDI80[1],
              upper = HPDI80[2])
 title(paste("Interval length = ",round(diff(HPDI80),3)))
 abline(v = HPDI80, col = "violet", lwd = 2)
 abline(v = CI80, col = "blue", lwd = 2, lty = 3)
-text(CI80, c(100,100), labels = round(CI80,2), pos = c(2,4), col = "blue")
-text(HPDI80, c(150,150), labels = round(HPDI80,2), pos = c(2,4), col = "violet")
+text(CI80, c(3000,3000), labels = round(CI80,2), pos = c(2,4), col = "blue")
+text(HPDI80, c(2500,2500), labels = round(HPDI80,2), pos = c(2,4), col = "violet")
 ```
 
-### Posterior predictions
+## Posterior predictions
 
 How do we know that our model is any good?
 
-In the workflow of Bayesian data analysis, we check "model fit" visually, by comparing if the predictions made by the model are consistent with the data.
+In the workflow of Bayesian data analysis, we check "model fit" visually, by _comparing if the predictions made by the model are consistent with the data_.
 
 We do this by taking parameters from the posterior distribution, and then simulate data from the model with these parameters.
 
 If the model and parameters are good, the simulated data should look similar to the observed data.
 
-Lets look at some more globe tosses: We get 13 out of 20 tosses water and calculate the posterior distributio for proportion water with a flat prior.
+Lets look at some more globe tosses: We get 13 out of 20 tosses water and calculate the posterior distribution for proportion water with a flat prior.
 ```{r class.source = 'fold-show'}
 n_water = 13
 n_total = 20
@@ -619,32 +653,40 @@ To simulate data from our posterior distribution, we have to use the posterior p
 
 ```{r class.source = 'fold-show'}
 # generate samples from the posterior distribution
-posterior_samples = sample(p_grid,1000, prob = posterior, replace = TRUE)
+posterior_samples = 
+  sample(p_grid,5000, prob = posterior, replace = TRUE)
 # simulate data given the median of the 
 # posterior distribution for proportion of water
-predictions.point = rbinom(1000,n_total, prob = median(posterior_samples))
+predictions.point = 
+  rbinom(5000,n_total, prob = median(posterior_samples))
 simplehist(
   predictions.point, 
   xlab = "# predicted water tosses",
   main = "Posterior predictive distribution from median")
-points(n_water,0, col = "red", pch = 16, cex = 2)
+points(n_water,0,pch = 17, col = "green3", cex = 3)
+points(round(mean(predictions.point)),0, col = "red", pch = 16, cex = 2)
 ```
 
 The random process involved in simulating the data (we repeatedly toss 10 biased coins) makes that our posterior predictions are variable even if we always use the same (median) probability.
 
-However, in a Bayesian approach, we do use a point estimates of parameters to generate posterior predictions, but the full posterior distribution.
+However, **in a Bayesian approach, we do not use a point estimates of parameters to generate posterior predictions, but the full posterior distribution.**
+
+```{r class.source = 'fold-show'}
+predictions.dist = rbinom(5000,n_total, prob = posterior_samples)
+```
+
 
 ```{r}
-predictions.dist = rbinom(1000,n_total, prob = posterior_samples)
 simplehist(
   predictions.dist,
   ylim = c(0, max(table(predictions.point))),
   col = "blue",
   xlab = "# predicted water tosses",
   main = "Posterior predictive distribution")
-lines(as.numeric(names(table(predictions.point)))+.1,
+lines(as.numeric(names(table(predictions.point)))+.2,
       table(predictions.point), type ="h", lwd = 3)
-points(n_water,0, col = "red", pch = 16, cex = 2)
+points(n_water,0,pch = 17, col = "green3", cex = 2.5)
+points(round(mean(predictions.dist)),0, col = "red", pch = 16, cex = 2)
 legend("topleft",
        bty = "n",
        col = c("blue","black"), lty = 1, lwd = 3,
@@ -671,16 +713,49 @@ We can already see that something is not right here. Lets generate posterior pre
 
 ```{r class.source = 'fold-show'}
 # generate samples from the posterior distribution
-posterior_samples = sample(m_grid,1000, prob = posterior, replace = TRUE)
+posterior_samples = sample(m_grid,5000, prob = posterior, replace = TRUE)
 # simulate data given the median of the 
 # posterior distribution for proportion of water
-predictions.dist = rpois(1000,posterior_samples)
+predictions.dist = rpois(5000,posterior_samples)
 simplehist(
   predictions.dist, xlab = "# predicted water tosses",
   main = "Posterior predictive distribution from 'wrong' model.")
+points(round(mean(predictions.dist)),0,pch = 17, col = "green3", cex = 2.5)
 points(n_water,0, col = "red", pch = 16, cex = 2)
 abline(v = 20.5, lty = 3, col = "magenta")
 ```
 
 These posterior predictions are clearly incompatible with the data, because they allow for impossible values of 11 or more water tosses, even though our sample size is only 10.
 
+The lesson learned her should be that if we use a model that is not appropriate for the data, our statistical model can lead to impossible predictions, which in turn might lead to wrong conclusions. One of the more popular ways to use a "wrong model" is using linear regression for binary data when the prevalence of the outcome is either very low (<5%) or very high (>95%). 
+
+Here is a posterior predictive distribution from another bad model. What aspect of model is problematic?
+
+```{r class.source = 'fold-show'}
+n_water = 13
+n_total = 20
+p_grid = seq(0,1,.01)
+prior = dbeta(p_grid,1,10)
+likelihood = dbinom(n_water, n_total, prob = p_grid)
+posterior = prior*likelihood
+```
+
+```{r}
+posterior = posterior / sum(posterior)
+posterior_samples = 
+  sample(p_grid,5000, prob = posterior, replace = TRUE)
+predictions.dist = rbinom(5000,n_total, prob = posterior_samples)
+simplehist(
+  predictions.dist,
+  xlab = "# predicted water tosses",
+  main = "Bad posterior predictive distribution (I)")
+points(n_water,0,pch = 17, col = "green3", cex = 2.5)
+points(round(mean(predictions.dist)),0, col = "red", pch = 16, cex = 2)
+```
+
+
+## Summary
+
+- Bayes rule allows us to invert conditional probabilities. This is relevant, because we can often learn one conditional probability from the data ($P(Data|Parameter)$ aka the likelihood) which we can use to learn a scientifically or pragmatically more interesting conditional probability ($P(Parameter|Data)$).
+- In practice, Bayesian analyses result in posterior samples, from which we can calculate measures of central tendency (mean, median, mode), uncertainty (CrI, HDI, sd), and more "exotic" things like e.g. the probability that a parameter is larger than 0.
+- Historically, Bayesian data analysis stopped after the posterior distribution was obtained. Modern Bayesian data analysis workflows stress the importance of model checking. Posterior predictions, i.e. data simulated from the model and model parameters, are an important quantity used to check models. In a nutshell, posterior predictive checks evaluate of the model predictions are consistent with the observed data.
