@@ -1,7 +1,7 @@
 ---
 title: "Chapter 5: Recap"
 author: "Guido Biele"
-date: "15.03.2023"
+date: "07.03.2024"
 output:
   html_document: 
     mathjax: default
@@ -351,7 +351,7 @@ Looking at the `quap` model, you can see that we use the same parameters for the
 Because this is a fairly simple model and less model checking is needed, we directly look at the regression coefficients from the first model `m.C_B`, which used only $\small B$ as a predictor, and on the last model we estimated, `m.C_BD`,which used $\small B$ and $\small D$.
 
 ```{r}
-plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"), xlim = c(0,1.2))
+coeftab_plot(coeftab(m.C_BD,m.C_B),par=c("bD","bB"))
 ```
 
 While the coefficient $\beta_B$ or `bB` is smaller and closer to zero for the regression model that also includes $D$, it is not zero. Therefor, we cannot assume that the dag2 is the data generating process.
@@ -389,7 +389,7 @@ coefkable(m.C_D,"m.C_D")
 Now we can plot the coefficients from the `m.C_D` and `m.C_BD` models together: 
 
 ```{r}
-plot(coeftab(m.C_BD,m.C_D),par=c("bD"))
+coeftab_plot(coeftab(m.C_BD,m.C_D),par=c("bD"))
 ```
 
 As expected, the _total effect_ from the `m.C_D` model is larger than the _direct effect_ from the `m.C_BD` model.
@@ -799,7 +799,7 @@ mean(s2[,2]-s2[,1])
 
 # Unmasking "hidden" relationships
 
-Many effects depend on multiple causes and our previous example about the effect of parental reading on child reading has shown that we need to be careful about confounders, common caused of the treatment of interest and the outcome, in order to avoid overestimating treatment effects.
+Many effects depend on multiple causes. Our previous example about the effect of parental reading on child reading showed that we need to be careful about confounders, common causes of the treatment of interest and the outcome, in order to avoid overestimating treatment effects.
 
 In this section, we examine how ignoring concurrent causes can lead to underestimating true effects. As an example, we can think about the effect decision authority ($\small A$) and stress ($\small S$) on job satisfaction ($\small W$). What can we hypothesize about the relationship of these variables?
 
@@ -911,7 +911,7 @@ drawdag(naive.dag, cex = 0.5, lwd = 1)
 
 And here are the implied conditional independencies of this DAG:
 
-```{r}
+```{r class.source = 'fold-show'}
 impliedConditionalIndependencies(naive.dag)
 ```
 
@@ -920,7 +920,7 @@ A short look at the pairs plot above shows us that $\small A$ and $\small S$ are
 But we already new that this DAG was not correct. Now lets check the conditional independencies of the true DAG:
 
 
-```{r}
+```{r class.source = 'fold-show'}
 impliedConditionalIndependencies(dag1)
 ```
 
@@ -971,11 +971,21 @@ m.AS <-quap(
 Did the coefficients for $\small A$ and $\small S$ change? Here is a plot of the coeffcients from the different models: 
 
 ```{r}
-plot(coeftab(m.A,m.S,m.AS),pars=c("bA","bS"))
+coeftab_plot(coeftab(m.A,m.S,m.AS),pars=c("bA","bS"))
 ```
 
 
 Next we use the `link` function from the `rethinking` package to calculate values $\small W$ for varying $\small A$ while we fix $\small S = 0$. We plot the counterfactual effect with a solid line and add for comparison the effect from the unadjusted model (`m.A`) with a dotted line.
+
+
+
+
+```{r, class.source = 'fold-show'}
+xseq = seq(from=min(d$A)-0.15, to=max(d$A)+0.15, length.out=50)
+mu = link(m.AS,data=data.frame(A=xseq,S=0))
+mu.mean <-apply(mu,2,mean)
+mu.PI <-apply(mu,2,PI)
+```
 
 ```{r, fig.height=3.5, fig.width=4, out.width="50%"}
 par(mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)

@@ -1,7 +1,7 @@
 ---
 title: "Chapter 4: Recap"
 author: "Guido Biele"
-date: "01.03.2023"
+date: "07.03.2024"
 output:
   html_document: 
     mathjax: default
@@ -204,7 +204,7 @@ This example illustrates the central limit theorem, which states that the result
 
 One way to explain why this is the case is to see that there are more possible combinations of events that lead to average outcomes than possible combination of events that lead to extreme events. 
 
-For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you loos a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
+For instance, assume that you are throwing a fair coin four times, and each time heads shows you receive one credit point and each time tail shows you lose a credit point. The next table shows that there are more possible sequences that lead to an end result of 0 credit points than sequences that lead to 4 or more credit points.
 
 ```{r CLTtable, echo = F}
 combs = 
@@ -261,7 +261,7 @@ lines(x,y, col = "grey", lty = 3)
 
 One popular device to display such a process is a Galton^[Who certainly was clever, but is nowadays also infamous for his views on eugenics and race.] board:
 
-![Galton Board](galton1.mp4){width=75%}
+![Galton board](galton1.mp4){width=75%}
 
 ## Multivariate distributions
 
@@ -316,7 +316,7 @@ One way to view how the marginal distribution is calculate is to imagine that da
 
 ![Marginalization](margins1.mp4){width=75%}
 
-This is only a visualization to give you an intuition. We won't cover here how one calculates marginal integrals. When we dealing with samples from posterior distributions, we also do not calculate integrals. In fact, just showing the histogram for one parameter of the posterior is already the display of this variables marginal distribution.
+This is only a visualization to give you an intuition. We won't cover here how one calculates marginal integrals. When we dealing with samples from posterior distributions, we also do not calculate integrals. In fact, just showing the histogram for one parameter of the posterior is already the display of this variables' marginal distribution.
 
 
 Here is a more traditional way to show two marginal distributions.
@@ -349,7 +349,7 @@ dt$weight = rnorm(250,expected_weight,.5)
 ```
 
 
-When data covary,we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
+When data covary, we look at e.g. a scatter plot, which shows the _joint_ distribution, to see how the data are related.
 
 ```{r lreg1 , echo = F, fig.width=10}
 par(mfrow = c(1,2), mar = c(0,0,0,0))
@@ -434,14 +434,16 @@ The numerator just means to calculate the following for each combination of $\mu
 
 1. for each participant $i$ calculate the product of 
   - likelihood ($Normal(w_i|\mu,\sigma)$) and 
-  - prior ($Normal(mu|3.5,1.5) Uniform(\sigma|0,1.5)$)
+  - prior ($Normal(mu|3.5,1.5)$ and $Uniform(\sigma|0,1.5)$)
 2. calculate the product of all values generated in 1.
   
 This is not how the calculation is performed in Bayesian analysis software (expect when one uses grid approximation). Instead, methods lake Laplace approximation or MCMC are used to calculate this quantity.
 
 The denominator is what is called the evidence, and it's main purpose is to insure that the posterior sums to 1. If we are mainly interested in the relative plausibility of parameter values, we do not calculate the denominator because the product of likelihood and prior is already proportional to the posterior distribution. Only if we wan to do different types of analysis, like Bayes factors, is it necessary to calculate the denominator/evidence. 
 
-If you still want to understand more what the symbols in the numerator mean:
+
+<details>
+<summary>Click here for an explanation  symbols in the numerator mean:!</summary>
 
 - $\int\int ... d\mu d\sigma$ means that we are integrating over to parameters, here $\mu$ and $\sigma$
 - roughly speaking, we are 
@@ -449,21 +451,24 @@ If you still want to understand more what the symbols in the numerator mean:
   - for each cell we calculate $\prod_i Normal(w_i|\mu,\sigma) \cdot Normal(\mu|3.5,1.5)  \cdot Uniform(\sigma|0,1.5)$ and multiply it with the size of the cell $d\mu \cdot d\sigma$
   - an finally we sum all these quantities
 
+</details>
+
 ## Prior predictive check
 
 __Before one estimates the model parameters one should check if the model with priors make sensible predictions.__
 The goal is not to prior-predict data that are very similar to observed data, but to prior-predict data that pass plausibility checks and are in the same ball park as the observed data.
 Plausibility checks are simple things like that there are not negative birth-weights. "In the same ball park" means that the values should have approximately the same order of magnitude. For instance, newborns are a few kilogram heavy, and not 10s or 100s of kilogram. Prior predictive checks rely on domain knowledge, and can be very useful in understanding the effect of multivariate priors. We still give it a quick try for our simple example:
 
+```{r class.source = 'fold-show'}
+prior.pedictive.weights = 
+  #                     mean                    sd                  
+  rnorm(10000, rnorm(10000, 3.5, 1.5), runif(10000, 0, 1.5))   
+```
+
 ```{r PriorPredictiveAlpha}
 my_blue = adjustcolor("blue",alpha = .5) # for model predictions
 my_gray = adjustcolor("black",alpha = .5) # for data
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
-prior.pedictive.weights = 
-  rnorm(
-    10000,
-    rnorm(10000, 3.5, 1.5), # prior mean
-    runif(10000, 0, 1.5))   # prior standard deviation
 hist(prior.pedictive.weights,
      main = "", xlab = "prior predictive weights",
      col = my_blue)
@@ -493,7 +498,7 @@ text(-5000,1500,expression(mu~"="~Normal(0,10000)), pos = 4)
 text(-5000,1350,expression(sigma~"="~Uniform(0,10000)), pos = 4)
 ```
 
-It seems obvious that the first set of parameters makes more sense.
+It seems obvious that the first set of priors makes more sense.
 
 ## Estimating the model parameters
 
@@ -505,7 +510,7 @@ head(dt)
 
 Based on the quap code in the table above, we can also put the quap model. `alist` is a command that creates a list that holds our model.
 
-```{r , class.source = 'fold-show', alphaquapmpodel}
+```{r class.source = 'fold-show', alphaquapmpodel}
 alpha.model.list =
   alist(
     weight ~ dnorm(mu,sigma),
@@ -626,8 +631,7 @@ abline(lm(dt$weight~dt$length), lty = 3, col = "blue", lwd = 3)
 
 Next we "build" the new model, which also takes birth length into account.
 
-
-<br />
+<br/>
 
 | What | Previous model | New model |
 |---|---|---|
@@ -637,11 +641,9 @@ Next we "build" the new model, which also takes birth length into account.
 |Prior |                      | $\beta \sim \dots$ |
 |Prior | $\sigma \sim \dots$ | $\sigma \sim \dots$ |
 
-<br />
-
+<br/>
 
 The key difference of the new analysis is that we describe the expected weight as a function of an additional predictor, here $X$. $\beta$ is the _slope_ of the regression model, which indicates how important the variable $X$ is to predict the outcome. This linear regression model can be visualized as follows.
-
 
 ```{r moModelPlot1, fig.width=6, fig.height=5, echo = F}
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
@@ -668,8 +670,6 @@ text(30,coeffs[1] + 30*coeffs[2], expression(mu~"="~alpha+beta*X), pos = 3, col 
 
 ## Thinking about priors
 
-
-
 ```{r, echo = F}
 min.l = min(floor(dt$length/10))*10
 max.l = max(ceiling(dt$length/10))*10
@@ -682,7 +682,7 @@ delta.w = max.w - min.w
 
 Generally, birthlength varies roughly between around `r min.l` and `r max.l` cm and weight varies roughly between `r min.w` and `r max.w` kg.^[I made this up, in a real analysis one might consult some statistics that are available.] Then we can see that for length `r max.l` - `r min.l` = `r delta.l` and for weight `r max.w` - `r min.w` = `r delta.w`. Finally we can calculate `r delta.w` / `r delta.l` to see that for a one unit increase of length height should increase by around `r round(10*delta.w/delta.l)/10`.
 
-We c    an use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
+We can use this number as a starting point to formulate a prior for the parameter $\beta$ and then plot predictions from using this prior.
 
 It is much harder to make a guess about the intercept (the predicted weight when length = 0), because length = 0 is so far out of the data range.
 
@@ -724,7 +724,11 @@ precis(mu.model.fit)
 One peculiar characteristic of this analysis is that the parameter values for $\alpha$ and $\beta$ are dependent, they co-vary. We discussed earlier that one can have dependency between any variables, which also includes parameter values, and that we can display this dependency by plotting both variables jointly in a (smooth) scatter plot.
 
 
-Here is a scatter plot (in blue) of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored (in green). Remember, Bayesian analysis tried to find parameter combinations are configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
+Here is a scatter plot (in blue) of the parameters combinations for $\alpha$ and $\beta$ that have the highest posterior probability. We show these high posterior probability samples on the background of the parameter space we explored (in green). 
+
+<div class="marginnote"> 
+Remember, Bayesian analysis tries to find parameter combinations or configurations that have a high posterior probability given the data, likelihood function, and priors. In the next figure the prior is in green and the posterior is in dark blue.
+</div>
 
 ```{r, echo = F, fig.width=6, fig.height=5}
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
@@ -801,7 +805,7 @@ The correlation in the posterior can make it hard to fit more complex models. In
 
 To deal with these problems, some recommend to center predictor variables.
 
-<p style="color:grey">
+<div class="marginnote"> 
 
 Why does centering help against covariation of intercept and slope parameters?
 
@@ -809,11 +813,11 @@ Why does centering help against covariation of intercept and slope parameters?
 If we want to fit a line through the point cloud, it needs to go through the center of the cloud, because only then can we achieve that the vertical distance from the points to the regression line is on average small.
 If we want to change the slope and still stay in the middle of the point cloud, we hence have to change the predicted weight value for length = 0 (the intercept). If we center length, centered length = 0 will be at the horizontal center of the point cloud. In this case, we can change the slope without changing the intercept (the predicted weight value for centered length = 0).
 
-</p>
+</div>
 
-## Analysis with centered predictor length
+## Analysis with a centered predictor length
 
-With centering means to subtract the mean of the predictor variable from all values. In order to standardize, one could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive for domain experts.
+**Centering means to subtract the mean of the predictor variable from all values**. In order to standardize, one could also divide by the standard deviation, but then the interpretation of slope parameters is less intuitive for domain experts.
 
 ```{r scaledata, fig.width=6, fig.height=5}
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
@@ -824,6 +828,7 @@ plot(dt$length.s,
      ylab = "weight",
      xlab = "centered length",
      ylim = ylim)
+abline(v = 0, lty = 2, col = "grey")
 ```
 
 
@@ -891,7 +896,7 @@ for (k in 1:50)
 
 This looks pretty wild. It is implausible that we have a negative association between length and weight, and the mean weight covers an implausibly large range. We can do better than that, without that the model priors determine the fitting results.
 
-A good rule to keep in mind is that for a prior $Normal(\mu,\sigma))$ 95% of the prior mass lies between $\mu + 2\sigma$ and $\mu - 2\sigma$.
+A good rule to keep in mind is that for a prior ($Normal(\mu,\sigma))$ 95% of the prior mass lies between $\mu + 2\sigma$ and $\mu - 2\sigma$.
 
 ```{r mupriorpredicttive2, fig.width=6, fig.height=5}
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
@@ -1232,7 +1237,7 @@ quap.spline.model =
 ```{r echo = F}
 par(mar=c(3,3,0,1), mgp=c(1.5,.5,0), tck=-.01)
 B %*% matrix(rnorm(ncol(B)*5,sd = 1),nrow = ncol(B)) %>% 
-  matplot(df$x,.,type = 'l', col = "red", lty = 1)
+  matplot(df$x,.,type = 'l', col = "red", lty = 1, xlab = "x")
 B %*% matrix(rnorm(ncol(B)*5,sd = .1),nrow = ncol(B)) %>% 
   matlines(df$x,.,col = "blue", lty = 1)
 legend("topleft",
@@ -1241,13 +1246,14 @@ legend("topleft",
        legend = c(expression(omega~"~ normal(0,1)"),
                   expression(omega~"~ normal(0,.1)")), bty = "n")
 ```
-The final figure shows the influence of number of knots (in rows) and the standard deviation for omega (in columns). the figure shows randomly generated predictions from models (posterior predictions) which highlights that posterior predictions are useful to understand model parameters and priors.
+
+The final figure shows the influence of number of knots (in rows) and the standard deviation for omega (in columns). The figure shows randomly generated predictions from model (prior predictions) which highlights that prior predictions are useful to understand model parameters and priors.
 
 ```{r, fig.height=8, fig.width=9}
 par(mfrow = c(2,2), mar=c(3,3,2,1), mgp=c(1.2,.25,0), tck=-.01)
 for (n_knots in c(5,20)) {
   for(sd in c(0.1,1)) {
-    plot(df$x,df$y, col = "grey")
+    plot(df$x,df$y, col = "grey", xlab = "x")
     knot_list = quantile(df$x,probs=seq(0,1,length.out=n_knots))
     B = bs(df$x, knots=knot_list, degree=3)
     B %*% matrix(rnorm(ncol(B)*5,sd = sd),nrow = ncol(B)) %>% 
