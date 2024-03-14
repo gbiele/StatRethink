@@ -1,7 +1,7 @@
 ---
 title: "Chapter 6: Recap"
 author: "Guido Biele"
-date: "22.03.2023"
+date: "14.03.2024"
 output:
   html_document: 
     mathjax: default
@@ -172,7 +172,7 @@ $$
 
 we would see that $\small \beta$ is clearly different from zero, even if there is no causal effect of brain structure on depression.
 
-This is due to a _backdoor_ path through which information can flow from $\small D$ to $\small B$. A backdoor path is an uninterrupted path that starts with an arrow pointing to the outcome of interest and that ends with and arrow pointing to the exposure. The following figure shows the backdoor path in red.
+This is due to an open _backdoor_ path through which information can flow from $\small D$ to $\small B$. An open backdoor path is an uninterrupted path that starts with an arrow pointing to the outcome of interest and that ends with and arrow pointing to the exposure. The following figure shows the backdoor path in red.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 coord.list = coordinates(C_dag)
@@ -240,7 +240,7 @@ abline(lm(D[S == 0]~B[S == 0]), col = 2)
 abline(lm(D[S == 1]~B[S == 1]), col = 1)
 ```
 
-In sum: **If exposure and outcome have a common cause, this opens up a back-door path, which in turn leads to a biased estimate of the causal effect if one does not adjust for common cause. This common cause is typically called a confounder or confounding variable, and adjustment produces un-biased effects of causal estimates by closing the back-door path.^[Assuming the DAG depicts the true data generating process.]**
+In sum: **If exposure and outcome have a common cause, this opens up a back-door path, which in turn leads to a biased estimate of the causal effect if one does not adjust for common cause. This common cause is typically called a confounder or confounding variable, and adjustment produces de-biased effects of causal estimates by closing the back-door path.^[Assuming the DAG depicts the true data generating process.]**
 
 ```{r echo = F}
 if (!file.exists("C_dag_flow.gif"))
@@ -270,7 +270,7 @@ The strong focus on confounding as a main problem for (observational) studies ha
 
 The effect of causes can be (partially or fully) mediated by auxiliary variables. Specifically, if we have the following _pipe_ structure, the effect of $\small Y$ on $\small X$ is fully mediated by $\small M$ because there is no other path from $\small Y$ to $\small X$ that does not go via $\small M$. 
 
-In experimental studies, post-treatment variables are variables that manifest after the treatment was delivered. Post-treatment variables have a higher likelihood to be mediators.
+In experimental studies, post-treatment variables are variables that manifest after the treatment was delivered. All åost-treatment variables are potentially mediators.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 pipe = dagitty(
@@ -372,7 +372,7 @@ title(expression(W%~%normal(alpha + beta[T]*T + beta[M]*M,sigma)))
 As before, we display the effect of adjusting for $\small M$ by regressing on the residuals of T (the plot shows only a sub/set of the data points):
 
 <div class="marginnote"> 
-Left: $\small T$: solid dots, $\small T_R$ circles. Note how the variation of the residuals $\small T_R$ is smaller than the variation of $\small T$, because all data points are moved from more to less extreme values. This is because individuals with high (low) $\small T$ values also had high (low) $\small W$ values.
+Left: $\small T$: solid dots, $\small T_R$ circles. Note how the variation of the residuals $\small T_R$ is smaller than the variation of $\small T$, because all data points are moved from more to less extreme values. This is because individuals with high (low) $\small T$ values also had high (low) $\small M$ values.
 </div>    
 ```{r, fig.width=8, fig.height=4, echo = FALSE}
 T_R = residuals(lm(T~M))
@@ -462,7 +462,7 @@ flow_dag(collider,
 
 Lets assume you are working in a BUP (Child and youth psychiatric division) and you want to learn about the relationship between internalizing problems ($\small I$, e.g. depression, anxiety) and externalizing problems ($\small E$, e.g. ADHD, oppositional behavior). To do this, you analyse  scores for internalizing and externalizing traits, which your BUP has collected for all children that were examined there.
 
-The process that generated you data can be described along the following lines:
+The process that generated your data can be described along the following lines:
 
 - You are not aware of any observed or unobserved common causes of $\small I$ and $\small E$.
 - Based on domain knowledge, you do not think that $\small I$ causes $\small E$ or vice versa.
@@ -485,9 +485,9 @@ coordinates(Cl_dag) = coord.list
 drawmydag(Cl_dag)
 ```
 
-Note that $\small B$ is circled, that is we are conditioning on $\small B$. We say that we are conditioning on $\small B$ because the data we observe are conditioned on children being observed in the BUP. Children who are not in the BUP are not observed. Put differently, if we code $\small B = 1$ for children observed in the BUP and $\small B = 0$ for children not observed, we are looking only at data were the value of $\small B$ is fixed so one, i.e. we are conditioning on $\small B$.
+Note that $\small B$ is circled, that is we are conditioning on $\small B$. We say that we are conditioning on $\small B$ because the data we observe are conditioned on children being observed in the BUP. Children who are not in the BUP are not observed. Put differently, if we code $\small B = 1$ for children observed in the BUP and $\small B = 0$ for children not observed, we are looking only at data were the value of $\small B$ is fixed so $1$, i.e. we are conditioning on $\small B$.
 
-One important consequence of conditioning on $\small B$ is that the previously closed indirect path from $\small E$ to $\small I$ is now open. Generally, a collider variable closes a path and conditioning on a collider opens a path at the collider one conditioned on.
+One important consequence of conditioning on $\small B$ is that the previously closed indirect path from $\small E$ to $\small I$ is now open. Generally, a **collider variable closes a path and conditioning on a collider opens a path at the collider one conditioned on**.
 
 ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
 flow_dag(Cl_dag,
@@ -560,47 +560,47 @@ If a mediator, a confounder, or a collider has a descendant, adjustment of the d
 
 # Consider unobserved variables
 
-I still need to find a good example that is different than in the book and holds for esimation of total effects
+<!-- I still need to find a good example that is different than in the book and holds for esimation of total effects -->
 
 
-<!-- When thinking about DAGs it is often easier to think about variables one has measured.  -->
+When thinking about DAGs it is often easier to think about variables one has measured.
 
-<!-- For instance, if we are interested in the effect of parental income $\small I_P$ on child mental health diagnosis $D$ it is easy to think about and measure parental education $\small E_P$ as a confounder -->
+For instance, if we are interested in the effect of parental income $\small I_P$ on child mental health diagnosis $D$ it is easy to think about and measure parental education $\small E_P$ as a confounder
 
-<!-- ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'} -->
-<!-- C_dag =dagitty( -->
-<!--   "dag{ -->
-<!--   E_P -> I_P  -->
-<!--   E_P -> D -->
-<!--   }") -->
-<!-- coord.list =  -->
-<!--   list( -->
-<!--     x=c(I_P=0,E_P=1, D=2,U=2), -->
-<!--     y=c(I_P=0,E_P=-1,D=0,U=-1)) -->
-<!-- coordinates(C_dag) = coord.list -->
-<!-- drawmydag(C_dag) -->
-<!-- ``` -->
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+C_dag =dagitty(
+  "dag{
+  E_P -> I_P
+  E_P -> D
+  }")
+coord.list =
+  list(
+    x=c(I_P=0,E_P=1, D=2,U=2),
+    y=c(I_P=0,E_P=-1,D=0,U=-1))
+coordinates(C_dag) = coord.list
+drawmydag(C_dag)
+```
 
-<!-- If this DAG were a good model of the true data generating process, we could simply adjust for $\small E_P$ to obtain an unbiased effect estimate for $\small I_P$. -->
+If this DAG were a good model of the true data generating process, we could simply adjust for $\small E_P$ to obtain an unbiased effect estimate for $\small I_P$.
 
-<!-- However, we could also think about other variables that play a role, and that are maybe harder to measure. For instance, parents social network $\small S_P$ could be an unobserved common cause of $\small E_P$ and $\small D$:  -->
+However, we could also think about other variables that play a role, and that are maybe harder to measure. For instance, parents social network $\small S_P$ could be an unobserved common cause of $\small E_P$ and $\small D$:
 
-<!-- ```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'} -->
-<!-- U_dag =dagitty( -->
-<!--   "dag{ -->
-<!--   S_P [unobserved] -->
-<!--   E_P -> I_P  -->
-<!--   E_P -> D -->
-<!--   S_P -> E_P -->
-<!--   S_P -> D -->
-<!--   }") -->
-<!-- coord.list =  -->
-<!--   list( -->
-<!--     x=c(I_P=0,E_P=1, D=2,S_P=2), -->
-<!--     y=c(I_P=0,E_P=-1,D=0,S_P=-1)) -->
-<!-- coordinates(U_dag) = coord.list -->
-<!-- drawmydag(U_dag) -->
-<!-- ``` -->
+```{r fig.height=1.25, fig.width=1.5, fig.align = 'center'}
+U_dag =dagitty(
+  "dag{
+  S_P [unobserved]
+  E_P -> I_P
+  E_P -> D
+  S_P -> E_P
+  S_P -> D
+  }")
+coord.list =
+  list(
+    x=c(I_P=0,E_P=1, D=2,S_P=2),
+    y=c(I_P=0,E_P=-1,D=0,S_P=-1))
+coordinates(U_dag) = coord.list
+drawmydag(U_dag)
+```
 
 
 # Functional forms matter!
@@ -648,6 +648,61 @@ and other functions.
 
 Successful adjustment depends on our adjustment model being close to the true data generating process. Therefor it is a good idea use flexible models to account for e.g. confounding (e.g. splines) in conjunction with methods to regularize parameter estimates to avoid overfitting.
 
+# Excercise M1
+
+I'll use this example to give a few tips abut how to quickly make DAGs and analyze them. 
+
+Dagitty (https://www.dagitty.net/dags.html) is a website that you can use to draw and analyze DAGs. It also produces code to represent DAGs in the dagitty R package.
+
+To solve oversize 6.1, I simply drew the graph from page 189 on (https://www.dagitty.net/dags.html and copied the dagitty-code into this R-Markdown document:
+
+```{r, fig.height=2, fig.width=3, out.width="50%"}
+dag6_1b <- dagitty('dag{
+bb="0,0,1,1"
+A [pos="0.5,0.15"]
+B [pos="0.5,0.35"]
+C [pos="0.875,0.25"]
+U [latent,pos="0.125,0.25"]
+X [exposure,pos="0.125,0.5"]
+Y [outcome,pos="0.875,0.5"]
+V [pos=".75,0.375"]
+A -> C
+A -> U
+C -> B
+C -> Y
+U -> B
+U -> X
+X -> Y
+V -> C
+V -> Y
+}')
+drawmydag(dag6_1b)
+```
+
+How many paths connect X to Y?
+
+```{r class.source = 'fold-show'}
+my_paths = paths(dag6_1b)
+my_paths = cbind(my_paths$paths,my_paths$open)
+colnames(my_paths) = c("path", "open")
+my_paths
+```
+
+Which must be closed?
+
+```{r class.source = 'fold-show'}
+my_bpaths = paths(dag6_1b)
+my_bpaths = cbind(my_bpaths$paths,my_bpaths$open)
+colnames(my_bpaths) = c("path", "open")
+my_bpaths
+```
+
+Which variables should you condition on now?
+
+```{r class.source = 'fold-show'}
+adjustmentSets(dag6_1b)
+```
+
 # Excercise M2
 
 If collinearity is a problem, depends on the question of interest and the reason for collinearity.
@@ -656,13 +711,12 @@ _Left:_ If collinearity is due to the correlation of the (distal) cause and a me
 
 _Right:_ If collinearity is due to a common (unobserved) cause of 2 predictor variables, we cannot identify with high certainty the unique contribution of the two variables. A model that includes X1 and X2 provides us the conditional effects of both variables. But because both variables mediate the effect of the same unobserved variable, the conditional effect of X1 and X2 can be large or small, dependent on the value to which one fixes the other variable. The large standard error on the coefficients just reflects the fact that because X1 and X2 reflect the same process, we cannot say with high certainty to which value we should fix either X1 or X2 to fit the data as well as possible.
 
-
 This is different if a model includes a distal cause and a mediator: Because only the mediator has a direct influence on the outcome, it is clearer to which value we need to fix M in order to fit the data well.
 
 The take home message here is that we should worry less about colinearity and rather specify which effect we want to estimate and then use DAGs to find out if or under what circumstance we can estimate it.
 
 
-```{r, fig.width=8, fig.height=4}
+```{r, fig.width=8, fig.height=4, out.width="75%"}
 conf = dagitty(
   "dag{
   U [unobserved]

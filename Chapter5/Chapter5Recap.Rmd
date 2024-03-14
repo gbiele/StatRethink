@@ -184,7 +184,7 @@ As a recap, here is the model for a simple linear regression that models $\small
 |Linear model | $\mu_i = \alpha + \beta B_i$ | `mu[i] <- a + b*B[i]`|
 |Prior | $\alpha \sim Normal(0,.5)$ | `alpha ~ dnorm(0, .5)` |
 |Prior | $\beta \sim Normal(0,2)$ | `beta ~ dnorm(0, 1)` |
-|Prior | $\sigma \sim Exponential(1)$ | `sigma ~ dunif(1)` |
+|Prior | $\sigma \sim Exponential(1)$ | `sigma ~ dexp(1)` |
 
 <br/>
 
@@ -245,7 +245,7 @@ shade( mu.HPDI, B_seq, col = adjustcolor("blue", alpha = .2))
 title("Posterior predictive mean & HDPI")
 ```
 
-So, if we disregard our knowledge about daily reading duration of parents, we conclude that there is a strong relationship between number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that number of books in a household are an important cause of child reading ability.
+So, if we disregard our knowledge about daily reading duration of parents, we conclude that there is a strong relationship between the number of books in a household and child reading ability. If one would be willing to interpret the association as causal, one could even think that the number of books in a household is an important cause of child reading ability.
 
 ## Conditional independencies in DAGs
 
@@ -565,7 +565,7 @@ C_sim = rethinking::sim(m.C_BD,n=1e3)
 C_PI = apply(C_sim,2,PI)  # prediction intervals
 ```
 
-When we add HDPIs or credible intervals, we can calculate those for the linear predictions, the right plot in the next figure, or for posterior predictions, the left plot in the next figure. The difference in intervals for linear and posterior predictions is that the latter also captures uncertainty about predictions for each individual (which depends on the standard deviation $\sigma$ of the Gaussian likelihood), whereas the former only captures uncertainty about the slope of the regression line, i.e. $\beta$.
+When we add HDPIs or credible intervals, we can calculate those for the *linear predictions*, the right plot in the next figure, or for *posterior predictions*, the left plot in the next figure. The difference in intervals for linear and posterior predictions is that the latter also captures uncertainty about predictions for each individual (which depends on the standard deviation $\sigma$ of the Gaussian likelihood), whereas the former only captures uncertainty about the slope of the regression line, i.e. $\beta$.
 
 If the main concern is if the observed data are within the most plausible predicted data, one should use credible intervals from posterior predictions. If one has for example a 90% credible interval, 90% of the observed values should be within the credible interval of the predicted values.
 
@@ -604,7 +604,7 @@ for (i in idx)
   lines(rep(d$C[i],2),
         mu_PI[,i],
         col="blue")
-title("posterior predictions + credible intervals", cex.main = 1)
+title("linear predictions + credible intervals", cex.main = 1)
 ```
 
 In this example, there are no strong deviations between predicted and observed values. After all, the regression is based on the true model. Here are the same types of plots if the true DGP is a non-linear effect $\small D$ on $\small C$, but our model assumes only a linear relationship:
@@ -665,7 +665,7 @@ Here, we see that the model systematically overestimates low values of child rea
 
 ## Counterfactual plots 
 
-Counterfactual plots tell us about the effect of an intervention, under the condition that we assume or have identified the correct data generating process our causal model (which may be represented as a DAG).
+Counterfactual plots tell us about the effect of an intervention, under the condition that we assume or have identified the correct data generating process in our causal model (which may be represented as a DAG).
 
 Let's assume you are thinking about an intervention to improve child reading ability. You know that parental daily reading has a stronger effect than the number of books in the household. On the other hand, it is maybe easier to convince parents to accept some book gifts compared to making them read more. So you want to know by how much you can expect child reading to change if you increase either daily reading hours or number of books in a household.
 
@@ -704,7 +704,7 @@ m.BC <-quap(
 Next we specify a sequence of values for $\small D$, for which we would like to estimate $\small C$ and $\small B$:
 
 ```{r class.source = 'fold-show'}
-D_seq  = seq(from=-2, to=2, length.out=10)
+D_seq  = seq(from=-2, to=2, length.out=20)
 ```
 
 We can use the `sim` function from the `rethinking` package to simulate first values of $\small D$ and then, using the just simulate $\small D$ values, also $\small C$ values.
@@ -741,7 +741,7 @@ shade(PIs,
 mtext( "Total counterfactual effect of D on C")
 ```
 
-This is a large effect. Next we calculate by how many standard deviations child reading gets better if we increase daily reading of parents from 0 to 1 (which is also a 1 sd increase because the sd of parental reading is 1.).
+This effect, represented by the slope, is a large. Next we calculate by how many standard deviations child reading gets better if we increase daily reading of parents from 0 to 1 (which is also a 1 sd increase because the sd of parental reading is 1.).
 
 ```{r class.source = 'fold-show'}
 sim2_dat = data.frame(D = c(0,1))
@@ -755,7 +755,7 @@ Now we look at counterfactuals for $\small B$. We calculate the effect of $\smal
 
 ```{r class.source = 'fold-show'}
 sim_datB = data.frame(
-  B=seq(from=-2,to=2,length.out=10),
+  B=seq(from=-2,to=2,length.out=20),
   D=0)
 sB = rethinking::sim(m.BC,
                       data=sim_datB,
@@ -927,7 +927,7 @@ impliedConditionalIndependencies(dag1)
 
 Indeed, this DAG does not have any conditional independencies. Another property of this DAG is that it is just one of many DAGs with the same skeleton, i.e. nodes and undirected connections, that can produce the same dependencies between variables. We can extract and plot all these dags, which belong in a markov equivalence class, with a few short commands:
 
-```{r}
+```{r out.width="60%"}
 ME.dags <-equivalentDAGs(dag1) # equivalentDAGs is part of dagitty
 drawdag(ME.dags)
 mtext("(1)", outer = T, line = -17, adj = 0+.025,cex = .75)
@@ -970,7 +970,7 @@ m.AS <-quap(
 
 Did the coefficients for $\small A$ and $\small S$ change? Here is a plot of the coeffcients from the different models: 
 
-```{r}
+```{r out.width="70%"}
 coeftab_plot(coeftab(m.A,m.S,m.AS),pars=c("bA","bS"))
 ```
 
