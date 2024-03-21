@@ -734,3 +734,8 @@ par(mfrow = c(1,2))
 drawmydag(pipe, cex = 2, lwd = 2)
 drawmydag(conf, cex = 2, lwd = 2, radius = 5.5)
 ```
+
+
+# Excercise M3
+
+![](M3.png)
