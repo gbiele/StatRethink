@@ -228,7 +228,7 @@ matplot(x,bf.s,type = 'l', lty = 1)
 ```
 
 
-The following animation shows the estimated relationships for different samples drawn from the population.
+Now we estimate the relationship with a more complex spline model with 8 basis functions. **The following animation shows the estimated relationships for different samples drawn from the population.**
 
 ![](shrinkage.gif){width=500px}
 
@@ -236,7 +236,7 @@ The following animation shows the estimated relationships for different samples 
 Hopefully you can see that large deviations between the true DGP in red and the estimated DGP in blue are less frequent when the prior on regression coefficients is narrow (top left) compared to when it is wider (bottom right).
 
 
-To confirm this, the following plot shows deviances from a simulation that 
+To confirm this, the following plot shows deviances from a **cross-validation simulation** that 
 
 - samples 1000 times 75 training and 75 test data points
 - estimates model parameters on the training set
@@ -244,7 +244,7 @@ To confirm this, the following plot shows deviances from a simulation that
 
 The following figure shows deviances +/- 1 sd.
 
-```{r, fig.height=4, fig.width=4, out.width="50%"}
+```{r, fig.height=4, fig.width=4, out.width="50%", echo=FALSE}
 load("sim_lppd.Rdata")
 
 plot_deviances = function() {
@@ -382,14 +382,16 @@ __One important thing to keep in mind when doing cross validation__ is that depe
 
 The computationally challenging part of LOO-CV is that one needs to estimate the model $\small N-1$ times.
 
-Fortunately, one can **approximate LOO-CV** after fitting a model only once with _importance sampling_ (_IS-LOO_).
+Fortunately, one can **approximate LOO-CV** after fitting a model only once with _importance sampling_ (_IS-LOO_), which does not require refitting of models.
 The key idea of importance sampling is to estimate out of sample deviance by giving different data points different weights $w_i$, such that unexpected data points have higher weights.
 
 $$
 w_i^{s} = \frac{1}{p(y_i|\theta^s)}
 $$
 
-Impotance sampling itself has weaknesses (extreme influence of extremely unexpected data points), which can be remedied by smoothing these weights. This is implemented in the _PSIS-LOO_ (pareto smoothed importance sampling) estimator of out of sample deviance. Here, not all $\small \textrm{lppd}$ receive the same weight when calculating the deviance, but 
+**To recap: PSIS-LOO approximates the LOO-CV by calculating the the weighted average of the "likelihoods", where extreme likelihoods, i.e. unexpected data points, get larger weights.**
+
+Importance sampling itself has weaknesses (extreme influence of extremely unexpected data points), which can be remedied by smoothing these weights. This is implemented in the _PSIS-LOO_ (pareto smoothed importance sampling) estimator of out of sample deviance. Here, not all $\small \textrm{lppd}$ receive the same weight when calculating the deviance, but 
 
 - $\small \textrm{lppd}$ values of observations that have a strong influence receive a higher weight and 
 - Pareto-smoothing (of the tails of the $\small \textrm{lppd}$ distribution) is used to get better / less extreme weights and to detect if the approximation is reliable at all. _If the approximation is unreliable (k-hat values above 0.7 or 1) this usually indicates problems with the model!_
@@ -412,8 +414,8 @@ $\textrm{WAIC}$:
 If the log likelihood for a data point has a high variance, this is likely because different parameter values predict different data points well (the model trades off which data points to predict well). This also implies that we are uncertain, which parameter values would allow to predict hold out data, so that such model should be penalized.
 </div>
 
-- $\textrm{AIC}$: number of parameters
-- $\textrm{BIC}$: number of parameters and sample size
+- $\textrm{AIC}$: number of parameters ($2k$)
+- $\textrm{BIC}$: number of parameters and sample size ($ln(n)k$)
 - $\textrm{DIC}_{\textrm{Bayes}}$: average deviance minus the deviance at average $\small \theta$ ($\rightarrow$ "effective # parameters")
 - $\textrm{WIC}_{\textrm{Bayes}}$: variance of log likelihood over $\small \theta$ ($\rightarrow$ "effective # parameters")
 
@@ -563,7 +565,7 @@ Here is an explanation of the columns:
 
 We see that in a scenario where a good part of the treatment effect was mediated by motivation (the DPG is `M = T + rnorm(N)`, `W = 0.1*T + 0.5*M + rnorm(N)` ) the model we should use to estimate the treatment effect is not the best model, and even worse than a model that only uses the mediator.
 
-One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around `r round(cm["W.TM","dWAIC"],1)` WAIC better than `W.TM` and that the standard error of this difference is `r round(cm["W.TM","dSE"],1)`. Given that WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of `r round(cm["W.T","dWAIC"],1)` and a standard error of `r round(cm["W.T","dSE"],1)`. 
+One important benefit of WAIC (and PSIS-LOO) is that they come with standard error, so that we can compare differences in WAIC with our uncertainty of the difference. Looking at the two best models, we see that `W.M` is around `r round(cm["W.TM","dWAIC"],1)` WAIC better than `W.TM` and that the standard error of this difference is `r round(cm["W.TM","dSE"],1)`. Given that the WAIC difference is firmly within two times `dSE` we cannot conclude that the `W.M` model is certainly better than the `W.TM` model. In comparison, the `W.M` model is certainly better than the `W.T` model with a WIC differences of `r round(cm["W.T","dWAIC"],1)` and a standard error of `r round(cm["W.T","dSE"],1)`. 
 
 This is more easily seen in a plot:
 
@@ -573,7 +575,7 @@ legend("topright",
        pch = c(16,1,2),
        legend = c("sample deviance",
                   "WAIC +/- 2*SE",
-                  "WAIC +/- 2*dSE"),
+                  "dWAIC +/- 2*dSE"),
        bty = "n")
 ```
 
@@ -838,7 +840,7 @@ And we compare the models again.
 compare(q.B3r,q.B6r,q.B9r,q.LMr, func = "PSIS", n = 25e3) %>% round(2)
 ```
 
-This time there are no warnings and we can relatively safely conclude that the spline model with 3 or 6 knots, describes a non-linear relationship between y and x best.
+This time there are no warnings and we can relatively safely conclude that the spline models describe a the relationship between y and x best.
 
 Here are the new models' predictions:
 
@@ -867,10 +869,15 @@ $$
 \textrm{lppd}(y,\Theta) = \sum_i log \frac{1}{S}\sum_s p(y_i|\Theta_s)
 $$
 $$
-\textrm{WAIC}(y,\Theta) = -2 \left(lppd -\sum_i var_\theta \;log \;p(y_i|\theta) \right)
+\textrm{penalty}_\textrm{WAIC} =  \sum_i var_\theta \;log \;p(y_i|\theta)
+$$
+
+
+$$
+\textrm{WAIC}(y,\Theta) = -2 \left(lppd - \textrm{penalty}_\textrm{WAIC} \right)
 $$
 $$
-\textrm{AIC}(y,\Theta) = -2lppd + 2p
+\textrm{AIC}(y,\Theta) = -2lppd + 2k
 $$
 
 where $p$ is the number of free parameters in a model.
