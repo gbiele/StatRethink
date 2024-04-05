@@ -18,15 +18,15 @@ quap.spline.model =
     sigma ~ dnorm(.25,.1)
   )
 
-N.sim = 1000
+
+N.sim = 500
 b.sds = exp(seq(log(1),log(15) , length.out = 8))
-b.sds = c(0.5,1,2,5,10)
+b.sds = c(.25, 0.5,1,2,5)
 elpd.test = elpd.train = matrix(NA,nrow = N.sim, ncol = length(b.sds))
 yhats = vector(mode = "list", length = length(b.sds))
 for (my.seed in 1:N.sim) {
   if (my.seed <= 100)
-    png(paste0("anim/F", stringr::str_pad(my.seed,2,pad = "0"), ".png"), width = 11, height = 11,
-      res = 300, units = "cm")
+    #png(paste0("anim/F", stringr::str_pad(my.seed,2,pad = "0"), ".png"), width = 11, height = 11, res = 300, units = "cm")
   set.seed(my.seed)
   idx = sample(length(x),75)
   test.idx = sample(setdiff(1:1000,idx),75)
@@ -46,23 +46,23 @@ for (my.seed in 1:N.sim) {
     p = extract.samples(q.fit)
     yhat = rowMeans(B.m %*% t(p$b))
     yhats[[which(b.sd == b.sds)]] = rbind(yhats[[which(b.sd == b.sds)]],yhat)
-    if (my.seed <= 100 & b.sd != max(b.sds)) {
-      plot(x,y, col = adjustcolor("black", alpha = .025))
-      points(x[idx],y[idx], pch = 16, 
-             col = adjustcolor("black", alpha = .5), cex = .5)
-      lines(x,mu, col = "red")
-      lines(x,yhat,col = "blue")
-      if (my.seed > 2) {
-        matlines(x,t(yhats[[which(b.sd == b.sds)]][1:my.seed,]), lty = 1, 
-                 col = adjustcolor("blue",alpha = .05))
-      }
-      text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
-    }
+    # if (my.seed <= 100 & b.sd != max(b.sds)) {
+    #   plot(x,y, col = adjustcolor("black", alpha = .025))
+    #   points(x[idx],y[idx], pch = 16, 
+    #          col = adjustcolor("black", alpha = .5), cex = .5)
+    #   lines(x,mu, col = "red")
+    #   lines(x,yhat,col = "blue")
+    #   if (my.seed > 2) {
+    #     matlines(x,t(yhats[[which(b.sd == b.sds)]][1:my.seed,]), lty = 1, 
+    #              col = adjustcolor("blue",alpha = .05))
+    #   }
+    #   text(-4,1.2, paste0("b ~ normal(0, ",round(b.sd,1),")"), pos = 4)
+    # }
     elpd.train[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
     q.fit@data = list(bf.s = B.m[test.idx,], y = y[test.idx])
     elpd.test[my.seed,which(b.sds == b.sd)] = sum(lppd(q.fit))
   }
-  if (my.seed <= 100) dev.off()
+  # if (my.seed <= 100) dev.off()
 }
 save(elpd.test,elpd.train, b.sds, yhats,x,y, file = "sim_lppd.Rdata")
 # for (b.sd in b.sds) {

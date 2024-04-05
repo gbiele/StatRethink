@@ -417,7 +417,7 @@ If the log likelihood for a data point has a high variance, this is likely becau
 - $\textrm{AIC}$: number of parameters ($2k$)
 - $\textrm{BIC}$: number of parameters and sample size ($ln(n)k$)
 - $\textrm{DIC}_{\textrm{Bayes}}$: average deviance minus the deviance at average $\small \theta$ ($\rightarrow$ "effective # parameters")
-- $\textrm{WIC}_{\textrm{Bayes}}$: variance of log likelihood over $\small \theta$ ($\rightarrow$ "effective # parameters")
+- $\textrm{WAIC}_{\textrm{Bayes}}$: variance of log likelihood over $\small \theta$ ($\rightarrow$ "effective # parameters")
 
 
 Never heard of $\textrm{WAIC}$, why should you used it?
@@ -761,7 +761,7 @@ par (mar=c(3,3,0,1), mgp=c(2,.7,0), tck=-.01)
 curve(dnorm(x, mean = , sd = 1), -4, 4, n = 50, ylab = "density", lty = 3)
 curve(dstudent(x, nu = 2, mu = 0, sigma = 1), -4, 4, n = 500,  add = TRUE)
 legend("topleft", lty = c(1,3), cex = .9,
-       legend = c("dnorm(0,1)","dstudent(0,2,1)"),
+       legend = c("dstudent(0,2,1)","dnorm(0,1)"),
        bty = "n")
 ```
 
