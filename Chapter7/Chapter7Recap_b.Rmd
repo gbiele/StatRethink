@@ -285,7 +285,7 @@ plot_deviances()
 
 ```
 
-Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. 
+Indeed, we see that while models with wider priors on the regression coefficients have a lower deviances in the training data, they have larger deviances for the test data. The large deviance at a prior with a standard deviation of only 0.25 highlights that priors that are too narrow will lead to underfitting!
 
 This becomes also clear, if we plot many estimated DGPs together. In the following figure, each blue lines show the expected `y` values inferred from 100 random samples and the red lines the true relationship between x an y.
 
