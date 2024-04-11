@@ -291,6 +291,7 @@ IQ.A =
       sigma ~ dexp(.5)
     ),
     data=dt)
+# IQ ~ A
 ```
 
 Lets quickly look at the prior predictions to make sure the piors are OK.
@@ -340,6 +341,7 @@ IQ.A_SES =
       sigma ~ dexp(.5)
     ),
     data=dt)
+# IQ ~ 0 + SES.c + A
 ```
 
 
@@ -372,6 +374,7 @@ IQ.AxSES =
       sigma ~ dexp(.5)
     ),
     data=dt)
+# IQ ~ 0 + SES.c + A:SES.c
 ```
 
 The key part of this model is that we are not specifying a main effect for A and an interaction effect with SES, but that we are **estimating 2 regression coefficients, one for high and one for low SES. This simplifies putting reasonable priors on the effect in each group, but also implies that we do not put a prior on the difference between the two groups.**
@@ -386,7 +389,7 @@ plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 1), "black", spaghetti = TRUE)
 plot_mu.CIs(IQ.AxSES, data.frame(A=A.seq, SES.c = 2), "red", spaghetti = TRUE)
 ```
 
-Even though the DGP does not have different "intercepts" for high and log SES, we have to add it, because when the effect of A depends on SES, and childre with higher parental SES should have a higher IQ than children with lower parental SES and the same A.
+Even though the DGP does not have different "intercepts" for high and low SES, we have to add it, because when the effect of A depends on SES, and childre with higher parental SES should have a higher IQ than children with lower parental SES and the same A.
 
 Here is a comparison of all the models we have fit:
 
@@ -484,21 +487,21 @@ shade(CIs,A.seq, col = blue.25)
 abline(h = 0, lty = 2)
 
 
-A.seq = c(10,11)
-mu.low = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=10))
-mu.high = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=11))
+A.seq = c(10,12)
+mu.low = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=A.seq[1]))
+mu.high = link(IQ.AxSES,data=data.frame(SES.c=c(1,2),A=A.seq[2]))
 delta = mu.high-mu.low
 CIs = apply(delta,2,PI)
 plot(c(1,2), colMeans(delta), pch = 16, cex = 2,
      ylim = range(CIs), xlim = c(.8,2.2),
      col = "blue", xlab = "SES", xaxt = "n",
-     ylab = expression(A-effect: IQ["A=11"]~-~IQ["A=10"]))
+     ylab = expression(A-effect: IQ["A=12"]~-~IQ["A=10"]))
 axis(1, at = c(1,2), labels = c("low","high"))
 lines(c(1,1),CIs[,1], col = blue.25, lwd = 2)
 lines(c(2,2),CIs[,2], col = blue.25, lwd = 2)
 ```
 
-Nothing in the data determines which of the two interpretations is more appropriate.
+Nothing in the data determines which of the two points of view is more appropriate.
 
 # Continuous interactions
 
@@ -603,7 +606,7 @@ IQc.A_SES =
 plot.pred(IQc.A_SES,dt, type = "prior")
 ```
 
-These priors are reasonable, so we look at the predictions:
+These priors are reasonable, so we look at the model-predictions:
 
 ```{r fig.height=3, fig.width=10, fig.align = 'center', out.width="120%"}
 plot.pred(IQc.A_SES,dt)
@@ -619,7 +622,7 @@ $$
 \gamma_A = f(SES)
 $$
 
-if we assume that $\small f(SES)$ is a linear function, we are saying that
+i.e., the effect of $\small A$ is a function of $\small SES$. If we assume that $\small f(SES)$ is a linear function, we are saying that
 
 <div class="marginnote"> 
 
@@ -640,19 +643,19 @@ Here, $\small \beta_A$ is the intercept for the effect of $\small A$, i.e. the e
 Now lets think back to our original regression, with slightly modified notations
 
 $$
-\mu = \alpha + \gamma_{A}A + \beta_{S}SES
+\mu = \alpha + \color{Red}{\gamma_{A}}A + \beta_{S}SES
 $$
 
 We can just plug in $\small (\beta_A + \beta_{AS}SES)$ in place of $\small \gamma_a$:
 
 $$
-\mu = \alpha + (\beta_A + \beta_{AS}SES)A + \beta_{S}SES
+\mu = \alpha + \color{Red}{(\beta_A + \beta_{AS}SES)}A + \beta_{S}SES
 $$
 
 and if we multiply out the brackets, we get
 
 $$
-\mu = \alpha + \beta_A A + \beta_{S}SES + \beta_{AS}SES \, A
+\mu = \alpha + \color{Red}{\beta_A A + \beta_{AS}SES \, A}+ \beta_{S}SES 
 $$
 
 which is the standard interaction model with 2 main effects.
@@ -672,6 +675,7 @@ IQc.AxSES.m =
       sigma ~ dexp(.5)
     ),
     data=dt)
+# IQ ~ A + SES + A:SES
 plot.pred(IQc.AxSES.m,dt, type = "prior")
 ```
 
@@ -733,6 +737,11 @@ fig
 # Scarr-Rowe effect: Latest results
 
 ![Giagrande 2019: Scarr-Rowe effect](Giagrande_ScarrRoweEffect.png)
+
+# Questions
+
+- How do you make the three diagrams next to each other to investigate interaction effects with centralized and extreme values? The book doesn’t show this clearly. 
+- What is the difference between moderating and interacting effects?
 
 # Exercises
 
@@ -844,7 +853,7 @@ plot_prior_predictive = function(m) {
 plot_prior_predictive(m)
 ```
 
-This is a bit wild. We see that the effect of water is much to steep, so we make the prior for the slopes smaller.
+This is a bit wild. We see that the effect of water is much to steep, so we give the prior for the slopes a lower mean.
 
 
 ```{r  class.source = 'fold-show', fig.width=9, fig.height=3}
@@ -914,3 +923,4 @@ m = quap(
   ), data=d )
 plot_prior_predictive(m)
 ```
+
