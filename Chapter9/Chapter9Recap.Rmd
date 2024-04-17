@@ -1,7 +1,7 @@
 ---
 title: "Chapter 9: Recap"
 author: "Guido Biele"
-date: "26.04.2023"
+date: "18.04.2024"
 output:
   html_document: 
     mathjax: default
@@ -107,7 +107,7 @@ lp[1] = calc.lp(post.mu[1], post.log_sigma[1], y)
 
 ## Making proposals
 
-Proposals for the Metropolis algorithm have to be symmetric around the current parameter values. **Here we use a normal distribution with a standard deviation of `0.5`**. 
+Proposals for the Metropolis algorithm have to be symmetric around the current parameter values. **Here we use a normal distribution with a standard deviation of `0.05`**. 
 
 This standard deviation is an important parameter because if it is to small and we initialize far away from the posterior distribution the algorithm will take a lot of time to find the posterior distribution. On the other hand, if the standard deviation is to large, the algorithm will make lots of proposals that are rejected, which also slows things down.
 
@@ -241,7 +241,7 @@ And to double check, here are arithmetic mean and sd:
 c(mean = mean(y), sd = sd(y))
 ```
 
-While this was a trivial example, it shows us the MCMC, here in the form of the Metropolis algorithm, can compute posterior distributions.
+While this was a trivial example, it shows us that MCMC, here in the form of the Metropolis algorithm, can compute posterior distributions.
 
 **With an infinite number of posterior samples the simple Metropolis algorithm can recover any posterior.** But we cannot generate an infinte number of samples.
 
@@ -574,14 +574,14 @@ will be the same. In fact there is an infinite number of combinations of values 
 
 Lets see if we can still fit this model
 
-```{r echo = F, eval = F}
+```{r echo = F}
 if (file.exists("u.fit.wide.Rdata")) {
   load("u.fit.wide.Rdata")
 } else {
   u.fit.wide = ulam(
   wide.model,
   data = data.list,
-  iter = 2000,      # 200 iterations, (1000 warmup)
+  iter = 2000,      # 2000 iterations, (1000 warmup)
   chains = 4,       # for chains, to check convergence
   cores = 4,        # use 4 cores in parallel
   cmdstan = TRUE)   # use cmdstanr not rstan
@@ -590,7 +590,7 @@ if (file.exists("u.fit.wide.Rdata")) {
 ```
 
 
-```{r class.source = 'fold-show'}
+```{r eval = FALSE, class.source = 'fold-show'}
 u.fit.wide = ulam(
   wide.model,
   data = data.list,
@@ -621,7 +621,7 @@ The pairs plot is useful to show correlations between parameters, which explains
 pairs(u.fit.wide)
 ```
 
-This model did clearly not work out. Lets look again and the model and think about how we could improve the model. We start with prior predictions: 
+This model did clearly not work out. Lets look again at the model and think about how we could improve the model. We start with prior predictions: 
 
 ```{r, class.source = 'fold-show', results='hide', message=FALSE}
 prior = extract_prior_ulam(u.fit.wide)
@@ -643,7 +643,7 @@ matplot(range(data.list$X1),
 
 The left panel shows observed Y and X1 values. The right panels shows that the prior for beta allows slope that are orders of magnitude steeper than is reasonable. Lets look at the priors again:
 
-```{r}
+```{r class.source = 'fold-show'}
 wide.model
 ```
 
@@ -657,13 +657,21 @@ less.wide.model = alist(
   b1 ~ dnorm(0,15),
   b2 ~ dnorm(0,15),
   log_sigma ~ dnorm(0,1))
-u.fit.less.wide = ulam(
+
+if (file.exists("u.fit.less.wide.Rdata")) {
+  load("u.fit.less.wide.Rdata")
+} else {
+ u.fit.less.wide = ulam(
   less.wide.model,
   data = data.list,
   iter = 2000,      # 200 iterations, (1000 warmup)
   chains = 4,       # for chains, to check convergence
   cores = 4,        # use 4 cores in parallel
   cmdstan = TRUE)   # use cmdstanr not rstan
+  save(u.fit.less.wide,file = "u.fit.less.wide.Rdata")
+}
+
+
 traceplot(u.fit.less.wide, max_rows = 1, pars = c("b1","b2"), n_cols = 1)
 ```
 
@@ -681,6 +689,7 @@ $$
 $$
 
 the likelihood will be the same for 
+
 - $\beta_1 = 1, \quad \beta_2 = 1$ and for 
 - $\beta_1 = 0, \quad \beta_2 = 2$
 
