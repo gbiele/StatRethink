@@ -1,7 +1,7 @@
 ---
 title: "Chapter 11: Recap"
 author: "Guido Biele"
-date: "03.05.2022"
+date: "25.04.2022"
 output:
   html_document: 
     mathjax: default
@@ -176,7 +176,7 @@ $$
 
 GLMs use different link functions for different distributions to implement different constraints:
 
-The link function for the binomial distribution is based on the logit function:
+The _classical_ link function for the binomial distribution is based on the logit function:
 
 $$
 \textrm{logit}(p) = log(\frac{p}{1-p})
@@ -184,10 +184,10 @@ $$
 
 where $\frac{p}{1-p}$ are odds, i.e. the ratio of two probabilities.
 
-The link function for the Binomial distribution is then $\small p = inv.logit(\alpha + \beta X)$
+The _classical_ link function for the Binomial distribution is then $\small p = inv.logit(\alpha + \beta X)$
 
 $$
-inv.logit(x) = \frac{exp(x)}{1+exp(x)} + \frac{1}{1+exp(-x)}
+inv.logit(x) = \frac{exp(x)}{1+exp(x)} = \frac{1}{1+exp(-x)}
 $$
 
 ```{r, out.width="80%", fig.height=4, fig.width=8}
@@ -208,13 +208,13 @@ curve(pnorm(x),add = T, col = "grey", lty = 2)
 
 - For the Poisson: $\lambda = exp(\alpha + \beta X)$
 
-```{r, out.width="80%", fig.height=4, fig.width=4}
+```{r, out.width="40%", fig.height=4, fig.width=4}
 set_par()
 curve(exp(x),-3,4,n = 100,
       xlab = expression(alpha~" + "~beta~"X"), ylab = expression(lambda))
 ```
 
-One important effect of link functions is that we cannot interpret regression weights in the same way as for simple linear regression. In a nutshell, if link functions exponentiate the linear predictor, regression weights represent multiplicative rather than additive effects.
+**One important effect of link functions is that we cannot interpret regression weights in the same way as for simple linear regression.** In a nutshell, if link functions exponentiate the linear predictor, regression weights represent multiplicative rather than additive effects.
 
 In `R`, `family` is the term for an object that tells a regression model both what outcome distribution to use and what link function to use.
 
@@ -237,7 +237,7 @@ People are "produced" at a constant rate and psychologists is just a fraction of
   
 # Logistic regression
 
-As a hands on example for logistic regression we will try to predict failing the math class with the Portuguese school data shown above.
+As a hands on example for logistic regression we will try to predict failing the math class in the Portuguese school data shown above.
 In particular, we will use these predictors:
 
 - maternal education
@@ -256,7 +256,7 @@ table(data.list$failures) %>% barplot(border = "grey", ylab = "count", xlab = "n
 table(data.list$Medu) %>% barplot(border = "grey", xlab = "maternal education")
 ```
 
-We are centering `Medu`, so that the intercept measures odds of "middle high" maternal education.
+We are centering `Medu`, so that the intercept measures odds at "middle high" maternal education.
 
 ```{r class.source = 'fold-show'}
 data.list$cMedu = data.list$Medu-2.5
@@ -268,7 +268,7 @@ We begin the analysis with an intercept model only. Especially if one is not fam
 model = alist(
   fail ~ dbinom(1,p),
   logit(p) <- a,
-  a ~ dnorm(0,10)
+  a ~ dnorm(0,10)  # note the wide prior
 )
 ```
 
@@ -301,24 +301,27 @@ set_par(mfrow = c(1,2), mar=c(3,3,3,3), cex = 1)
 curve(dnorm(x,0,10),-30,30, ylab = "prior density", xlab = "a")
 axis(4,at = seq(0,0.04, length.out = 5),col.axis = "red",
      labels = seq(0,1,length.out = 5), col = "red")
-curve(inv_logit(x)/25, add = T, col = "red")
+curve(inv_logit(x)/25, add = TRUE, col = "red")
 abline(h = .1/25, lty = 3, col = "grey")
-mtext(side = 4, "p", line = 1.5, col = "red")
+mtext(side = 4, "p = inv.logit(a)", line = 1.5, col = "red")
 title("a ~ dnorm(0,10)")
+rect(-50,-1,-5,1, col = adjustcolor("blue", alpha = .25), lty = 0)
+rect(5,-1,50,1, col = adjustcolor("blue", alpha = .25), lty = 0)
 
-curve(dnorm(x,-1,1),-5,5, ylab = "prior density", xlab = "a")
+curve(dnorm(x,-1,1),-5.1,5.1, ylab = "prior density", xlab = "a")
 axis(4,at = seq(0,0.4, length.out = 5), col.axis = "red",
      labels = seq(0,1,length.out = 5), col = "red")
-curve(inv_logit(x-1)/2.5, add = T, col = "red")
+curve(inv_logit(x-1)/2.5, add = TRUE, col = "red")
 abline(h = .1/5, lty = 3, col = "grey")
-mtext(side = 4, "p", line = 1.5, col = "red")
+mtext(side = 4, "p = inv.logit(a)", line = 1.5, col = "red")
 title("a ~ dnorm(-1,1)")
-
+rect(-50,-1,-5,1, col = adjustcolor("blue", alpha = .25), lty = 0)
+rect(5,-1,50,1, col = adjustcolor("blue", alpha = .25), lty = 0)
 ```
 
 With a wide prior, most of the probability mass is either smaller than -5, leading to $p$ very close to 0, or larger than 5, leading to $p$ close to 1. Hence we will use a tighter prior on a. In addition, we know the failure proportion is closer to zero than to one, so we can set the mean to a number below 0.
 
-Here is the prior distribution of p:
+Here is the prior distribution of p for a N(-1,1) prior on a:
 
 ```{r class.source = 'fold-show', fig.height=4, fig.width=4, out.width="50%"}
 set_par()
@@ -379,14 +382,14 @@ u.fit_F = quap(
 prior = extract.prior(quap(model, data = data.list))
 ```
 
-Now we can use the `link` function and new data to generate predictions from the prior. 
-
-First we look at the effect of a one level change of education.
+Now we can use the `link` function and new data to generate predictions from the prior: 
 
 ```{r class.source = 'fold-show', out.width="100%", fig.height = 4, fig.width=8}
+# simultate outcomes from the prior
 p = link(
-  u.fit_F, post = prior, 
-  data = list(failures = c(0,1)))
+  u.fit_F,                        # the model fit
+  post = prior,                   # we want simulations from the prior
+  data = list(failures = c(0,1))) # the data used for the simulation
 set_par(mfrow = c(1,2), mar=c(3,3,3,3), cex = 1)
 hist(p[,2]-p[,1],
      main = "risk difference", xlab = "P(fail|high) - P(fail|low)", )
@@ -398,7 +401,7 @@ These differences and ratios are pretty large, so it is safe to make the prior f
 
 Which predictions one generates from the prior depends on research questions and domain knowledge. My approach is to check if prior-predicted data are broadly consistent with the overall distribution of the data and to check if effect estimates fall into a plausible range. The latter is easier for Gaussian models and harder for models with exponential link functions. 
 
-One simple rule of thumb for logistic or binomial regressions is that with a $\small Normal(0,1)$ prior on regression coefficients the 97.5 percentile is 1.96. If we exponentiate this we get 7, which means that a $\small Normal(0,1)$ prior expresses the prior information that the OR is probably not much larger then 7 or smaller than 1/7. Note that this prior would still be overwhelmed if we have a reasonable amount (N>25)^[I plugged this number from thin air, should really to a quick calculation on this.] of data.
+One **simple rule of thumb for logistic or binomial regressions priors** is that with a $\small Normal(0,1)$ prior on regression coefficients the 97.5 percentile is 1.96. If we exponentiate this we get 7, which means that a $\small Normal(0,1)$ prior expresses the prior information that the OR is probably not much larger then 7 or smaller than 1/7. Note that this prior would still be overwhelmed if we have a reasonable amount (N>25)^[I plugged this number from thin air, should really to a quick calculation on this.] of data.
 
 Here is the our model so far, which include previous class fails and maternal education as predictors: 
 
@@ -550,7 +553,7 @@ This does not look that much better. Let's check this with PSIS-LOO:
 compare(u.fit_FE.2,u.fit_FE, func = "PSIS")
 ```
 
-In this case the added complexity has not helped much. So lets look at the parameters of the first model:
+In this case the added complexity has not helped much (most of the data is at 0 past failures). So lets look at the parameters of the first model:
 
 ```{r class.source = 'fold-show', out.height="50%"}
 plot(precis(u.fit_FE, depth = 2))
@@ -570,9 +573,9 @@ What does this all mean?
 
 Because the parameters are log-odds ratios, we exponentiate them to get ORs. Because the probability of our outcome is (relatively) close to zero, we can interpret the OR as approximate risk ratios. Hence
 
-- the intercept value is `r a`, which gives a baseline risk of `r round(exp(a),2)`
-- the regression weight for failures is `r b1`, which means that the odds ratio and approximate relative risk to fail the class for one more prior failed class is exp(`r b1`) `r round(exp(b1),2)`. 
-- the regression weight for maternal education is `r b2`, which means that the odds ratio and approximate relative risk to fail the class if a mother has a one level higher education is exp(`r b2`) = `r round(exp(b2),2)`. Correspondingly, if maternal education is changed by two levels, the OR (~RR) is exp(2 * `r b2`) = `r round(exp(2*b2),2)`
+- the intercept value is `r a`, which gives a baseline risk of `r round(exp(a),2)` to fail.
+- the regression weight for prior failures is `r b1`, which means that the odds ratio and approximate relative risk to fail the class for one more prior failed class is exp(`r b1`) = `r round(exp(b1),2)`. 
+- the regression weight for maternal education is `r b2`, which means that the odds ratio and approximate relative risk to fail the class if a mother has a one level higher education is exp(`r b2`) = `r round(exp(b2),2)`. Correspondingly, if maternal education is changed by two levels, the OR (~RR) is exp(2 * `r b2`) = `r round(exp(2*b2),2)`.
 
 ## Constrasts
 
@@ -607,7 +610,7 @@ delta.L2 = pp[,6] - pp[, 5]
 precis(
   list(delta.L1 = pp[,2] - pp[, 1],
        delta.L2 = pp[,6] - pp[, 5],
-       delta.diff = pp[,6] - pp[, 5] - pp[,2] + pp[, 5])) 
+       delta.diff = pp[,6] - pp[, 5] - pp[,2] + pp[, 1])) 
 ```
 
 ```{r, fig.height=4, fig.width=12, out.width="125%"}
@@ -626,17 +629,17 @@ abline(v = 0, col = "red", lty = 3)
 
 **The right histogram shows an interaction effect on the scale of risk differences, even though our model has no interaction term!** This is due to the exponent in the link function!
 
-> This interaction effect can also be understood by remembering that odds ratios are relative effects, i.e. the effect of a one unit change of a variable depends on the probability of success at the comparison value. Here is an example with numbers. Lets assume our intercepts for two groups are 1 and 2, respecitively, and the log-odds ration for the effect of interest is 1. Then we can calculate the risk differences as
+> This interaction effect can also be understood by remembering that odds ratios are relative effects, i.e. the effect of a one unit change of a variable depends on the probability of success at the comparison value. Here is an example with numbers. Lets assume our intercepts for two groups are 1 and 2, respectively, and the log-odds ratio for the effect of interest is 1. Then we can calculate the risk differences as
 > - `inv_logit(1+1) - inv_logit(1+0)` = `r round(inv_logit(2) - inv_logit(1),2)` 
 > - and `inv_logit(2+1) - inv_logit(2+0)` = `r round(inv_logit(3) - inv_logit(2),2)`
-> and see that the absolute effect of the logg odds ratio depends on the starting point. Calculate `inv_logit(1+1) / inv_logit(1+0)` and `inv_logit(2+1) / inv_logit(2+0)` and compare the results.
-> Therefore, the meaningfulness of a result in log odds ratios can only be understood based on some background knnowledge.
-> **Note that the dependence of the absolute effect on the comparison value also explains the "interaction with oneself" described in the chapter. The key insight is that the exp() in the link functions turns the additive model $\small \alpha + \beta X$ into a multiplicative model.**
+> and see that the absolute effect of the logg odds ratio depends on the baseline odds. Calculate `inv_logit(1+1) / inv_logit(1+0)` and `inv_logit(2+1) / inv_logit(2+0)` and compare the results.
+> Therefore, the meaningfulness of a result in log odds ratios can only be understood based on some background knowledge.
+> **Note that the dependence of the absolute effect on the comparison value also explains the "interaction with oneself" described in the chapter. The key insight is that the exp() in the link function turns the additive model $\small \alpha + \beta X$ into a multiplicative model.**
 
 
 ## Non-collapsibility of the odds ratios
 
-Lets assume the following DPG X1 -> Y <- X2:
+Lets assume the following DPG X1 -> Y <- X2 where X1 and X2 have independent effects on Y:
 
 ```{r class.source = 'fold-show'}
 n = 250
@@ -704,10 +707,10 @@ hist(pb1.1, col = adjustcolor("blue",.5), border = NA, breaks = breaks, main = "
 hist(pb1.2, col = adjustcolor("red",.5), border = NA, breaks = breaks, add = TRUE)
 ```
 
-So differently than for linear regression, adding a non-confodunder changes the effect on the odds-ration scale.
-A related issue is that the average odds ratio of the sub-groups from a model with main and interaction effects of groups is not the same as the odds ratio over the totals sample. 
+**Differently than for linear regression, adding a non-confounder changes the effect on the odds-ratio scale.**
+A related fact is that the average odds ratio of the sub-groups from a model with main and interaction effects of groups is not the same as the odds ratio over the totals sample. 
 
-In all cases, the multiplicative effect of regression coefficients explains while intuitions that are true for linear models (models with identity link function) are not valid when non-linear link functions are involved.
+In all cases, the multiplicative effect of regression coefficients explains while **intuitions that are true for linear models (models with identity link function) are not valid when "exponential" linear link functions are involved.**
 
 # Aggregated binomial regression
 
@@ -809,7 +812,7 @@ The strong negative correlation reminds us that the Fylke and topic intercepts b
 
 While we can estimate such a model in a Bayesian way, the standard deviation of the correlated parameters will be inflated. (Parameter comparisons will not be affected.) 
 
-We can solve this by re-formulating the model and use the indexing approach only two of the three of the topics.
+We can solve this by re-formulating the model and use the indexing approach only for two of the three of the topics.
 
 We update our data so that there is one dummy variable for Math and one for English tests.
 
@@ -818,7 +821,7 @@ NatTests5$Math = 1*(NatTests5$topic == "Math")
 NatTests5$Eng = 1*(NatTests5$topic == "Eng")
 ```
 
-And we formulate and estimate an updated model:
+And we formulate and estimate an updated model, where the Fylke-intercepts will capture excuses for reading.
 
 ```{r class.source = 'fold-show', results='hide', message=FALSE, warning=FALSE}
 NT.model2 = 
@@ -828,8 +831,11 @@ NT.model2 =
     a[Fylke_Nr] ~ dnorm(-1,1),
     b1 ~ dnorm(0,1),
     b2 ~ dnorm(0,1))
-
-u.fit_NT2 = ulam(
+fn = "ufit_NT2.Rdata" 
+if (file.exists(fn)) {
+  load(fn)
+} else {
+  u.fit_NT2 = ulam(
   NT.model2,
   data = NatTests5,
   log_lik = TRUE,   # for model comparison
@@ -837,6 +843,9 @@ u.fit_NT2 = ulam(
   chains = 4,       # four chains, to check convergence
   cores = 4,        # use 4 cores in parallel
   cmdstan = TRUE)   # use cmdstanr not rstan
+  save(u.fit_NT2, file = fn)
+}
+
 ```
 
 ```{r}
@@ -913,3 +922,16 @@ plot(precis(u.fit_NT2, pars = c("b1","b2")))
 - The exponent in the inverse logit (logistic) link function makes that the model parameters have a multiplicative effects on the outcome scale. Therefor, care is required when interpreting results from such models.
 - Odds ratios obtained from logistic regressions are good approximations to risk ratios or relative risks when the baseline probability is low (< ~ 10%).
 - Simpsons paradox exists in psychology! [Here](https://www.frontiersin.org/articles/10.3389/fpsyg.2013.00513/full) is a paper only about that by Rogier Kievit et al..
+
+# Likelihood and model comparison
+
+- Do not compare models that use different likelihood functions
+
+When using the aggregate or disaggregate models we do not leave trials out, but observations. For instances, assume you ran an experiment with 4 conditions and 10 observations in each condition. If you analyse the data with only the experimental condition as a predictor, you can structure the data in 2 ways
+
+- Disaggregate: 40 rows, each row indicating if the one "trial" was successful
+- Aggregate: 4 rows, each row indicating how many out of 10 trials were successful
+
+For LOO, one would then either leave one individual out at the time for the disaggregate data, but one experimental group for the aggregate data. However, this would not influence the relative LOO-CV values of different models, as in the disaggregate data we would leave out individuals from each experimental group equally often.
+
+In this example, it makes only sense to use the aggregate version, if we assume that the individuals in the four conditions are identical regarding characteristics relevant for the experiment. However, if e.g. we had in each group half men and half women, we could aggregate into 8 groups!
