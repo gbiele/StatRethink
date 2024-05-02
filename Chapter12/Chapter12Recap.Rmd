@@ -1,7 +1,7 @@
 ---
 title: "Chapter 12: Recap"
 author: "Guido Biele"
-date: "10.05.2023"
+date: "02.05.2024"
 output:
   html_document: 
     mathjax: default
@@ -100,10 +100,13 @@ In this model, **the latent variable is distributed according to the logistic di
 
 We can calculate the log odds of an outcome as before, this time using probabilities.
 
+<div class="marginnote"> The odds of an event represent the likelihood that the event will occur compared to the likelihood that it will not. Odds are usually expressed as ratios. </div>
+
+
 $$
 \textrm{log odds} = log \left( \frac{P_{fail}}{P_{pass}} \right) = log \left( \frac{P_{fail}}{1-P_{fail}} \right)
 $$
-To get the cumulative probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit.
+To get the probability to fail at a certain threshold, we use the cumulative probability function of the logistic distribution, also called the inverse logit.
 
 In R we can use `boot::inv.logit` or `plogis` to get the cumulative density function of the logistic distribution.
 
@@ -122,10 +125,10 @@ abline(h = c(0,1), lty = 2)
 
 
 ```{r class.source = 'fold-show'}
-P_fail = plogis(threshold)
-P_pass = 1-P_fail
-log_odds = log(P_fail/P_pass)
-log_odds
+P_fail = plogis(threshold)      # fail prob. from thresh. (-2)
+P_pass = 1-P_fail               # Pass probability
+log_odds = log(P_fail/P_pass)   # calculate log odds
+log_odds                        # log odds = threshold!
 ```
 
 This is exactly our threshold and explains why the intercept coefficient of an intercept-only logistic regression for data with a fail-rate of 12% will be `qlogis(.12)` = `r round(qlogis(.12),1)`. 
@@ -157,7 +160,7 @@ $$
 log \left( \frac{P_{fail}}{P_{pass}} \right) = \alpha + \beta \cdot X
 $$
 
-Here, $\small \alpha$ is the intercept and baseline log-odds to pass the test (due to latent scholastic aptitude) and $\small \beta$ captures log odds ratio from passing the class due to $\small X$.
+Here, $\small \alpha$ is the intercept and baseline log-odds to pass the test (due to latent scholastic aptitude) and $\small \beta$ captures the change in log odds of passing the class due to $\small X$. Because the log odds can also be understood as thresholds on top of a logistic-distributed latent variable, you can also think of $\small \alpha$ and $\small \beta$ together determining the threshold value for passing and the thus the probability to pass.
 
 Because our baseline threshold / log odds is -2 and the threshold for children with variable X is -3, *we calculate beta as the difference of the two thresholds*:
 
@@ -175,7 +178,8 @@ N = 10000
 thresholds = rep(-2,N)
 X = sample(c(0,1), N, replace = TRUE)
 thresholds[X==1] = -3
-pass = rlogis(N) > thresholds
+trait_values = rlogis(N)
+pass = trait_values > thresholds
 ```
 
 We estimate the model:
@@ -196,20 +200,21 @@ precis(q.fit) %>%
 ```
 
 
-Due to simulation noise we are not exactly recovering the parameters, but we are getting very close to the correct thresholds with `r precis(q.fit)$mean[1] %>% round(2)` at baseline and a + b =  `r precis(q.fit)$mean[1] %>% round(2)` + `r precis(q.fit)$mean[2] %>% round(2)` = `r sum(precis(q.fit)$mean) %>% round(2)` for individuals where X = 1.
+Due to simulation noise when generating `trait_values` we are not exactly recovering the parameters, but we are getting very close to the correct thresholds with `r precis(q.fit)$mean[1] %>% round(2)` at baseline and a + b =  `r precis(q.fit)$mean[1] %>% round(2)` + `r precis(q.fit)$mean[2] %>% round(2)` = `r sum(precis(q.fit)$mean) %>% round(2)` for individuals where X = 1.
 
-This shows us again that regression weights in logistic regressions represent changes in log odds ratios, and thus also changes in the threshold, due to a predictor variable.
+This shows us again that **regression weights in logistic regressions represent changes in log odds ratios, and thus also changes in the threshold or success probability, due to a predictor variable.** As we discussed in the last class, these changes are due to the `exp` in the link function multiplicative on the probability scale.
 
 # Cumulative ordinal logistic regression
 
 ## A simple threshold / intercepts only model
 
-The ordinal logistic regression is named as such, because just like logistic regression, it assumes a latent logistic variable that determines responses. Differently than the standard logistic regression, ordered logistic regression uses multiple thresholds, which are used to map a latent trait (variable) onto ordered responses.
+The ordinal logistic regression is named as such, because just like logistic regression, it assumes a latent logistic variable that determines responses. Differently than the standard logistic regression, ordered logistic regression uses not one but multiple thresholds in order to map a latent trait (variable) onto ordered responses.
 
 Lets visualize this with 3 thresholds of our choice for $\small M=4$ categories.
 
 ```{r class.source = 'fold-show'}
 thresholds = c(-1.24,.25,2)
+thresholds
 ```
 
 
@@ -246,13 +251,13 @@ Just as we can use the (cumulative) logistic distribution to recover threshold v
 For instance, when `r round(plogis(thresholds[1])*100,1)`% of individuals respond with Y = 1:
 
 ```{r class.source = 'fold-show'}
-threshold_1 = log(.224/(1-.224)) 
+threshold_1 = log(.224/(1-.224))  # note the log odds
 threshold_1 %>% round(2)
 ```
 
 As you might have guessed, we can also read the cumulative probabilities to give a response up to a level $\small k$ given $\small k-1$ thresholds from the cumulative logistic distribution.
 
-Then we obtain a categorical distribution by calculating the probability of a response as the difference of the probabilities at the thresholds that enclose that category.
+Then, we obtain a categorical distribution by calculating the probability of a response as the difference of the cumulative probabilities at the thresholds that enclose that category. **This categorical distribution that is used to calculate the likelihood for ordinal responses.**
 
 ```{r fig.height=5, fig.width=9, out.width="80%"}
 plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5)) {
@@ -285,13 +290,13 @@ plot_plogis.thresh = function(thresholds, plot.thrsh.eq = FALSE, xlim = c(-5,5))
           1-plogis(thresholds[k-1]),
           plogis(thresholds[k])-plogis(thresholds[k-1]))) %>% 
       round(2)
-    text(-4, (b+t)/2, paste0("P(Y=",k,")=", prob.level), pos = 4)
+    text(-4, (b+t)/2, paste0("P(Y=",k,")=", prob.level), pos = 4, cex = .8)
     
     if (k < n_cat) {
       p=plogis(thresholds[k])
       thrsh = log(p/(1-p)) %>% round(2)
       thrsh.equ = bquote(frac(.(round(p,2)),.(round(1-p,2)))~"=exp("~.(thrsh)~")")
-      if (plot.thrsh.eq == TRUE) text(5.5,p,thrsh.equ, xpd = T, pos = 4)
+      if (plot.thrsh.eq == TRUE) text(5.5,p,thrsh.equ, xpd = T, pos = 4, cex = .8)
       arrows(x0 = thresholds[k], y0 = 0, y1 = p, col = "red", lty = 2)
       arrows(x0 = thresholds[k], x1 = -5.4, y0 = p, col = "red", lty = 2)
     }
@@ -307,8 +312,8 @@ Let's again simulate data from the model and estimate the thresholds.
 ```{r class.source = 'fold-show'}
 N = 1000
 Y = cut(
-  rlogis(1000), # latent variable
-  breaks = c(-Inf,thresholds,Inf)) %>% 
+  rlogis(1000),                          # latent variable
+  breaks = c(-Inf,thresholds,Inf)) %>%   # thresholds
   as.numeric()
 ```
 
@@ -340,7 +345,7 @@ for (k in 1:n_cat)
 ```
 
 
-Here is an ordered logistic model:
+Here is an ordered logistic regression model:
 
 ```{r class.source = 'fold-show'}
 bol.model = 
@@ -364,7 +369,7 @@ $$
 
 with responses $\small k \in \{1,2...M\}$
 
-The `dordlogit` function in the rethinking package **calculates the likelihood of the observations given the model using the `plogis` / `inv_logit` function, whereby different threshold values lead to different likelihoods**:
+The `dordlogit` function in the rethinking package **calculates the likelihood of the observations given the model by using the `plogis` / `inv_logit` link functions and  threshold values to calculate likelihoods from a categorical distribution.**. The implicit latent variable remains unchanged, but thresholds are adjusted to maximize the posterior probability of the data.
 
 ```{r, fig.width=10, fig.height=8}
 set_par(mfrow = c(2,2))
@@ -432,11 +437,11 @@ abline(v = thresholds,col = "blue", lty = 3)
 ```
 
 
-As expected, we recover the correct threshold values (with some error/bias due to simulation and prior).
+As expected, we recover the correct threshold values `r paste(as.character(thresholds), collapse = ", ")` (with some error/bias due to simulation and prior).
 
 ## Ordinal logistic regression with predictors
 
-To understand how to set up a model, such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variable and thresholds again. The plot also shows a hypothetical person with an average latent scholastic aptitude of 0 as a white dot.
+To understand how to set up a model such that a variable can increase or decrease the probability of higher response levels, lets look at the plot of latent variable and thresholds again. The plot also shows a hypothetical person with an average latent scholastic aptitude of 0 as a white dot.
 
 ```{r, out.width="60%"}
 set_par(cex = 1.5)
@@ -463,7 +468,7 @@ arrows(x0 = thresholds, x1 = thresholds.b,
 plotrix::draw.circle(0,.005,radius = .1,col = "white")
 ```
 
-If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally. In both plots above the bright white dot is in in the middle between the 2|3 and 3|4 thresholds.
+**If we shift the latent value or the thresholds by the same amount, the probability of a higher response rises equally.** In both plots above the bright white dot is in in the middle between the 2|3 and 3|4 thresholds.
 
 Therefore we can, as we saw earlier for the logistic regression, add terms for individual level effects to the basic threshold / intercept only model to capture the effect of predictor variables on responses:
 
@@ -472,17 +477,18 @@ log \left( \frac{P(Y_i>k)}{P(Y_i<k)} \right) = \alpha_k + \beta \cdot X_i
 $$
 where $\small \alpha_k$ are thresholds and $\beta$ captures the effect of the variable $X$ by modifying each individual's threshold.
 
-Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. Y = 4 instead of Y = 3 (Y = 3 instead of Y = 4).
+Now we have seen previously that a threshold is just the log odds of responding in a category above vs below the threshold. Therefore, **a positive (negative) regression weight in an ordinal logistic regression should be interpreted as the log odds ratio to give a one level higher (lower) response**, i.e. Y = 4 instead of Y = 3 (Y = 2 instead of Y = 3).
 
 Because there is only one regression weight $\small \beta$ per variable that is added to all thresholds, the log odds ratios are the same for all category transitions, i.e. 
 
 $$
+\small 
 log \left( \frac{P(Y_i>1|X_i = 0)}{P(Y_i<1|X_i = 1)} \right) = 
 log \left( \frac{P(Y_i>2|X_i = 0)}{P(Y_i<2|X_i = 1)} \right) = 
 log \left( \frac{P(Y_i>3|X_i = 0)}{P(Y_i<3|X_i = 1)} \right)
 $$
 
-This is referred to as the proportional odds assumptions, which may or may not be true for the data at hand. _There are alternative models that do not make this assumption. Here is a good paper that describes these models:_ [Ordinal Regression Models in Psychology: A Tutorial](https://osf.io/gyfj7/download)
+This is referred to as the **proportional odds assumptions**, which may or may not be true for the data at hand. _There are alternative models that do not make this assumption. Here is a good paper that describes these models:_ [Ordinal Regression Models in Psychology: A Tutorial](https://osf.io/gyfj7/download)
 
 ### An example
 
@@ -559,9 +565,9 @@ Specifically, we estimate the effect of past failure and maternal education on g
 ol.model = 
   alist(
     G3 ~ dordlogit(phi,thresholds),
-    phi <- bM*(Medu-2.5) + iFE*failures,
+    phi <- bE*(Medu-2.5) + iFE*failures,
     iFE <- bF + bFE*(Medu-2.5), # interaction
-    c(bF, bM, bFE) ~ normal(0,1),
+    c(bF, bE, bFE) ~ normal(0,1),
     thresholds ~ dnorm(0,3)
   )
 ```
@@ -584,7 +590,7 @@ if (file.exists(fn)) {
 ```
 
 
-```{r class.source = 'fold-show', eval = F}
+```{r class.source = 'fold-show', eval = FALSE}
 ol.fit = ulam(
   ol.model,
   data=list(G3 = df$G3, Medu = df$Medu, failures = df$failures),
@@ -633,21 +639,21 @@ arrows(x0 = simple_thresholds,
 abline(0,1,lty = 3, col = "grey")
 ```
 
-Because the model now also estimates effects of education and past failures, the thresholds are a bit different^[Not centering predictor variables leads to additional differences]. Only if the covariates would be independent of grades would we expect to see identical thresholds.
+Because the model now also estimates effects of education and past failures, the thresholds are set off a bit ^[Not centering predictor variables leads to additional differences]. Only if the covariates would be independent of grades would we expect to see identical thresholds.
 
 Now lets look at the coefficients of interest:
 
 ```{r class.source = 'fold-show', fig.height=3}
-coeffs = precis(ol.fit, pars = c("bM","bF","bFE"))
+coeffs = precis(ol.fit, pars = c("bE","bF","bFE"))
 coeffs %>% plot()
 coeffs %>% round(2)
 ```
 
 What do these results mean?^[remember that because thresholds are changed as $\small\alpha - \beta X$ positive values of $\small \beta$ mean that higher positive values x move the thresholds to the left and thus make higher-level responses more likely.]
 
-- for each level of maternal education the odds ratio to get a one level higher grade is exp(`r round(coeffs["bM",1],2)`) = `r round(exp(coeffs["bM",1]),2)`
+- for each level of maternal education the odds ratio to get a one level higher grade is exp(`r round(coeffs["bE",1],2)`) = `r round(exp(coeffs["bE",1]),2)`
 - for each past fail the odds ratio to get a one level higher grade is exp(`r round(coeffs["bF",1],2)`) = `r round(exp(coeffs["bF",1]),2)`.
-- the "effect" of past fails depends on maternal education, with a log odd ratio of `r round(coeffs["bFE",1],2)`, though the 90% credible interval overlaps with zero.
+- the "effect" of past fails depends on maternal education, with a log odd ratio of `r round(coeffs["bFE",1],2)`, though the 90% credible interval comes close to zero.
 
 It is a bit hard to interpret these results because they are on the log odds ratio scale and because it is not totally clear (to me) how to interpret interaction effects. Therefor, we use posterior predictions to understand the results better.
 
@@ -713,13 +719,14 @@ for (k in 1:nrow(sim.data)) {
 }
 ```
 
-To answer the first question, **"Do grades decrease from 0 to 3 previous fails?"**, we calculate:
+To answer the first question, **"Do grades decrease from 0 through 3 previous fails?"**, we calculate for 1,2,3 previous fails if one less previous fail had lead to a better grade and average over these 3 comparisons:
 <div class="marginnote"> 
 The minimum number of previous fails is 0.
 </div>
 $$
 \delta = \frac{1}{3}\sum^i_{1:3} G3(fails = i) - G3(fails = i-1)
 $$
+where $\small G3(fails = i)$ is the expected grade give i previous fails.
 
 ```{r}
 posterior_hist = function(x,label, set_par = TRUE, xlim = NULL) {
@@ -750,7 +757,7 @@ posterior_hist( # un-hide previous code block for this function
   xlim = range(delta))
 ```
 
-On average grades decreased by `round(mean(delta),2)` for each previous fail. 
+On average grades decreased by `r round(mean(delta),2)` for each previous fail. 
 
 
 To answer the second question, **"Is higher maternal education associated with higher grades when there were 0 previous fails and with lower grades when there were 3 fails?"**, we first calculate the effect of maternal education for students with 0 and 3 previous fails:
@@ -815,12 +822,20 @@ However, one can then interpret regression coefficients as changes on the level 
 The basic idea for an ordered predictor with $\small M$ levels is as follows:
 
 1. Set the value for the **standard effect** to 0 for the lowest level ($\small \lambda_1 = 0$) and to 1 for the highest level  ($\small \lambda_k = 1$). 
-2. Estimate parameters $\small \lambda_2 { to } \lambda_{k-1}$ that describe how much of the maximal effect if realized at levels $\small 2 \textrm { to } k-1$, such that $\small \lambda_1 { to } \lambda_{k}$ increase monotonically.
-3. Estimate a parameter $\small \beta_o$ that scales the $\lambda$s so that the effect of a given level is calculated as $\small \lambda_k\beta_o$
+2. Estimate parameters $\small \lambda_2 \textrm{ to } \lambda_{k-1}$ that describe how much of the maximal effect if realized at levels $\small 2 \textrm { to } k-1$, such that $\small \lambda_1 \textrm{ to } \lambda_{k}$ increase monotonically.
+3. Estimate a parameter $\small \beta_o$ that scales the $\lambda$s such that the effect of a given level is calculated as $\small \lambda_k\beta_o$. Than the effect at the higest level of the ordered predictor will be $\small \beta_o$.
+
+This approach to ordered predictors can be used for any kind of outcome variable.
+
+# Over- and underdispersion
+
+- Over dispersion happens when the rate at which something happens is not fixed. E.g. if we count the number o drinks somebody had in the last year, this variable will be overdispersed, because different people have different rates at which they have drinks
+
+- Count data can be underdispersed when additional constraints influence behavior. E.g., if we are observing number of coffees bought per month at a shop that has a promotion where you get something free if you buy at least 10 coffees a month.
 
 # Summary
 
 - Think of (ordinal) logistic regression as a model in which a latent variable together with thresholds determines ordered categorical responses
 - the basic thresholds are just log-odds of probability to respond at levels $1...k$ vs $k+1 ... max(k)$.
-- Regression weights can be understood as shift of the location of the latent variable, or as shift of all thresholds. The letter interpretation makes clear why they are log odds ratios.
+- Regression weights can be understood as shift of the location of the latent variable, or as shift of all thresholds. The latter interpretation makes clear why they are log odds ratios.
 - To understand the results of ordinal logistic regressions it is most useful to generate posterior predictions (using thresholds and category values) and then to calculate contrasts of interest.
