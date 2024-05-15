@@ -1,7 +1,7 @@
 ---
 title: "Chapter 13: Recap"
 author: "Guido Biele"
-date: "24.05.2023"
+date: "16.05.2024"
 output:
   html_document: 
     mathjax: default
@@ -62,6 +62,7 @@ h3,h4,h5,h6{
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE, results='hide'}
 knitr::opts_chunk$set(echo = TRUE, dpi = 300, global.par = TRUE,
                       fig.align = 'center', out.width="80%")
+library(rstan)
 library(rethinking)
 library(magrittr)
 library(knitr)
@@ -116,7 +117,7 @@ Here is a simple model of the data generating process, and its translation in si
     <td>
 
   ```nemerle
-  department_mus = 
+  true_dept_mus = 
     rnorm(n_departments,
           3,.25)
   ```
@@ -130,7 +131,7 @@ Here is a simple model of the data generating process, and its translation in si
   ```nemerle
   employee_satisfaction = 
     rnorm(n_employees[d],
-          department_mus[d],
+          true_dept_mus[d],
           1)
   ```
 </td>
@@ -145,7 +146,7 @@ Now we can simulate satisfaction of employees in the firm:
 ```{r class.source = 'fold-show'}
 set.seed(1)
 # mean satisfaction in departments
-department_mus = 
+true_dept_mus = 
     rnorm(n_departments,
           mean_firm_satisfaction,
           sd_dep_satisfaction)
@@ -157,7 +158,7 @@ for (d in 1:n_departments) {
 # deviates from the true department mean.
   employee_satisfaction = 
     rnorm(n_employees[d],
-          department_mus[d],
+          true_dept_mus[d],
           1)
   firm_satisfaction = rbind(
     firm_satisfaction,
@@ -202,7 +203,7 @@ plot_data = function(return.x = FALSE) {
          y1 = dep.satisf$mean + 1.96*se,
          length = 0)
   abline(h = mean(firm_satisfaction$satisfaction), col = "red", lty = 3)
-  points(x,department_mus, pch = 8, col = "green3")
+  points(x,true_dept_mus, pch = 8, col = "green3")
   
   if (return.x == TRUE)
     return(x)
@@ -210,19 +211,19 @@ plot_data = function(return.x = FALSE) {
 
 plot_data()
 ```
-__In our simulated world, the true and the measured satisfaction differ due to random measurement error, as indicated by this line in the simulation code: `employee_satisfaction = rnorm(n_employees[d], department_mus[d], 1)`__ The difference is larger in smaller departments, where the random error is less likely to average out.
+__In our simulated world, the true and the measured satisfaction differ due to random measurement error, as indicated by this line in the simulation code: `employee_satisfaction = rnorm(n_employees[d], true_dept_mus[d], 1)`__ The difference is larger in smaller departments (1-5), where the random error is less likely to average out, compared to the larger departments (11-15).
 
 # 3 levels of pooling
 
 In the context of multilevel modeling, we can think of three qualitatively different approaches:
 
-- __Full pooling__ The groups are identical, we do not need to take differences between groups into account. _All groups get the same average_.
-- __No pooling__ The groups are completely independent. _Each group gets its own average_.
-- __Partial pooling__ The groups are somewhat dependent. _All groups get similar averages_.
+- __full-pooling__ The groups are identical, we do not need to take differences between groups into account. _All groups get the same average_.
+- __no-pooling__ The groups are completely independent. _Each group gets its own average_.
+- __partial-pooling__ The groups are somewhat dependent. _All groups get similar averages_.
 
-## Full pooling analysis
+## full-pooling analysis
 
-A Bayesian model to estimate _identical_ group means (full pooling) looks as follows:
+A Bayesian model to estimate _identical_ group means (full-pooling) looks as follows:
 
 $$ 
 S_i \sim normal(\bar \mu, \sigma)   \\ 
@@ -230,13 +231,13 @@ S_i \sim normal(\bar \mu, \sigma)   \\
 \sigma \sim exponential(1) \\
 $$
 
-where $\bar \mu$ is the average satisfaction in the departments. 
+where $\bar \mu$ is the average satisfaction in the company. 
 
 However, to facilitate the comparison to alternative models, we re-write the model as follows:
 
 <table>
   <tr>
-    <th>Full pooling</th>
+    <th>full-pooling</th>
   </tr>
   <tr>
     <td>
@@ -322,12 +323,14 @@ if (file.exists(fn)) {
     m.full_pooling,
     data = u.data,
     log_lik = TRUE, iter = 1000, 
-    chains = 4, cores = n.cores)
+    chains = 4, cores = n.cores,
+    rstanout=TRUE)
   fit.full_pooling.b = ulam(
     m.full_pooling.b,
     data = u.data,
     log_lik = TRUE, iter = 1000,
-    chains = 4, cores = n.cores)
+    chains = 4, cores = n.cores,
+    rstanout=TRUE)
   save(fit.full_pooling, fit.full_pooling.b, file = fn)
 }
 ```
@@ -339,12 +342,14 @@ fit.full_pooling = ulam(
   m.full_pooling,
   data = u.data,
   log_lik = TRUE, iter = 1000,
-  chains = 4, cores = n.cores)
+  chains = 4, cores = n.cores,
+  rstanout = TRUE)
 fit.full_pooling.b = ulam(
   m.full_pooling.b,
   data = u.data,
   log_lik = TRUE, iter = 1000,
-  chains = 4, cores = n.cores)
+  chains = 4, cores = n.cores,
+  rstanout = TRUE)
 ```
 
 
@@ -366,7 +371,7 @@ compare(fit.full_pooling,
 ```
 
 
-Indeed, the difference between the two models is very small. More importantly, we can see that the number of effective parameters of the two versions of the full polling model are `r round(WAIC(fit.full_pooling)[,3],2)` and `r round(WAIC(fit.full_pooling.b)[,3],2)`, even though the models have 2 and 17 parameters, respectively. (we expect 2 effective parameters, mean and standard deviation.)
+Indeed, the difference between the two models is very small. More importantly, we can see that **the number of effective parameters of the two versions of the full polling model are `r round(WAIC(fit.full_pooling)[,3],2)` and `r round(WAIC(fit.full_pooling.b)[,3],2)`**, even though the models have 2 and 17 parameters, respectively. (we expect 2 effective parameters, mean and standard deviation.)
 
 And here is our initial figure with the estimated average employee satisfactions:
 
@@ -379,15 +384,26 @@ points(x,est.full_pooling$mean, col = "blue", pch = 16)
 As expected we estimated the same mean for everyone
 
 
-## No pooling analysis (fixed effects)
+## no-pooling analysis (fixed effects)
 
-A Bayesian model to estimate _independent_ group means looks as follows:
+A Bayesian model to estimate _independent_ group means looks as follows.
+
+```{r class.source = 'fold-show'}
+m.no_pooling = alist(
+  S ~ dnorm(mu, sigma),
+  mu <- a[d],
+  a[d] ~ dnorm(3,3),
+  sigma ~ dexp(2)
+)
+```
+
+As before, we can re-formulate the model: 
 
 
 <table>
   <tr>
-    <th>Full pooling</th>
-    <th>No pooling</th>
+    <th>full-pooling</th>
+    <th>no-pooling</th>
   </tr>
   <tr>
     <td>
@@ -399,15 +415,14 @@ A Bayesian model to estimate _independent_ group means looks as follows:
   </tr>
 </table>
 
-
 In this model, the large standard deviation of the distribution of department level satisfaction ($\small \mu_d \sim normal(\bar \mu,1000)$) encodes the assumption of independent groups. 
 
-__Getting from a full pooling to a no polling model by changing a model parameter shows that this are not qualitatively distinct models, but opposite endpoints of a continuous model space.__
+__Getting from a full-pooling to a no polling model by changing a model parameter shows that this are not qualitatively distinct models, but opposite endpoints of a continuous model space.__
 
-The corresponding `ulam` model looks as follows:
+The corresponding `ulam` non-standard no-pooling looks as follows:
 
 ```{r class.source = 'fold-show'}
-m.no_pooling = alist(
+m.no_pooling.b = alist(
   S ~ dnorm(mu, sigma),
   mu <- mu_bar + z[d]*1000,
   z[d] ~ dnorm(0,1),
@@ -417,60 +432,103 @@ m.no_pooling = alist(
 )
 ```
 
-
-Now we estimate the model ...
+Now we estimate the models ...
 
 ```{r, echo = FALSE}
 fn = "no_pooling.Rdata"
 if (file.exists(fn)) {
   load(fn)
 } else {
+  fit.no_pooling.b = ulam(
+    m.no_pooling.b,
+    data = u.data,
+    log_lik = TRUE, iter = 2000,
+    chains = 4, cores = n.cores,
+    rstanout = TRUE)
   fit.no_pooling = ulam(
-  m.no_pooling,
-  data = u.data,
-  log_lik = TRUE, iter = 2000,
-  chains = 4, cores = n.cores,
-  cmdstan = TRUE)
-  save(fit.no_pooling, file = fn)
+    m.no_pooling,
+    data = u.data,
+    log_lik = TRUE, iter = 2000,
+    chains = 4, cores = n.cores,
+    rstanout = TRUE)
+  save(fit.no_pooling,fit.no_pooling.b, file = fn)
 }
 ```
 
 
 ```{r class.source = 'fold-show', eval = F}
-fit.no_pooling = ulam(
-  m.no_pooling,
+fit.no_pooling.b = ulam(
+  m.no_pooling.b,
   data = u.data,
   log_lik = TRUE, iter = 1000,
   chains = 4, cores = n.cores,
+  rstanout = TRUE
 )
+fit.no_pooling = ulam(
+    m.no_pooling,
+    data = u.data,
+    log_lik = TRUE, iter = 2000,
+    chains = 4, cores = n.cores,
+    rstanout = TRUE)
 ```
 
 
 and check convergence:
 ```{r class.source = 'fold-show'}
-precis(fit.no_pooling, depth = 2) %>% 
-  round(2)
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01,mfrow = c(1,2))
+precis(fit.no_pooling,depth = 2)$Rhat4 %>% hist(main = "standard no-pooling", xlab = "Rhat")
+precis(fit.no_pooling.b,depth = 2)$Rhat4 %>% hist(main = "non-standard no-pooling", xlab = "Rhat")
 ```
+
+Here we compare the parameter fits of the standard form of the no-pooling model and of the non-standard form:
+
+```{r fig.width=4.8, fig.height=5, out.width="70%"}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
+dmu_standard = fit.no_pooling@stanfit %>% as_draws() %>% subset_draws("a") %>% summarise_draws()
+dmu_nonstandard = fit.no_pooling.b@stanfit %>% as_draws() %>% subset_draws("mus") %>% summarise_draws()
+
+plot(dmu_standard$mean, dmu_nonstandard$mean,
+     ylab = "department mean standard pooling",
+     xlab = "department mean non-standard pooling")
+abline(lm(dmu_nonstandard$mean~dmu_standard$mean), col = "grey")
+pse = function(dt, lu) {
+  if (lu == "l") {dt$mean - 2*(dt$sd/sqrt(dt$ess_bulk))
+  } else { dt$mean + 2*(dt$sd/sqrt(dt$ess_bulk))
+  }
+}
+arrows(x0 = dmu_standard$mean, x1 = dmu_standard$mean,
+       y0 = pse(dmu_nonstandard,"l"), y1 = pse(dmu_nonstandard,"u"),
+       code = 0)
+arrows(x0 = pse(dmu_standard,"l"), x1 = pse(dmu_standard,"u"),
+       y0 = dmu_nonstandard$mean, y1 = dmu_nonstandard$mean,
+       code = 0)
+```
+
+We can also verify that the number of effective parameters (pWAIC) is the same for both models:
+
+```{r}
+compare(fit.no_pooling,fit.no_pooling.b) %>% round(2)
+```
+
 
 Now lets look at the true and estimated satisfaction in departments, where the estimated satisfaction from the no-pooling model is shown as blue dots:
 
 ```{r}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 x = plot_data(return.x = TRUE)
-est.no_pooling = precis(fit.no_pooling, pars = "mus", depth = 2)
+est.no_pooling = precis(fit.no_pooling.b, pars = "mus", depth = 2)
 points(x,est.no_pooling$mean, col = "blue", pch = 16)
 ```
 
 As expected, the estimates of this simple, no-pooling,  Bayesian model correspond to the averages we calculated earlier, except that we see a bit of shrinkage towards the prior mean for the small departments (1-5).
 
-Now lets compare the no pooling and full pooling model:
+Now lets compare the no-pooling and full-pooling model:
 
 ```{r}
-compare(fit.full_pooling.b,
-        fit.no_pooling) %>% 
-  round(2)
+compare(fit.full_pooling.b,fit.no_pooling.b) %>% round(2)
 ```
 
-As expected, the no pooling model is estimate to have a higher number of effective parameters (13 vs 2) than the full pooling model. The difference of 11 is not the same as the number of departments (15), but close enough.
+As expected, the no-pooling model is estimate to have a higher number of effective parameters (13 vs 2) than the full-pooling model. The difference of 11 is not the same as the number of departments (15), but close enough. Indeed, it the difference would be larger if we used wider priors.
 
 ## Multilevel regression implements paritial pooling (random effects)
 
@@ -478,9 +536,9 @@ As expected, the no pooling model is estimate to have a higher number of effecti
 *Hierarchical regression* and *multilevel regression* are different terms for the same concept. Both model the variation between groups of observations with *random effects*. Most Hierarchical regression models can also be called *mixed effects* models, because the include *random effects* and *fixed effects*, where the latter are assumed to be constant across groups.
 </div>
 
-In the full and no pooling analysis, we determined the the degree of pooling by setting the standard deviation for the department level satisfaction to a very low or very high number, respectively.
+In the full- and no-pooling analysis, we determined the the degree of pooling by setting the standard deviation for the department level satisfaction to a very low or very high number, respectively.
 
-*The key advantage of multilevel regression and partial pooling models is that, instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.* **We are learning the degree of pooling from the data**.
+*The key advantage of multilevel regression and partial-pooling models is that, instead of setting this standard deviation to a fixed value, they estimate it as a parameter from the data.* **We are learning the degree of pooling from the data**.
 This allows such models to adapt to situations where the different groups are either similar (low standard deviation) or dissimilar (high standard deviation).
 
 **Hierachical models require assumptions** that can be avoided in the no-pooling case. 
@@ -493,9 +551,9 @@ Here is an overview over the three model types.
 
 <table>
   <tr>
-    <th>Full pooling</th>
-    <th>No pooling</th>
-    <th>Partial pooling</th>
+    <th>full-pooling</th>
+    <th>no-pooling</th>
+    <th>partial-pooling</th>
   </tr>
   <tr>
     <td>
@@ -510,7 +568,7 @@ Here is an overview over the three model types.
     </td>
     <td>
     
-    $$S_i \sim normal(\mu_d, \sigma)\\ {\mu_d} \sim normal(\bar \mu,\color{red}{\sigma_{\mu}}) \\ \sigma \sim exponential(1) \\ \bar \mu \sim normal(3,3) \\ \color{red}{\sigma_{\mu} \sim exponential(0,.5)}$$
+    $$S_i \sim normal(\mu_d, \sigma)\\ {\mu_d} \sim normal(\bar \mu,\color{red}{\sigma_{\mu}}) \\ \sigma \sim exponential(1) \\ \bar \mu \sim normal(3,3) \\ \color{red}{\sigma_{\mu} \sim exponential(0,2)}$$
 
     </td>
   </tr>
@@ -518,7 +576,7 @@ Here is an overview over the three model types.
 
 $\small \bar \mu$ and $\small \sigma_{\mu}$ describe latent properties of groups of observations and are called *hyperparameters*. The priors for hyperparameters are often called *hyperpriors*.
 
-Here is the partial pooling `ulam` model:
+Here is the partial-pooling `ulam` model:
 
 ```{r class.source = 'fold-show'}
 m.partial_pooling = alist(
@@ -531,6 +589,13 @@ m.partial_pooling = alist(
   gq> vector[d]:mus<<-mu_bar+z*sigma_mu
 )
 ```
+<div class="marginnote"> 
+In `brms` or similar packages we would write 
+`prior = prior(exp(2), class = sigma) +`
+`prior(normal(0,2), class = sd) + `
+`prior(normal(0,3), class = Intercept)`
+`brm(S ~ (1 | d), prior = prior)`
+</div>
 
 Now we estimate the model ...
 
@@ -543,7 +608,8 @@ if (file.exists(fn)) {
   m.partial_pooling,
   data = u.data,
   log_lik = TRUE, iter = 1000,
-  chains = 4, cores = n.cores)
+  chains = 4, cores = n.cores,
+  rstanout = TRUE)
   save(fit.partial_pooling, file = fn)
 }
 ```
@@ -575,7 +641,7 @@ abline(v = sd_dep_satisfaction, lty = 2, lwd = 2, col = "green3")
 
 The vertical green line is the true standard deviation, which shows that the model accurately estimates the variability of departments.
 
-__Models in which we estimate the between group standard deviation are called partial pooling models, because they lie somewhere on the continuum between no and full pooling.__
+__Models in which we estimate the between group standard deviation are called partial-pooling models, because they lie somewhere on the continuum between no and full-pooling.__
 
 
 Now lets look at the estimated means: 
@@ -586,14 +652,14 @@ est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
 points(x,est.partial_pooling$mean, col = "blue", pch = 16)
 ```
 
-The means estimated with the multilevel / partial pooling model lie between the means of the full pooling approach (dotted red line) and the means of the no pooling approach (bar height).
+The means estimated with the multilevel / partial-pooling model lie between the means of the full-pooling approach (dotted red line) and the means of the no-pooling approach (bar height).
 
 We can compare the models to see which model generalizes best and to compare the number of effective parameters.
 
 ```{r}
 compare(fit.full_pooling.b,
         fit.partial_pooling,
-        fit.no_pooling) %>% 
+        fit.no_pooling.b) %>% 
   round(2)
 ```
 
@@ -602,23 +668,24 @@ compare(fit.full_pooling.b,
 Model flexibility, which can lead to overfitting, is not simply a function of the number of parameters a model has. It also depends on how much parameters allow a model to fit the data. Regularization reduces a models ability to fit the data. In hierarchical models, regularization is learned from the data.
 </div>
 
-The number of effective parameters for the partial pooling model is smaller than for the no pooling model, even though it really has an additional free parameters! *shrinkage reduces the number of effective parameters because it makes the group level effects more dependent than they would be in a no pooling model.* We also see that the approximate out-of sample predictive accuracy is best for the partial pooling model. But what about accuracy for the current sample?
+The number of effective parameters for the partial-pooling model is smaller than for the no-pooling model, even though it really has an additional free parameters! *shrinkage reduces the number of effective parameters because it makes the group level effects more dependent than they would be in a no-pooling model.* We also see that the approximate out-of sample predictive accuracy is best for the partial-pooling model. But what about accuracy for the current sample?
 
-## Accuracy
+# Accuracy
 
-To see which method provides the best estimates of department level satisfaction, we compare each with the true department level satisfactions. Remember that the department averages calculated from individuals responses have an error due to the measurement error in the individual level data we collected:
+To see which method provides the best estimates of department level satisfaction, we compare each with the true department level satisfactions. Remember that the department averages calculated from individuals' responses have an error due to the measurement error in the individual level data we collected:
 
 ```{r class.source = 'fold-show'}
 abs.delta = rbind(
-  no_pooling = est.no_pooling$mean - department_mus,
-  full_pooling = est.full_pooling$mean - department_mus,
-  partial_pooling = est.partial_pooling$mean - department_mus
+  no_pooling = est.no_pooling$mean - true_dept_mus,
+  full_pooling = est.full_pooling$mean - true_dept_mus,
+  partial_pooling = est.partial_pooling$mean - true_dept_mus
 ) 
 ```
 
 Here is a plot of these deviations:
 
 ```{r}
+par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
 abs.delta = abs.delta %>% abs() %>% t()
 matplot(abs.delta, pch = 16, col = 2:4, xaxt = "none")
 axis(1,at = 1:15, cex.axis = .85)
@@ -630,7 +697,7 @@ legend("topleft", bty = "n",
 ```
 
 
-It seems as if the partial pooling model is doing best, but it is not 100% clear.
+It seems as if the partial-pooling model is doing best, but it is not 100% clear.
 
 A standard metric to calculate the performance of different models is the root means square deviation (RMSD), which we calculate now:
 
@@ -640,11 +707,11 @@ abs.delta^2 %>%    # square deviation
   sqrt()           # root
 ```
 
-Indeed, the partial pooling model has the smallest error. This is due to the same property of shrinkage estimators we already observed earlier in the course: Shrinkage estimators fit the data not as well as other models (here the no pooling model) but they are better at out of sample prediction.
+Indeed, the partial-pooling model has the smallest error. This is due to the same property of shrinkage estimators we already observed earlier in the course: Shrinkage estimators fit the data not as well as other models (here the no-pooling model) but they are better at out of sample prediction.
 
-Note though, that this is not a big surprise, because the data was generated according to the multilevel / partial pooling model.
+Note though, that this is not a big surprise, because the data was generated according to the multilevel / partial-pooling model.
 
-Here is a function that produces the same plot we just saw, and that takes the between department standard deviation as an input. This allows us to test if the partial pooling model does well, even if a full or no pooling model is the true DGP.
+Here is a function that produces the same plot we just saw, and that takes the between department standard deviation as an input. This allows us to test if the partial-pooling model does well, even if a full or no-pooling model is the true DGP.
 
 ```{r}
 check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
@@ -657,25 +724,26 @@ check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
   if (file.exists(fn)) {
     load(fn)
   } else {
-     # simulate data
-  department_mus = 
-    rnorm(n_departments,
-          mean_firm_satisfaction,
-          sd_dep_satisfaction)
-  firm_satisfaction = c()
-  for (d in 1:n_departments) {
-    employee_satisfaction = 
-      rnorm(n_employees[d],
-            department_mus[d],
-            1)
-    firm_satisfaction = rbind(
-      firm_satisfaction,
-      data.frame(
-        department = as.integer(d),
-        satisfaction = employee_satisfaction
+    set.seed(123)
+    rnormsd1 = function(n) as.numeric(scale(rnorm(n)))
+    # simulate data
+    true_dept_mus =
+      mean_firm_satisfaction + 
+      rnormsd1(n_departments) * sd_dep_satisfaction
+    
+    firm_satisfaction = c()
+    for (d in 1:n_departments) {
+      employee_satisfaction = 
+        true_dept_mus[d] + 
+        rnormsd1(n_employees[d])
+      firm_satisfaction = rbind(
+        firm_satisfaction,
+        data.frame(
+          department = as.integer(d),
+          satisfaction = employee_satisfaction
+        )
       )
-    )
-  }
+    }
   
   #prepare ulam.data
   u.data = list(
@@ -683,33 +751,33 @@ check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
     S = firm_satisfaction$satisfaction,
     d = as.integer(firm_satisfaction$department))
   
-  # fit.models
-  fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4, cores = n.cores)
-  fit.no_pooling = ulam(m.no_pooling,data = u.data,chains = 4, cores = n.cores)
-  fit.partial_pooling = ulam(m.partial_pooling,data = u.data,chains = 4, cores = n.cores)
+  # fit.models 
+  fit.full_pooling = ulam(m.full_pooling.b,data = u.data,chains = 4, cores = n.cores,rstanout = TRUE)
+  fit.no_pooling.b = ulam(m.no_pooling.b,data = u.data,chains = 4, cores = n.cores,rstanout = TRUE)
+  fit.partial_pooling = ulam(m.partial_pooling,data = u.data,chains = 4, cores = n.cores, rstanout = TRUE)
   
   save(fit.full_pooling,
-       fit.no_pooling,
+       fit.no_pooling.b,
        fit.partial_pooling,
-       department_mus,u.data,
+       true_dept_mus,u.data,
        firm_satisfaction,
        file = fn)
   }
   
  # get estimates
   est.full_pooling = precis(fit.full_pooling, pars = "mus", depth = 2)
-  est.no_pooling = precis(fit.no_pooling, pars = "mus", depth = 2)
+  est.no_pooling = precis(fit.no_pooling.b, pars = "mus", depth = 2)
   est.partial_pooling = precis(fit.partial_pooling, pars = "mus", depth = 2)
   
   abs.delta = rbind(
-    no_pooling = est.no_pooling$mean - department_mus,
-    full_pooling = est.full_pooling$mean - department_mus,
-    partial_pooling = est.partial_pooling$mean - department_mus
+    no_pooling = est.no_pooling$mean - true_dept_mus,
+    full_pooling = est.full_pooling$mean - true_dept_mus,
+    partial_pooling = est.partial_pooling$mean - true_dept_mus
   ) %>% abs() %>% t()
   
   layout(matrix(c(1,1,2,3),ncol = 2))
-  RMSD = abs.delta^2 %>% colMeans() %>% sqrt() 
-  matplot(abs.delta, pch = 16, col = 2:4, ylab = "RMSD", xaxt = "none",
+  RMSD = (abs.delta^2 %>% colMeans() %>% sqrt())#/sd_dep_satisfaction
+  matplot(abs.delta, pch = 16, col = 2:4, ylab = "abs(est-true)", xaxt = "none", #log = "y",ylim = c(.001,15),
           main = paste0("sd = ", sd_dep_satisfaction, ", ",n_departments," groups"))
   axis(1,at = 1:15, cex.axis = .7)
   legend("topleft", bty = "n",
@@ -733,35 +801,57 @@ check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
 Models' performance if there is **no variation between groups/departments**.
 
 ```{r, fig.width=7, fig.height=4, out.width="110%"}
+n_depts = 15
 set_par(cex = 1, mar=c(3,3,3,.5))
-check.accuracy(sd_dep_satisfaction = .01, n_departments = 15)
+check.accuracy(sd_dep_satisfaction = .01, n_departments = n_depts)
+```
+```{r, fig.width=7, fig.height=4, out.width="110%"}
+set_par(cex = 1, mar=c(3,3,3,.5))
+check.accuracy(sd_dep_satisfaction = 0.1, n_departments = n_depts)
 ```
 
 Models' performance if there is **some variation between groups/departments**.
 
 ```{r, fig.width=7, fig.height=4, out.width="110%"}
 set_par(cex = 1, mar=c(3,3,3,.5))
-check.accuracy(sd_dep_satisfaction = 0.5, n_departments = 15)
+check.accuracy(sd_dep_satisfaction = 0.5, n_departments = n_depts)
+```
+
+Models' performance if there is **some variation between groups/departments**.
+
+```{r, fig.width=7, fig.height=4, out.width="110%"}
+set_par(cex = 1, mar=c(3,3,3,.5))
+check.accuracy(sd_dep_satisfaction = 1, n_departments = n_depts)
 ```
 
 Models' performance if there is **a lot of variation between groups/departments**.
 
 ```{r, fig.width=7, fig.height=4, out.width="110%"}
 set_par(cex = 1, mar=c(3,3,3,.5))
-check.accuracy(sd_dep_satisfaction = 10, n_departments = 15)
+check.accuracy(sd_dep_satisfaction = 10, n_departments = n_depts)
 ```
 
-The last plot shows that if the number of groups is only moderately large and the prior for the standard deviation is relatively narrow, one can obtained biased estimates of the between group standard deviation. It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.
+The last plot shows that if the number of groups is only moderately large and the prior for the standard deviation is relatively narrow, one can obtained biased estimates of the between group standard deviation. *It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.*
 
-__The partial pooling model is generally nearly as accurate as the "true" model.__ *The model learned the right amount of pooling from the data*. Obviously, this also depends on how much data is available! The last figures are based on 15 groups, but if the number of groups becomes small and each group has only few members, a partial pooling model will have difficulties estimating the standard deviation for the between group variation.
+__The partial-pooling model is generally nearly as accurate as the "true" model.__ *The model learned the right amount of pooling from the data*. Obviously, this also depends on how much data is available! The last figures are based on 15 groups, but if the number of groups becomes small and each group has only few members, a partial-pooling model will have difficulties estimating the standard deviation for the between group variation.
 
 Still, it is generally a good idea to use hierarchical models when possible, if one is interested in estimating parameters for several units, because the it can be shown that pooling towards a common baseline will generally reduce the error. For more, see the [James-Stein Estimator]( https://en.wikipedia.org/wiki/James%E2%80%93Stein_estimator) or the [Stein's paradox or example](https://en.wikipedia.org/wiki/Stein%27s_example).
 
+
+```{r}
+for (sd_dep_satisfaction in c(.01, .1, .5, 1, 5, 10)) {
+  for (n_depts in c(15, 30, 60, 120)) {
+    check.accuracy(sd_dep_satisfaction = sd_dep_satisfaction, n_departments = n_depts)
+  }
+}
+```
+
+
 # Bias–variance tradeoff
 
-One _issue_ with multilevel models (with partial pooling) is that they are not "unbiased", which means that they do not provide an error free estimate of the sample mean. This bias is also not random. Instead, estimates are moved towards the grand mean, so that group differences become smaller. Does this mean that we are less likely to detect group differences?
+One _issue_ with multilevel models (with partial-pooling) is that they are not "unbiased", which means that they do not provide an error free estimate of the sample mean. Instead, estimates are moved towards the grand mean, so that group differences become smaller. Does this mean that we are less likely to detect group differences?
 
-Lets look at the means from the no pooling an partial pooling models, together with the observed sample means: 
+Lets look at the means from the no-pooling and partial-pooling models, together with the observed sample means: 
 
 ```{r}
 sample_means = 
@@ -781,19 +871,19 @@ arrows(x0 = 1:15,
 legend("topright",
        pch = c(1,16,16),
        col = c(1,2,4), bty = "n",
-       legend = c("obs. dep. mean","no pooling", "partial pooling"))
+       legend = c("obs. dept. mean","no-pooling", "partial-pooling"))
 ```
-The deviation between *sample mean* and partial pooling estimate shows that the latter is a biased estimate of the sample mean. This bias is larger for smaller departments (on the left hand side) which which are shrunk more, and it is also larger for departments with extreme means, compare e.g. departments 13 and 14.
+The deviation between *sample mean* and partial-pooling estimate shows that the latter is a biased estimate of the sample mean. This bias is larger for smaller departments (on the left hand side) which which are shrunk more, and it is also larger for departments with extreme means, compare e.g. departments 13 and 14.
 
-Now, one could be concerned that partial pooling makes it difficult to detect differences between groups. But the bias just described is only part of the story. Next, we plot the estimates together with their credible intervals: 
+Now, one could be concerned that partial-pooling makes it difficult to detect differences between groups. But the bias just described is only part of the story. Next, we plot the estimates together with their credible intervals: 
 
 ```{r}
 set_par()
 ylim = range(c(est.no_pooling[,3:4],est.partial_pooling[, 3:4]))
 plot(1:15, sample_means, ylab = "mean", xlab = "department", ylim = ylim, xaxt = "none")
 axis(1,at = 1:15, cex.axis = .85)
-points((1:15)-.1, est.no_pooling$mean, pch = 16, col = 2)
-points((1:15)+.1, est.partial_pooling$mean, pch = 16, col = 4)
+points((1:15)-.15, est.no_pooling$mean, pch = 16, col = 2)
+points((1:15)+.15, est.partial_pooling$mean, pch = 16, col = 4)
 abline(h = mean(u.data$S), lty = 3)
 arrows(x0 = (1:15)-.15,
        y0 = est.no_pooling$`5.5%`,
@@ -806,14 +896,14 @@ arrows(x0 = (1:15)+.15,
 legend("topright",
        pch = c(1,16,16),
        col = c(1,2,4), bty = "n",
-       legend = c("obs. dep. mean","no pooling", "partial pooling"))
+       legend = c("obs. dep. mean","no-pooling", "partial-pooling"))
 ```
 
 What do you see?
 
-The variance of the estimates from the hierarchical partial pooling model is generally smaller, especially for smaller departments. The intuition is that because the estimate for one department also relies partially on data from other departments, the estimated mean for the department was derived from more data and is therefore less uncertain. 
+The variances of the estimates from the hierarchical partial-pooling model are generally smaller, especially for smaller departments. The intuition is that because the estimate for one department also relies partially on data from other departments, the estimated mean for each department was derived from more data and is therefore less uncertain. 
 
-This reduction in variance means that even though all estimates were shrunk towards the global mean and group differences became smaller, we can still detect group differences well due to the reduces variance of the estimates for the group mean.
+This reduction in variances means that even though all estimates were shrunk towards the global mean and group differences became smaller, we can still detect group differences well due to the reduced variance of the estimates for the group mean.
 
 More generally, it can be said that total error of an estimate can be decomposed into:
 
@@ -828,18 +918,18 @@ VB = function(truth, estimate) {
     ))}
 ```
 
-Shrinkage methods and in particular multilevel regression and partial pooling make a different trade off than the more traditional no-pooling estimate by exchanging some bias for a reduction in variance. 
+Shrinkage methods and in particular multilevel regression and partial-pooling make a different trade off than the more traditional no-pooling estimate by exchanging some bias for a reduction in variance. 
 
-The following figure shows how partial pooling trades off variance for bias: 
+The following figure shows how partial-pooling trades off variance for bias: 
 
 ```{r, fig.width=5.5, fig.height=5, out.width="70%"}
 VB.partial_pooling = 
   do.call(rbind,lapply(1:15, function(d) {
-    VB(sample_means[d],extract_post_ulam(fit.partial_pooling,pars = "mus")[[1]][,d])
+    VB(sample_means[d],extract_post_ulam(fit.partial_pooling)[["mus"]][,d])
   }))
 VB.no_pooling = 
   do.call(rbind,lapply(1:15, function(d) {
-    VB(sample_means[d],extract_post_ulam(fit.no_pooling,pars = "mus")[[1]][,d])
+    VB(sample_means[d],extract_post_ulam(fit.no_pooling.b)[["mus"]][,d])
   }))
 
 set_par()
@@ -858,7 +948,7 @@ text(VB.no_pooling[,1], VB.no_pooling[,2], 1:15, col = 2)
 
 legend("topright", bty = "n",
          col = c(2,4), pch = 16,
-         legend = c("no pooling","partial pooling"))
+         legend = c("no-pooling","partial-pooling"))
 ```
 
 Hence, even if a hierarchical model means that sub-group estimates are pulled toward the grand mean, we can still detect group difference well because the group means are estimated more precisely.
@@ -885,7 +975,7 @@ Hence, even if a hierarchical model means that sub-group estimates are pulled to
 
 Rewrite the following model as a multilevel model
 
-**No pooling** | **Partial pooling**
+**no-pooling** | **partial-pooling**
 - | -
 $$y_i \sim Binomial(1,p_i) \\ logit(p_i) \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,1.5)} \\ \beta \sim Normal(0,0.5)$$ | $$
 y_i \sim Binomial(1,p_i) \\
@@ -901,7 +991,7 @@ $$
 
 Rewrite the following model as a multilevel model
 
-**No pooling** | **Partial pooling**
+**no-pooling** | **partial-pooling**
 - | -
 $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,5)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) $$ | $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) \\ \color{red}{\bar \alpha \sim Normal(0,5)} \\ \color{red}{\sigma_\alpha \sim Exponential(1)}
 $$
