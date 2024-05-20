@@ -69,6 +69,7 @@ library(knitr)
 library(kableExtra)
 library(MASS)
 library(psych)
+library(posterior)
 n.cores = 4
 source("../utils.R")
 
@@ -88,7 +89,7 @@ Here are the things you know about your firm:
 
 - There are 15 departments 
 - Each department has between around 8 (administration) and 100 (production) employees
-- The departments have different observed and unobserved characteristics that lead to (small differences) in average satisfaction between departments.
+- The departments have different observed and unobserved characteristics that lead to small differences in average satisfaction between departments.
 
 Here is this expressed in some variables.
 ```{r class.source = 'fold-show'}
@@ -241,7 +242,7 @@ However, to facilitate the comparison to alternative models, we re-write the mod
   </tr>
   <tr>
     <td>
-     $$\begin{align*} S_i \sim normal(\mu_d, \sigma)  & \;\;\;\;{\small \textrm{Individuals satisfaction is department satisfaction plus error}} \\ \mu_d  \sim normal(\bar \mu,.0001) & \;\;\;\;{\small \textrm{Department satisfaction is equal to average firm satisfaction}} \\ \bar \mu \sim normal(3,3) & \;\;\;\;{\small \textrm{Prior for average department satisfaction}} \\ \sigma \sim exponential(1) & \;\;\;\;{\small \textrm{Prior for error variance}} \\ \end{align*}$$
+     $$\begin{align*} S_i \sim normal(\mu_d, \sigma)  & \;\;\;\;{\small \textrm{Individuals' satisfaction is department satisfaction plus error}} \\ \mu_d  \sim normal(\bar \mu,.0001) & \;\;\;\;{\small \textrm{Department satisfaction is equal to average firm satisfaction}} \\ \bar \mu \sim normal(3,3) & \;\;\;\;{\small \textrm{Prior for average department satisfaction}} \\ \sigma \sim exponential(1) & \;\;\;\;{\small \textrm{Prior for error variance}} \\ \end{align*}$$
     </td>
   </tr>
 </table>
@@ -269,7 +270,7 @@ mu <- mu_bar + z*sigma_mu
 m.full_pooling = alist(
   S ~ dnorm(mu_bar, sigma),
   mu_bar ~ dnorm(3,3),
-  sigma ~ dexp(2)
+  sigma ~ dexp(1)
 )
 ```
 
@@ -279,7 +280,7 @@ m.full_pooling.b = alist(
   mu <- mu_bar + z[d]*.0001,
   z[d] ~ dnorm(0,1),
   mu_bar ~ dnorm(3,3),
-  sigma ~ dexp(2),
+  sigma ~ dexp(1),
   # calculate mu per department in generated quantities
   gq> vector[d]:mus<<-mu_bar+z*.0001
 )
@@ -355,19 +356,14 @@ fit.full_pooling.b = ulam(
 
 and check convergence:
 ```{r class.source = 'fold-show'}
-precis(fit.full_pooling) %>% 
-  round(2)
-precis(fit.full_pooling.b,
-       depth = 2) %>% 
-  round(2)
+precis(fit.full_pooling) %>% round(2)
+precis(fit.full_pooling.b,depth = 2) %>% round(2)
 ```
 
-Do the two models really describe the data equally well, and is the number of effective parameters more or less equal?
+Do the two models really describe the data equally well, and is the number of effective parameters more or less equal? We use the `compare` function to check this.
 
-```{r}
-compare(fit.full_pooling,
-        fit.full_pooling.b) %>% 
-  round(2)
+```{r class.source = 'fold-show'}
+compare(fit.full_pooling, fit.full_pooling.b) %>% round(2)
 ```
 
 
@@ -381,7 +377,7 @@ est.full_pooling = precis(fit.full_pooling.b, pars = "mus", depth = 2)
 points(x,est.full_pooling$mean, col = "blue", pch = 16)
 ```
 
-As expected we estimated the same mean for everyone
+As expected we estimated the same mean for department.
 
 
 ## no-pooling analysis (fixed effects)
@@ -417,15 +413,15 @@ As before, we can re-formulate the model:
 
 In this model, the large standard deviation of the distribution of department level satisfaction ($\small \mu_d \sim normal(\bar \mu,1000)$) encodes the assumption of independent groups. 
 
-__Getting from a full-pooling to a no polling model by changing a model parameter shows that this are not qualitatively distinct models, but opposite endpoints of a continuous model space.__
+__Getting from a full-pooling to a no-pooling model by changing a model parameter shows that this are not qualitatively distinct models, but opposite endpoints of a continuous model space.__
 
 The corresponding `ulam` non-standard no-pooling looks as follows:
 
 ```{r class.source = 'fold-show'}
 m.no_pooling.b = alist(
   S ~ dnorm(mu, sigma),
-  mu <- mu_bar + z[d]*1000,
-  z[d] ~ dnorm(0,1),
+  mu <- mu_bar + z[d]*1000, # if we remove the *1000 here
+  z[d] ~ dnorm(0,1),        # this becomes dnorm(0,1000)
   mu_bar ~ dnorm(3,3),
   sigma ~ dexp(2),
   gq> vector[d]:mus<<-mu_bar+z*1000
@@ -474,13 +470,13 @@ fit.no_pooling = ulam(
 
 
 and check convergence:
-```{r class.source = 'fold-show'}
+```{r }
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01,mfrow = c(1,2))
 precis(fit.no_pooling,depth = 2)$Rhat4 %>% hist(main = "standard no-pooling", xlab = "Rhat")
 precis(fit.no_pooling.b,depth = 2)$Rhat4 %>% hist(main = "non-standard no-pooling", xlab = "Rhat")
 ```
 
-Here we compare the parameter fits of the standard form of the no-pooling model and of the non-standard form:
+Here we compare the parameter fits of the standard form of the no-pooling model and of the non-standard form. the tiny crosses are MCMC standard errors, and the fact that the line lies within the standard error tells us the that the difference of the estimated parameters is smaller than random variation due to MCMC sampling (of the same model).
 
 ```{r fig.width=4.8, fig.height=5, out.width="70%"}
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
@@ -544,7 +540,7 @@ This allows such models to adapt to situations where the different groups are ei
 **Hierachical models require assumptions** that can be avoided in the no-pooling case. 
 
 - One has to choose/assume a *distribution that describes the variation of group level means*. The normal distribution is the default and a good choice, but other distributions are possible. 
-- One also has to assume that the *groups are exchangeable*. [Exchangeability](https://en.wikipedia.org/wiki/Exchangeable_random_variables) simply means that the joint distribution of the group-level means does not depend on our labels for these groups. Put differently, each ordering of the values is equally likely. Hence, e.g. time series data are not exchangable ([Video](https://www.youtube.com/watch?v=JXSHVkx2ZQQ)).
+- One also has to assume that the *groups are exchangeable*. [Exchangeability](https://en.wikipedia.org/wiki/Exchangeable_random_variables) simply means that the joint distribution of the group-level means does not depend on our labels for these groups. Put differently, each ordering of the values is equally likely. Hence, e.g. time series data like data about blood-cortisol levels are not exchangeable ([Video](https://www.youtube.com/watch?v=JXSHVkx2ZQQ)).
 
 
 Here is an overview over the three model types.
@@ -568,7 +564,7 @@ Here is an overview over the three model types.
     </td>
     <td>
     
-    $$S_i \sim normal(\mu_d, \sigma)\\ {\mu_d} \sim normal(\bar \mu,\color{red}{\sigma_{\mu}}) \\ \sigma \sim exponential(1) \\ \bar \mu \sim normal(3,3) \\ \color{red}{\sigma_{\mu} \sim exponential(0,2)}$$
+    $$S_i \sim normal(\mu_d, \sigma)\\ {\mu_d} \sim normal(\bar \mu,\color{red}{\sigma_{\mu}}) \\ \sigma \sim exponential(1) \\ \bar \mu \sim normal(3,3) \\ \color{red}{\sigma_{\mu} \sim halfnormal(0,2)}$$
 
     </td>
   </tr>
@@ -668,7 +664,7 @@ compare(fit.full_pooling.b,
 Model flexibility, which can lead to overfitting, is not simply a function of the number of parameters a model has. It also depends on how much parameters allow a model to fit the data. Regularization reduces a models ability to fit the data. In hierarchical models, regularization is learned from the data.
 </div>
 
-The number of effective parameters for the partial-pooling model is smaller than for the no-pooling model, even though it really has an additional free parameters! *shrinkage reduces the number of effective parameters because it makes the group level effects more dependent than they would be in a no-pooling model.* We also see that the approximate out-of sample predictive accuracy is best for the partial-pooling model. But what about accuracy for the current sample?
+**The number of effective parameters for the partial-pooling model is smaller than for the no-pooling model**, even though it really has an additional free parameters! *shrinkage reduces the number of effective parameters because it makes the group level effects more dependent than they would be in a no-pooling model.* We also see that the approximate out-of sample predictive accuracy is best for the partial-pooling model. But what about accuracy for the current sample?
 
 # Accuracy
 
@@ -682,7 +678,7 @@ abs.delta = rbind(
 ) 
 ```
 
-Here is a plot of these deviations:
+Here is a plot of these absolute deviations:
 
 ```{r}
 par (mar=c(3,3,2,1), mgp=c(2,.7,0), tck=-.01)
@@ -715,7 +711,7 @@ Here is a function that produces the same plot we just saw, and that takes the b
 
 ```{r}
 check.accuracy = function(sd_dep_satisfaction = .25, n_departments = 15) {
-  fn = paste0("accuracy_",100*sd_dep_satisfaction,"_",n_departments,".Rdata")
+  fn = paste0("fits/accuracy_",100*sd_dep_satisfaction,"_",n_departments,".Rdata")
   
   n_employees = 
     rep(c(5,22,98), each = n_departments/3) + 
@@ -805,10 +801,8 @@ n_depts = 15
 set_par(cex = 1, mar=c(3,3,3,.5))
 check.accuracy(sd_dep_satisfaction = .01, n_departments = n_depts)
 ```
-```{r, fig.width=7, fig.height=4, out.width="110%"}
-set_par(cex = 1, mar=c(3,3,3,.5))
-check.accuracy(sd_dep_satisfaction = 0.1, n_departments = n_depts)
-```
+
+Here, all models are doing well (check the y-axis).
 
 Models' performance if there is **some variation between groups/departments**.
 
@@ -828,7 +822,7 @@ Models' performance if there is **a lot of variation between groups/departments*
 
 ```{r, fig.width=7, fig.height=4, out.width="110%"}
 set_par(cex = 1, mar=c(3,3,3,.5))
-check.accuracy(sd_dep_satisfaction = 10, n_departments = n_depts)
+check.accuracy(sd_dep_satisfaction = 15, n_departments = n_depts)
 ```
 
 The last plot shows that if the number of groups is only moderately large and the prior for the standard deviation is relatively narrow, one can obtained biased estimates of the between group standard deviation. *It is therefore especially with smaller numbers of groups important to use domain knowledge to determine reasonable priors for the standard deviation.*
@@ -838,7 +832,7 @@ __The partial-pooling model is generally nearly as accurate as the "true" model.
 Still, it is generally a good idea to use hierarchical models when possible, if one is interested in estimating parameters for several units, because the it can be shown that pooling towards a common baseline will generally reduce the error. For more, see the [James-Stein Estimator]( https://en.wikipedia.org/wiki/James%E2%80%93Stein_estimator) or the [Stein's paradox or example](https://en.wikipedia.org/wiki/Stein%27s_example).
 
 
-```{r}
+```{r eval=FALSE}
 for (sd_dep_satisfaction in c(.01, .1, .5, 1, 5, 10)) {
   for (n_depts in c(15, 30, 60, 120)) {
     check.accuracy(sd_dep_satisfaction = sd_dep_satisfaction, n_departments = n_depts)
@@ -922,7 +916,7 @@ Shrinkage methods and in particular multilevel regression and partial-pooling ma
 
 The following figure shows how partial-pooling trades off variance for bias: 
 
-```{r, fig.width=5.5, fig.height=5, out.width="70%"}
+```{r, fig.width=5.5, fig.height=5, out.width="50%"}
 VB.partial_pooling = 
   do.call(rbind,lapply(1:15, function(d) {
     VB(sample_means[d],extract_post_ulam(fit.partial_pooling)[["mus"]][,d])
@@ -983,8 +977,9 @@ logit(p_i) \sim \alpha_{GROUP[i]} + \beta x_i \\
 \color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\
 \beta \sim Normal(0,0.5) \\
 \color{red}{\bar \alpha \sim Normal(0,1.5)} \\
-\color{red}{\sigma_\alpha \sim Exponential(0,1)}
+\color{red}{\sigma_\alpha \sim Exponential(1)}
 $$
+
 
 
 ## E3 
@@ -995,6 +990,40 @@ Rewrite the following model as a multilevel model
 - | -
 $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(0,5)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) $$ | $$y_i \sim Normal(\mu_i,\sigma) \\ \mu_i \sim \alpha_{GROUP[i]} + \beta x_i \\ \color{red}{\alpha_{GROUP} \sim Normal(\bar \alpha, \sigma_\alpha)} \\ \beta \sim Normal(0,1) \\ \sigma \sim Exponential(1) \\ \color{red}{\bar \alpha \sim Normal(0,5)} \\ \color{red}{\sigma_\alpha \sim Exponential(1)}
 $$
+## M1
+
+To learn about posterior distributions, always start by generating posterior distributions, and that group and plot the data according to the question. For instance, if we are interested in variation across ponds, we make predictions for tanks and calculate variances over tanks
+
+```{r eval = FALSE, class.source = 'fold-show'}
+# get model predictions
+preds = sim(model_list[[m]])
+# calculate mean probability for each tank
+p = colMeans(preds)/dat$N
+```
+
+```{r eval = FALSE, class.source = 'fold-show'}
+model_list <- 
+  list(m13.m1_0, m13.m1_pred, m13.m1_size, m13.m1_pred_size, m13.m1_pred_size_interact)
+
+
+par (mar=c(2,2,2,1), mgp=c(2,.2,0), tck=-.01,mfrow = c(2,3))
+for (m in 1:length(model_list)) {
+  # get model predictions
+  preds = sim(model_list[[m]])
+  # calculate mean probability for each tank
+  p = colMeans(preds)/dat$N
+  # plot
+  plot(1:length(dat$N),
+       p,
+       ylim = c(0,1), xlim = c(0,length(dat$N)+1),
+     ylab = "probability", xlab = "tank")
+  # print sd over tanks
+  text(15,.1, paste("sd =", round(sd(p),3)))
+  title(model_list[[m]]@formula[[2]], cex.main = .5)
+}
+```
+This simple plot only shows the averages over samples. A more complicated plot could show the posterior distribution for instead of averages.
+
 
 ## M3
 
