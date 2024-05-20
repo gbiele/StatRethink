@@ -34,3 +34,5 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 12. B: [Ordered logistic regression](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter12/Chapter12Recap.html)
 
+13. [Multilevel or hierarchical regression models](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter13/Chapter13Recap.html)
+
