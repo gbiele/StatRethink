@@ -1,0 +1,589 @@
+---
+title: "Example analysis"
+author: "GB"
+format:
+  html:
+    toc: true
+    toc-location: left
+    embed-resources: true
+    page-layout: full
+    html-math-method: katex
+editor: source
+---
+
+We load packages.
+
+```{r}
+#| warning: false
+#| message: false
+library(data.table)
+library(skimr)
+library(brms)
+library(posterior)
+library(bayesplot)
+library(ggdist)
+library(ggplot2)
+library(patchwork)
+library(brmsmargins)
+library(magrittr)
+library(knitr)
+options(mc.cores = 4)
+source("utils.R")
+```
+
+
+
+## Load data
+
+```{r}
+#| warning: false
+#| message: false
+dt = fread("reisefil_slim.csv")
+t.levels = c("< 5 min","5 - 10 min","10 - 15 min", "15 - 30 min", "30 - 60 min", "1 - 2 hours", "> 2 hours")
+dt %>% 
+  .[, c("monthyear","alderskategori","V1","NR",names(which(colMeans(is.na(dt)) > .25))) := NULL] %>% 
+  setnames("car_driver_boo","y") %>% 
+  .[, month := month(dato)] %>% 
+  .[, tidskategori := ordered(tidskategori,levels = t.levels)] %>% 
+  .[, dato := as.Date(dato)] %>% 
+  .[, yday := yday(dato)] %>% 
+  .[, formaal := gsub(" / temporary accomodation","",formaal)]
+dt = dt[!is.na(fylke)]
+
+f_vars = sapply(dt, function(x) is.character(x)) %>% which() %>% names()
+f_vars = c("ID",f_vars)
+for (v in f_vars) dt[, (v) := factor(get(v))]
+
+setnames(dt,c("day"),c("wday"))
+levels(dt$wday) = c("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
+
+fm_lvls = c("To/from workplace",setdiff(levels(dt$formaal),"To/from workplace"))
+yrk_lvls = c("Full-time",setdiff(levels(dt$yrke),"Full-time"))
+dt[, formaal := factor(formaal, levels = fm_lvls)]
+dt[, yrke := factor(yrke, levels = yrk_lvls)]
+
+
+skim(dt)
+```
+
+## Simple model
+
+We set up a simple model that respects basic characteristics of the data:
+
+- repeated measurements of individuals
+- clustering in fylke
+
+To get the prior for the intercept that on average not more than 4/10 of individuals use public transport. Calculating `exp(.4)` gives approximately `1.5` 
+
+```{r}
+f = bf(y ~ (1 | ID) + (1 | fylke))
+
+my_prior = 
+  prior(normal(0,1.5), class = "Intercept") + # prior for intercept
+  prior(normal(0,2), class = "sd")            # prior for sd of hierarchical vars
+```
+
+### Prior predictive check
+
+We generate predictions from the prior only
+
+```{r}
+load_or_execute("baseline_pp.Rdata",{
+  pp_bl = 
+    brm(f,
+        family = bernoulli(),
+        data = dt,
+        prior = my_prior,
+        backend = "cmdstanr",
+        iter = 1000,
+        sample_prior = 'only')
+})
+
+prior_pred = posterior_linpred(pp_bl) %>% boot::inv.logit()
+hist(prior_pred)
+```
+
+The high probabilities of values near 0, 1 is due to the hieracical model
+
+### Model estimation
+
+```{r}
+load_or_execute("baseline.Rdata", {
+fit_bl = 
+    brm(f,
+        family = bernoulli(),
+        data = dt,
+        prior = my_prior,
+        backend = "cmdstanr",
+        iter = 1000)
+  save(fit_bl,file = fn)})
+```
+
+
+### Convergence
+
+```{r}
+fit_bl %>% summary()
+```
+
+We see that the main parameters of the model converged, and that there is substantial variation between fylke and individuals.
+
+Here is a plot of all rhat values, i.e. also for all the random effects.
+
+```{r}
+s = fit_bl %>% as_draws() %>% summarise_draws()
+s %>% ggplot(aes(x=rhat)) + geom_histogram(bins=30)
+```
+
+
+### Posterior predictive check
+
+We check if the modeled propensity to take a car is consistent with the observed one^[brms also has a `ranef` command that one can use to extract Fylke random effects parameters. However, it is not straight forward to use these when making predictions from a logistic regression model.]
+
+```{r}
+obs = dt[, .(m = mean(y)), by = .(fylke)]
+
+# Here we prepare and generate posterior predictions
+new_data = unique(dt[, .(ID,fylke)])
+pred = posterior_predict(fit_bl, newdata = new_data)
+pred = cbind(new_data,t(pred)) %>% melt(id.vars = names(new_data))
+pred = pred[, .(yhat = mean(value)), by = .(fylke,variable)]
+
+# plotting
+pred %>% 
+  ggplot(aes(y = fylke, x = yhat)) + 
+  stat_slabinterval() +
+  geom_point(data = obs, aes(x = m), col = "red") + 
+  xlim(0,1)
+```
+
+Posterior predictions are generally more variable and can therefor look a bit funny.
+We can get smoother prediction by using linear predictions and the link function. This omits the last step, generating a random response give the the response probabilities, from the generation of posterior predictions.
+
+```{r}
+obs = dt[, .(m = mean(y)), by = .(fylke)]
+
+# Here we prepare and generate posterior predictions
+pred = posterior_linpred(fit_bl, newdata = new_data) %>% boot::inv.logit()
+pred = cbind(new_data,t(pred)) %>% melt(id.vars = names(new_data))
+pred = pred[, .(yhat = mean(value)), by = .(fylke,variable)]
+
+# plotting
+pred %>% 
+  ggplot(aes(y = fylke, x = yhat)) + 
+  stat_slabinterval() +
+  geom_point(data = obs, aes(x = m), col = "red") + 
+  xlim(0,1)
+```
+
+So far it looks as if our model is well able to describe the data.
+
+## Extending the model
+
+We are adding some variables of interest:
+
+- **formaal** is added as a fixed effect, as it has only few levels
+- **yrke** is added as a fixed effect, as it has only few levels
+- **kommune** is added as a random effect, as it has many levels and is nested in fylke
+
+We also widen the priors for the random effects, as the estimated priors were large compared to the sd of the prior.
+
+Here are the new model formula and updated priors:
+
+```{r}
+f = bf(y ~ formaal + yrke + (1 | ID) + (1 | fylke + Kommunenavn))
+
+my_prior = 
+  prior(normal(0,1), class = "Intercept") + # prior for intercept 
+  prior(normal(0,2), class = "b") +         # prior for fix effects 
+  prior(normal(0,3), class = "sd")          # prior for sd of hierarchical vars
+```
+
+We fit the model:
+
+```{r}
+load_or_execute("extend1.Rdata",{
+  fit_e1 = 
+    brm(f,
+        family = bernoulli(),
+        data = dt,
+        prior = my_prior,
+        backend = "cmdstanr",
+        iter = 1000)
+  save(fit_e1,file = fn)
+})
+fit_e1 %>% summary()
+```
+
+
+### "Effect" calcuations
+
+We put "effect" in parenthesis, because this are not causal effects but simple associations.
+
+The model converged, but it is a bit hard to understand the coefficients, so we use the `brmsmargins` package to calculate results of the scale of *risk differences*:
+
+When using brmsmargins it is useful to have a function that generates pairwise contrasts.
+
+```{r}
+pairwise_contrasts = function(levels) {
+  pairs <- t(combn(levels, 2))
+  # Initialize the contrast matrix with zeros
+  contrast_matrix <- matrix(0, nrow = nrow(pairs), ncol = length(levels))
+  colnames(contrast_matrix) <- levels
+  # Fill in the contrast matrix
+  for (i in 1:nrow(pairs)) {
+    contrast_matrix[i, pairs[i, 1]] <- 1
+    contrast_matrix[i, pairs[i, 2]] <- -1
+  }
+  rownames(contrast_matrix) = paste0(pairs[,1],"-",pairs[,2])
+  return(contrast_matrix)
+}
+
+reorder_dt = function(dt,f_var, o_var) {
+  tmp = dt[, .(m = mean(get(o_var))), by = c(f_var)][order(-m)]
+  dt[, (f_var) := factor(get(f_var), levels = tmp[,get(f_var)])]
+}
+```
+
+Here we use brms margins to calculate 
+
+1. The probability of car use by formaal group
+2. All pairwise differences, the latter using the function we just generated
+
+Note that it is important to appropriately use random effects when calculating fixed effects.
+
+```{r}
+load_or_execute("ame_formaal.Rdata", {
+  ame_formaal = 
+    brmsmargins(
+      fit_e1,
+      # points at which to make predictions
+      at = data.frame(formaal = fm_lvls),
+      # comparisons of groups
+      contrasts = pairwise_contrasts(fm_lvls) %>% t(),
+      CI = .9,
+      # correct treatment of random effects
+      effects = "integrateoutRE"
+    )})
+ame_formaal$Summary = cbind(ame_formaal$Summary, Label = fm_lvls)
+colnames(ame_formaal$Posterior) = fm_lvls
+```
+
+We can plot the results with 50% and 90% credible intervals.
+```{r}
+#| fig-cap: "Estimated probability of car use for different formaal"
+ame_formaal$Posterior %>% mcmc_intervals_sorted()
+```
+We can plot the posterior distribution.
+
+```{r}
+ame_formaal$Posterior %>% mcmc_hist(bins = 20)
+```
+
+And we can plot the table with the main results:
+
+```{r}
+ame_formaal$Posterior %>% 
+  summarise_draws() %>% .[, c("variable","mean","sd","q5","q95")] %>% 
+  kable(caption = "Probability to use a car by formaal", digits = c(2,3,2,2))
+```
+
+
+Finally, we can plot the differences between formaal.
+
+```{r}
+#| fig-cap: "Estimated difference in probability of car use between all formaal"
+#| fig-height: 8
+ame_formaal$Contrasts %>% mcmc_intervals_sorted() + geom_hline(yintercept = 0, color = "grey")
+```
+
+
+And we can also look at the variation between kommune:
+
+```{r}
+#| fig-cap: "Estimated probability of car use for all kommuner"
+#| fig-height: 8
+kommuner = dt[, .(m = mean(y)), by = "Kommunenavn"][order(-m)][,Kommunenavn]
+load_or_execute("ame_kommuner.Rdata",{
+  ame_kommune = 
+    brmsmargins(
+      fit_e1,
+      at = data.frame(Kommunenavn = kommuner),
+      effects = "includeRE",
+      CI = .9)})
+colnames(ame_kommune$Posterior) = kommuner
+ame_kommune$Posterior  %>% mcmc_intervals_sorted() + 
+  theme(axis.text.y = element_text(size = 4))
+```
+
+We see that there is a clear difference between kommuner, but to see more clearly we can zoom in on the most extreme kommuner.
+
+```{r}
+#| fig-cap: "Estimated probability of car use in extreme kommuner"
+#| fig-height: 6
+pdata = ame_kommune$Posterior %>% mcmc_intervals_data()
+pdata$parameter = factor(pdata$parameter, levels = pdata$parameter[order(-pdata$m)])
+  
+extreme_kommune = c(
+  pdata$parameter %>% levels() %>% head(10),
+  pdata$parameter %>% levels() %>% tail(10)
+)
+
+pdata %>% 
+  data.table() %>% 
+  .[parameter %in% extreme_kommune] %>% 
+  ggplot(aes(x = parameter, y = m)) + 
+  geom_hline(yintercept = .5, color = "grey") + 
+  geom_linerange(aes(ymin = ll, ymax = hh)) + 
+  geom_linerange(aes(ymin = l, ymax = h), linewidth = .8) + 
+  geom_point() + 
+  coord_flip() + 
+  theme_classic() +
+  ylab("estimate")
+```
+
+## Further extensions
+
+After seeing that this basic model works, we add additional relevant variables. In particular
+
+1. Gender
+2. Day of the week (wday)
+3. Day in the year (yday) to capture seasonal trends with cyclic splines
+4. Date to capture time trends
+5. Age
+6. Traveling time
+
+We use splines to estimate effects of continuous variables.
+
+```{r}
+dt[, ndate := as.numeric(dato)]
+f = bf(y ~ 
+         formaal + yrke + kjoenn + wday +
+         s(yday, bs = "cc") + 
+         s(alder, k = 5) + 
+         s(reisetid, k = 5) + 
+         s(ndate) + 
+         (1 | ID) + (1 | fylke/Kommunenavn))
+
+my_prior = 
+  prior(normal(0,1), class = "Intercept") + # prior for intercept 
+  prior(normal(0,2), class = "b") +         # prior for fix effects 
+  prior(normal(0,3), class = "sds") +       # prior for splines
+  prior(normal(0,3), class = "sd")          # prior for sd of hierarchical vars
+
+load_or_execute("extend2.Rdata",{
+  fit_e2 = 
+    brm(f,
+        family = bernoulli(),
+        data = dt,
+        prior = my_prior,
+        backend = "cmdstanr",
+        iter = 1000)
+})
+fit_e2 %>% summary()
+```
+
+### Model description
+
+In this study, we estimated a Bayesian generalized linear mixed effects model using the brms package in R. The binary outcome variable y was modeled as a Bernoulli distribution. Fixed effects included categorical predictors (formaal, yrke, kjoenn, wday) and continuous predictors (alder, reisetid, yday, ndate).
+
+Smooth terms were included to capture non-linear relationships:
+
+A cyclic cubic spline was used to account for potential seasonality in the data.
+Thin plate regression splines were employed to model non-linear associations with age, travel time, and date.
+Additionally, random intercepts for ID and nested random intercepts for county and municipality were incorporated to account for hierarchical structure in the data.
+
+Priors were specified as follows:
+
+- Intercept: Normal(0, 1)
+- Fixed effects: Normal(0, 2)
+- Standard deviations of splines: Normal(0, 3)
+- Standard deviation of group-level effects: Normal(0, 3)
+
+The model was fit using the cmdstanr backend with 4 chains à 1000 iterations, whereby the first 500 warmup-draws from each chain were discarded.
+
+### Results: Convergence
+
+The model was fit using the Hamiltonian Monte Carlo (HMC) algorithm with 4 chains, each with 1000 iterations (500 warmup and 500 post-warmup iterations), resulting in a total of 2000 post-warmup draws. The convergence diagnostics indicate that the model has generally converged well. Most parameters have an Rhat value close to 1, suggesting good mixing and convergence of the chains. The effective sample size (Bulk_ESS and Tail_ESS) is adequate for most parameters, indicating sufficient sampling efficiency.
+
+There were 5 divergent transitions after the warmup phase. Despite these divergences, the overall convergence metrics suggest that the majority of parameters were estimated reliably. 
+
+The smoothing spline hyperparameters and multilevel effects for the grouping factors (`fylke`, `ID`, and `Kommunenavn`) also show appropriate Rhat values and effective sample sizes, further supporting the model's convergence.
+
+### Results: Content
+
+First lets look at the effect of gender:
+
+```{r}
+#| fig-cap: "Associations between gender and car usage"
+#| fig-height: 4
+load_or_execute("ame_kjoenn2.Rdata",{
+ame_kjoenn = 
+  brmsmargins(
+    fit_e2,
+    at = data.frame(kjoenn = levels(dt$kjoenn)),
+    contrasts = pairwise_contrasts(levels(dt$kjoenn)) %>% t(),
+    effects = "integrateoutRE",
+    CI = .9)})
+colnames(ame_kjoenn$Posterior) = levels(dt$kjoenn)
+ame_kjoenn$Posterior %>% as_draws() %>% mcmc_intervals() + 
+ame_kjoenn$Contrasts %>% as_draws() %>% mcmc_intervals()
+```
+
+### Formulating results in the result section.
+
+#### Written by GB:
+
+The adjusted probability to use a car was `r get_stats(ame_kjoenn$Posterior,"Female")` among women, `r get_stats(ame_kjoenn$Posterior,"Male")` among men. The difference between women and men is `r get_stats(ame_kjoenn$Contrasts,"Female-Male")` and is reliable different from zero.
+
+#### ChatGPT 4o
+
+**ChatGPT prompt:**
+
+<blockquote>
+briefly describe the results in these table, which describe fixed effects of gender on the probability to use a car. Describe the results as is typically done in scientific articles. use 2 decimal points.
+
+Table 1:
+  Gender mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail
+  
+ Female   0.491  0.491 0.0437 0.0422 0.420 0.566  1.00     519.    1108.
+ 
+ Male     0.555  0.555 0.0448 0.0439 0.483 0.629  1.00     610.    1079.
+ 
+ Them     0.469  0.469 0.0994 0.106  0.308 0.628  1.00    1533.    1502.
+
+Table2: 
+ GenderDiffernence      mean  median     sd    mad      q5     q95  rhat ess_bulk ess_tail
+
+Female-Male -0.0637 -0.0631 0.0180 0.0177 -0.0940 -0.0351  1.00     430.     959.
+
+Female-Them  0.0216  0.0223 0.0913 0.0933 -0.128   0.171   1.00    1997.    1353.
+
+Male-Them    0.0853  0.0859 0.0938 0.0976 -0.0684  0.240   1.00    1630.    1315.
+</blockquote>
+
+**ChatGPT output:**
+<blockquote>
+The fixed effects of gender on the probability of using a car are summarized in the table below. For females, the mean probability of using a car is 0.49 (SD = 0.04), with a 95% credible interval ranging from 0.42 to 0.57. Males have a higher mean probability of 0.56 (SD = 0.04), with a 95% credible interval of 0.48 to 0.63. Individuals identifying as "Them" have a mean probability of 0.47 (SD = 0.10), with a broader 95% credible interval from 0.31 to 0.63.
+
+When examining gender differences, females are 0.06 less likely to use a car compared to males (mean difference = -0.06, SD = 0.02), with a 95% credible interval of -0.09 to -0.04. The difference between females and "Them" is smaller and less certain, with a mean difference of 0.02 (SD = 0.09) and a 95% credible interval ranging from -0.13 to 0.17. Similarly, males are 0.09 more likely to use a car compared to "Them" (mean difference = 0.09, SD = 0.09), with a 95% credible interval from -0.07 to 0.24.
+
+The Rhat values are all 1.00, indicating good convergence, and the effective sample sizes are adequate, suggesting reliable estimates.
+</blockquote>
+
+
+### Contrasts for nonlinear predictors
+
+The advantage of non-linear predictors is that they do not require that we commit to a particular  shape for the association between predictors and outcomes. The disadvantage is that it is less straight forward to generate contrasts. However, while this is next to impossible in the frequentist framework, we can do this relatively straiht forward in the Bayesian framework. Here we take seasonal changes in cart usage as in example.
+
+#### Marginal car usage througout the year
+
+First, we generate for different days in the year the expected car usage with the `brmsmargins` package. While our `yday` variable has 366 different value, we will restrict our-self to a subset of 52 days, one per week.
+
+```{r}
+days = seq(3,366, by = 7)
+load_or_execute("ame_yday.Rdata",{
+  ame_yday = 
+    brmsmargins(
+      fit_e2,
+      at = data.frame(yday = days),
+      effects = "integrateoutRE",
+      CI = .9)})
+dim(ame_yday$Posterior)
+head(ame_yday$Posterior,3)
+```
+
+Now we have 2000 samples for each of the 52 days. Lets plot this.
+
+```{r}
+#| fig-cap: "Seasonal changes in car use with 90% credible intervals. Vertical lines indicate season starts."
+colnames(ame_yday$Posterior) = days
+ame_yday$Posterior %>% 
+  summarise_draws() %>% 
+  ggplot(aes(x = as.numeric(variable), y = mean)) + 
+  geom_line(alpha = .25, color = "blue3") + 
+  geom_ribbon(aes(ymin = q5, ymax = q95), alpha = .2) + 
+  geom_line() + 
+  ylab("probability to use a car") +
+  xlab("day of the year")
+```
+
+A spaghetti plot can often give better insight into variability.
+
+```{r}
+#| fig-cap: "Spaghetti plot of seasonal changes in car use. Vertical lines indicate season starts."
+data.table(ame_yday$Posterior, iter = 1:2000) %>% 
+  melt(id.var = "iter", variable.name = "doy") %>% 
+  .[, doy := days[as.numeric(doy)]] %>% 
+  .[iter %in% sample(iter,100)] %>% 
+  ggplot(aes(x = doy, y = value, group = iter)) + 
+  geom_vline(xintercept = days[c(12,25,38,51)], alpha = .5) +
+  geom_line(alpha = .25, color = "blue3") + 
+  theme_classic() + 
+  ylab("probability to use a car") +
+  xlab("day of the year")
+```
+
+This plot suggests that the seasonal changes we observe are not reliable. Lets verify this statistically by checking.
+
+
+
+```{r}
+layout(matrix(c(1,1,2,3), nrow = 2))
+image(1:52,1:2000,t(ame_yday$Posterior), xlab = "", ylab = "", bty = "n")
+color_palette <- colorRampPalette(c("red", "grey", "blue"))(3)  # 100 color levels
+image(1:6,1:52,t(my_contrasts),xlab = "", ylab = "", bty = "n", xaxt = "n",col = color_palette)
+mtext("X", side = 2)
+```
+
+
+```{r}
+
+colnames(seasons) = c("winter","spring","summer","autumn")
+seasons[c(1:12,52),1] = 1
+seasons[13:25,2] = 1
+seasons[26:38,3] = 1
+seasons[39:51,4] = 1
+my_contrasts = c()
+combs = combn(4,2)
+for (i in 1:ncol(combs)) {
+  my_contrasts = cbind(
+    my_contrasts,
+    seasons[,combs[1,i]] / sum(seasons[,combs[1,i]]) -
+      seasons[,combs[2,i]] / sum(seasons[,combs[2,i]])
+    )
+}
+colnames(my_contrasts) = paste0(colnames(seasons)[combs[1,]],"-", colnames(seasons)[combs[2,]])
+
+px = as_draws_matrix(ame_yday$Posterior)
+post_delta =  px %*% my_contrasts
+post_delta %>% summarise_draws()
+post_delta %>% mcmc_intervals()
+```
+
+```{r, eval = FALSE, echo = FALSE}
+load_or_execute("ame_yrke2.Rdata",{
+  ame_yrke = 
+    brmsmargins(
+      fit_e2,
+      at = data.frame(yrke = yrk_lvls),
+      contrasts = pairwise_contrasts(yrk_lvls) %>% t(),
+      CI = .9,
+      effects = "integrateoutRE")})
+load_or_execute("ame_formaal2.Rdata",{
+  ame_formaal = 
+    brmsmargins(
+      fit_e2,
+      at = data.frame(formaal = fm_lvls),
+      contrasts = pairwise_contrasts(fm_lvls) %>% t(),
+      CI = .9,
+      effects = "integrateoutRE")})
+load_or_execute("ame_kommuner2.Rdata",{
+  ame_kommune = 
+    brmsmargins(
+      fit_e2,
+      at = data.frame(Kommunenavn = kommuner),
+      effects = "includeRE",
+      CI = .9)})
+
+```
