@@ -526,19 +526,9 @@ data.table(ame_yday$Posterior, iter = 1:2000) %>%
 
 This plot suggests that the seasonal changes we observe are not reliable. Lets verify this statistically by checking.
 
-
-
-```{r}
-layout(matrix(c(1,1,2,3), nrow = 2))
-image(1:52,1:2000,t(ame_yday$Posterior), xlab = "", ylab = "", bty = "n")
-color_palette <- colorRampPalette(c("red", "grey", "blue"))(3)  # 100 color levels
-image(1:6,1:52,t(my_contrasts),xlab = "", ylab = "", bty = "n", xaxt = "n",col = color_palette)
-mtext("X", side = 2)
-```
-
+To do this, we generate a contrast matrix with which we multiply the posterior distribution matrix of daily car usage to obtain the comparisons.
 
 ```{r}
-
 colnames(seasons) = c("winter","spring","summer","autumn")
 seasons[c(1:12,52),1] = 1
 seasons[13:25,2] = 1
@@ -554,12 +544,32 @@ for (i in 1:ncol(combs)) {
     )
 }
 colnames(my_contrasts) = paste0(colnames(seasons)[combs[1,]],"-", colnames(seasons)[combs[2,]])
-
-px = as_draws_matrix(ame_yday$Posterior)
-post_delta =  px %*% my_contrasts
-post_delta %>% summarise_draws()
-post_delta %>% mcmc_intervals()
 ```
+
+
+
+```{r, echo = FALSE}
+layout(matrix(c(1,1,2,3), nrow = 2))
+image(1:52,1:2000,t(ame_yday$Posterior), xlab = "", ylab = "", bty = "n")
+color_palette <- colorRampPalette(c("red", "grey", "blue"))(3)  # 100 color levels
+image(1:6,1:52,t(my_contrasts),xlab = "", ylab = "", bty = "n", xaxt = "n",col = color_palette)
+mtext("X", side = 2)
+```
+
+
+```{r}
+post_delta =  ame_yday$Posterior %*% my_contrasts
+post_delta %>%
+  summarise_draws() %>% .[, c("variable","mean","sd","q5","q95")]
+#%>%  kable(caption = "Seasonal differneces in probability to use a car", digits = c(2,3,2,2))
+```
+
+```{r}
+post_delta %>% mcmc_areas()
+```
+
+The comparison between summer and autumn shows a credible interval that does not include zero, indicating a reliable difference. Specifically, the mean difference is 0.06 (CI: 0.004, 0.12).
+Other seasonal comparisons did not show credible intervals that exclude zero, suggesting no reliable differences in those cases.
 
 ```{r, eval = FALSE, echo = FALSE}
 load_or_execute("ame_yrke2.Rdata",{
