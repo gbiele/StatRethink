@@ -36,3 +36,5 @@ See [here](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbie
 
 13. [Multilevel or hierarchical regression models](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Chapter13/Chapter13Recap.html)
 
+13. [Example analysis with brms](https://htmlpreview.github.io/?https://raw.githubusercontent.com/gbiele/StatRethink/master/Winnie/example.html)
+
