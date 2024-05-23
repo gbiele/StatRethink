@@ -225,24 +225,45 @@ The model converged, but it is a bit hard to understand the coefficients, so we 
 When using brmsmargins it is useful to have a function that generates pairwise contrasts.
 
 ```{r}
+# Define a function to create pairwise contrasts
 pairwise_contrasts = function(levels) {
+  # Generate all unique pairs of the given levels
   pairs <- t(combn(levels, 2))
+  
   # Initialize the contrast matrix with zeros
+  # The number of rows is equal to the number of pairs
+  # The number of columns is equal to the number of levels
   contrast_matrix <- matrix(0, nrow = nrow(pairs), ncol = length(levels))
+  
+  # Assign column names to the contrast matrix using the provided levels
   colnames(contrast_matrix) <- levels
+  
   # Fill in the contrast matrix
   for (i in 1:nrow(pairs)) {
+    # Set the element corresponding to the first level of the pair to 1
     contrast_matrix[i, pairs[i, 1]] <- 1
+    # Set the element corresponding to the second level of the pair to -1
     contrast_matrix[i, pairs[i, 2]] <- -1
   }
-  rownames(contrast_matrix) = paste0(pairs[,1],"-",pairs[,2])
+  
+  # Assign row names to the contrast matrix to indicate which levels are being compared
+  rownames(contrast_matrix) = paste0(pairs[, 1], "-", pairs[, 2])
+  
+  # Return the completed contrast matrix
   return(contrast_matrix)
 }
 
-reorder_dt = function(dt,f_var, o_var) {
+
+# Define a function to reorder a factor variable in a data table based on the mean of another variable
+reorder_dt = function(dt, f_var, o_var) {
+  # Compute the mean of o_var for each level of f_var, and store the result in a temporary data table
   tmp = dt[, .(m = mean(get(o_var))), by = c(f_var)][order(-m)]
-  dt[, (f_var) := factor(get(f_var), levels = tmp[,get(f_var)])]
+  
+  # Reorder the factor levels of f_var in the original data table dt
+  # The new order is based on the sorted means from the temporary data table tmp
+  dt[, (f_var) := factor(get(f_var), levels = tmp[, get(f_var)])]
 }
+
 ```
 
 Here we use brms margins to calculate 
@@ -529,21 +550,38 @@ This plot suggests that the seasonal changes we observe are not reliable. Lets v
 To do this, we generate a contrast matrix with which we multiply the posterior distribution matrix of daily car usage to obtain the comparisons.
 
 ```{r}
-colnames(seasons) = c("winter","spring","summer","autumn")
-seasons[c(1:12,52),1] = 1
-seasons[13:25,2] = 1
-seasons[26:38,3] = 1
-seasons[39:51,4] = 1
+# Create a matrix with 52 rows and 4 columns, initialized to 0
+seasons = matrix(0, nrow = 52, ncol = 4)
+
+# Assign column names to the matrix for the four seasons
+colnames(seasons) = c("winter", "spring", "summer", "autumn")
+
+# Define the weeks for each season
+# Set weeks 1 to 12 and week 52 as winter (1-based indexing)
+seasons[c(1:12, 52), 1] = 1
+seasons[13:25, 2] = 1 # spring
+seasons[26:38, 3] = 1  #summer
+seasons[39:51, 4] = 1 # autumn
+
+# Initialize an empty vector to store contrasts
 my_contrasts = c()
-combs = combn(4,2)
+
+# Generate all combinations of two seasons out of four
+combs = combn(4, 2)
+
+# Loop over each combination to calculate contrasts
 for (i in 1:ncol(combs)) {
+  # Calculate the contrast between two seasons
   my_contrasts = cbind(
     my_contrasts,
-    seasons[,combs[1,i]] / sum(seasons[,combs[1,i]]) -
-      seasons[,combs[2,i]] / sum(seasons[,combs[2,i]])
-    )
+    seasons[, combs[1, i]] / sum(seasons[, combs[1, i]]) -
+    seasons[, combs[2, i]] / sum(seasons[, combs[2, i]])
+  )
 }
-colnames(my_contrasts) = paste0(colnames(seasons)[combs[1,]],"-", colnames(seasons)[combs[2,]])
+
+# Assign column names to the contrast matrix to indicate the season comparisons
+colnames(my_contrasts) = paste0(colnames(seasons)[combs[1,]], "-", colnames(seasons)[combs[2,]])
+
 ```
 
 

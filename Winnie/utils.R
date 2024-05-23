@@ -27,6 +27,17 @@ load_or_execute <- function(file_path, execute_command) {
   }
 }
 
+# Define a function to reorder a factor variable in a data.table
+# based on the mean of another variable
+reorder_dt = function(dt, f_var, o_var) {
+  # Compute the mean of o_var for each level of f_var, 
+  # and store the result in a temporary data table
+  tmp = dt[, .(m = mean(get(o_var))), by = c(f_var)][order(-m)]
+  
+  # Reorder the factor levels of f_var in the original data table dt
+  # The new order is based on the sorted means from the temporary data table tmp
+  dt[, (f_var) := factor(get(f_var), levels = tmp[, get(f_var)])]
+}
 
 mcmc_intervals_sorted = function(draws) {
   dt = draws %>% mcmc_intervals_data()
